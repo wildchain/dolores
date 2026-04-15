@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { ArweaveService } from './arweave.service';
+import { ArweaveService } from '@dolores/receipt/services/arweave.service';
 
 describe('ArweaveService', () => {
   let service: ArweaveService;

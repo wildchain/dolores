@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ArweaveService } from './arweave.service';
-import { ExecutionReceipt } from '../interfaces/execution-receipt.interface';
+import { ArweaveService } from '@dolores/receipt/services/arweave.service';
+import { ExecutionReceipt } from '@dolores/receipt/interfaces/execution-receipt.interface';
 import { createHash } from 'crypto';
 
 @Injectable()

@@ -1,6 +1,6 @@
-import { ExecutionReceipt } from '../interfaces/execution-receipt.interface';
-import { ReceiptEntity } from '../receipt.entity';
-import { CreateReceiptDto } from '../dto/create-receipt.dto';
+import { ExecutionReceipt } from '@dolores/receipt/interfaces/execution-receipt.interface';
+import { ReceiptEntity } from '@dolores/receipt/receipt.entity';
+import { CreateReceiptDto } from '@dolores/receipt/dto/create-receipt.dto';
 
 /**
  * Mock execution receipt for testing

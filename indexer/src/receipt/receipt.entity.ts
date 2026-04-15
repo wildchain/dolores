@@ -1,5 +1,5 @@
 import { Entity, Column, Index } from 'typeorm';
-import { BaseEntity } from '../lib/database/base.entity';
+import { BaseEntity } from '@dolores/lib/database/base.entity';
 
 @Entity('receipts')
 @Index(['taskId'], { unique: true })

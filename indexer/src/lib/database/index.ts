@@ -49,6 +49,7 @@ export const DATABASE_CONFIG: TypeOrmModuleAsyncOptions = {
       schema: 'dolores',
       port: 5432,
       ssl: process.env.APPLICATION_ENV !== 'development',
+      driver: 'postgres',
     };
   },
   inject: [ConfigService],

@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule } from '@dolores/app.module';
 import { ValidationPipe } from '@nestjs/common';
 
 export const CORS_ORIGINS = ['http://localhost:5173'];

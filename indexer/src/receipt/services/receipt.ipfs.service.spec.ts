@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ReceiptIpfsService } from './receipt.ipfs.service';
-import { ArweaveService } from './arweave.service';
-import { ExecutionReceipt } from '../interfaces/execution-receipt.interface';
+import { ReceiptIpfsService } from '@dolores/receipt/services/receipt.ipfs.service';
+import { ArweaveService } from '@dolores/receipt/services/arweave.service';
+import { ExecutionReceipt } from '@dolores/receipt/interfaces/execution-receipt.interface';
 
 describe('ReceiptIpfsService', () => {
   let service: ReceiptIpfsService;

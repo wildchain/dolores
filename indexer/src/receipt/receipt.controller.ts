@@ -1,3 +1,6 @@
+import { ExecutionReceipt } from '@dolores/receipt/interfaces/execution-receipt.interface';
+import { ReceiptService } from '@dolores/receipt/receipt.service';
+import { ReceiptIpfsService } from '@dolores/receipt/services/receipt.ipfs.service';
 import {
   Controller,
   Post,
@@ -8,10 +11,6 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { ReceiptService } from './receipt.service';
-import { ReceiptEntity } from './receipt.entity';
-import { ReceiptIpfsService } from './services/receipt.ipfs.service';
-import { ExecutionReceipt } from './interfaces/execution-receipt.interface';
 
 export interface UploadReceiptResponse {
   cid: string;

@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { ReceiptController } from './receipt.controller';
-import { ReceiptService } from './receipt.service';
-import { ReceiptIpfsService } from './services/receipt.ipfs.service';
-import { ReceiptEntity } from './receipt.entity';
-import { ExecutionReceipt } from './interfaces/execution-receipt.interface';
+import { ReceiptController } from '@dolores/receipt/receipt.controller';
+import { ReceiptService } from '@dolores/receipt/receipt.service';
+import { ReceiptIpfsService } from '@dolores/receipt/services/receipt.ipfs.service';
+import { ReceiptEntity } from '@dolores/receipt/receipt.entity';
+import { ExecutionReceipt } from '@dolores/receipt/interfaces/execution-receipt.interface';
 
 describe('ReceiptController', () => {
   let controller: ReceiptController;

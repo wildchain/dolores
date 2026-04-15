@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ReceiptModule } from './receipt/receipt.module';
+import { AppController } from '@dolores/app.controller';
+import { AppService } from '@dolores/app.service';
+import { ReceiptModule } from '@dolores/receipt/receipt.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DATABASE_CONFIG } from '@dolores/lib/database';
 

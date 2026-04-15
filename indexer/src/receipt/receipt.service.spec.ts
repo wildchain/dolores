@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ReceiptService } from './receipt.service';
-import { ReceiptEntity } from './receipt.entity';
-import { CreateReceiptDto } from './dto/create-receipt.dto';
+import { ReceiptService } from '@dolores/receipt/receipt.service';
+import { ReceiptEntity } from '@dolores/receipt/receipt.entity';
+import { CreateReceiptDto } from '@dolores/receipt/dto/create-receipt.dto';
 
 describe('ReceiptService', () => {
   let service: ReceiptService;

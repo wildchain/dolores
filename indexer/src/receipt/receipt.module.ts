@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { ReceiptController } from './receipt.controller';
-import { ReceiptService } from './receipt.service';
-import { ReceiptEntity } from './receipt.entity';
-import { ReceiptIpfsService } from './services/receipt.ipfs.service';
-import { ArweaveService } from './services/arweave.service';
+import { ReceiptController } from '@dolores/receipt/receipt.controller';
+import { ReceiptService } from '@dolores/receipt/receipt.service';
+import { ReceiptEntity } from '@dolores/receipt/receipt.entity';
+import { ReceiptIpfsService } from '@dolores/receipt/services/receipt.ipfs.service';
+import { ArweaveService } from '@dolores/receipt/services/arweave.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ReceiptEntity]), ConfigModule],

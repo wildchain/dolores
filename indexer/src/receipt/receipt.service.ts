@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { ReceiptEntity } from './receipt.entity';
-import { CreateReceiptDto } from './dto/create-receipt.dto';
+import { ReceiptEntity } from '@dolores/receipt/receipt.entity';
+import { CreateReceiptDto } from '@dolores/receipt/dto/create-receipt.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
