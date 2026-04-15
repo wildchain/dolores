@@ -42,6 +42,11 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+# Arweave wallet keys (NEVER COMMIT)
+arweave-wallet.json
+arweave-wallet*.json
+*.jwk
+
 # temp directory
 .temp
 .tmp

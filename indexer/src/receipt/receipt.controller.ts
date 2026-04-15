@@ -6,56 +6,118 @@ import {
   Param,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { ReceiptService } from './receipt.service';
-import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { ReceiptEntity } from './receipt.entity';
+import { ReceiptIpfsService } from './services/receipt.ipfs.service';
+import { ExecutionReceipt } from './interfaces/execution-receipt.interface';
 
 export interface UploadReceiptResponse {
   cid: string;
   taskId: string;
   agentId: string;
+  outputHash: string;
 }
 
 @Controller('receipts')
 export class ReceiptController {
-  constructor(private readonly receiptService: ReceiptService) {}
+  private readonly logger = new Logger(ReceiptController.name);
+
+  constructor(
+    private readonly receiptService: ReceiptService,
+    private readonly ipfsService: ReceiptIpfsService,
+  ) {}
 
   @Post('upload')
   async uploadReceipt(
-    @Body() dto: CreateReceiptDto,
+    @Body() executionReceipt: ExecutionReceipt,
   ): Promise<UploadReceiptResponse> {
-    // Create receipt in database
-    const receipt = await this.receiptService.create(dto);
+    try {
+      // Validate required fields
+      if (
+        !executionReceipt.agent_id ||
+        !executionReceipt.task_id ||
+        !executionReceipt.timestamp_unix
+      ) {
+        throw new HttpException(
+          'Missing required fields in execution receipt',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
-    // TODO: Upload to Pinata (IPFS)
-    // const cid = await this.pinataService.upload(receipt);
-    const cid = `bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi`; // Placeholder
+      // Compute output hash from full receipt
+      const outputHash = this.ipfsService.computeOutputHash(executionReceipt);
 
-    // Store CID mapping
-    await this.receiptService.updateCid(receipt.taskId, cid);
+      // Upload full receipt to Arweave (IPFS)
+      const cid = await this.ipfsService.pinReceiptToIpfs(executionReceipt);
 
-    return {
-      cid,
-      taskId: receipt.taskId,
-      agentId: receipt.agentId,
-    };
+      // Store minimal metadata + CID in database
+      const receipt = await this.receiptService.create({
+        agentId: executionReceipt.agent_id,
+        taskId: executionReceipt.task_id,
+        outputHash,
+        timestamp: executionReceipt.timestamp_unix,
+      });
+
+      await this.receiptService.updateCid(receipt.taskId, cid);
+
+      this.logger.log(
+        `Receipt uploaded for task ${receipt.taskId}, CID: ${cid}`,
+      );
+
+      return {
+        cid,
+        taskId: receipt.taskId,
+        agentId: receipt.agentId,
+        outputHash,
+      };
+    } catch (error) {
+      this.logger.error('Failed to upload receipt:', error);
+      throw new HttpException(
+        error.message || 'Failed to upload receipt',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':taskId')
-  async getReceipt(@Param('taskId') taskId: string): Promise<ReceiptEntity> {
+  async getReceipt(@Param('taskId') taskId: string): Promise<ExecutionReceipt> {
     const receipt = await this.receiptService.findByTaskId(taskId);
 
-    if (!receipt) {
+    if (!receipt || !receipt.cid) {
       throw new HttpException(
         `Receipt not found for taskId: ${taskId}`,
         HttpStatus.NOT_FOUND,
       );
     }
 
-    // TODO: Add CID verification (hash check against on-chain output_hash)
+    try {
+      // Retrieve full receipt from Arweave
+      const executionReceipt = await this.ipfsService.retrieveReceipt(
+        receipt.cid,
+      );
 
-    return receipt;
+      // Verify the hash matches
+      const isValid = await this.ipfsService.verifyReceipt(
+        receipt.cid,
+        receipt.outputHash,
+      );
+
+      if (!isValid) {
+        this.logger.warn(
+          `Hash mismatch for receipt ${taskId}, CID: ${receipt.cid}`,
+        );
+      }
+
+      return executionReceipt;
+    } catch (error) {
+      this.logger.error(`Failed to retrieve receipt ${taskId}:`, error);
+      throw new HttpException(
+        'Failed to retrieve receipt from Arweave',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get('agent/:agentId')
@@ -72,5 +134,29 @@ export class ReceiptController {
     }
 
     return receipts;
+  }
+
+  @Get('verify/:taskId')
+  async verifyReceipt(@Param('taskId') taskId: string) {
+    const receipt = await this.receiptService.findByTaskId(taskId);
+
+    if (!receipt || !receipt.cid) {
+      throw new HttpException(
+        `Receipt not found for taskId: ${taskId}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const isValid = await this.ipfsService.verifyReceipt(
+      receipt.cid,
+      receipt.outputHash,
+    );
+
+    return {
+      taskId,
+      cid: receipt.cid,
+      verified: isValid,
+      outputHash: receipt.outputHash,
+    };
   }
 }

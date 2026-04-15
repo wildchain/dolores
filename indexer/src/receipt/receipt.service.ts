@@ -12,44 +12,32 @@ export class ReceiptService {
   ) {}
 
   async create(dto: CreateReceiptDto): Promise<ReceiptEntity> {
-    const receipt = new ReceiptEntity(
-      dto.agentId,
-      dto.taskId,
-      dto.outputHash,
-      dto.timestamp,
-    );
-    receipt.id = this.idCounter++;
+    const receipt = this.receiptRepository.create({
+      agentId: dto.agentId,
+      taskId: dto.taskId,
+      outputHash: dto.outputHash,
+      timestamp: dto.timestamp,
+    });
 
-    this.receipts.set(dto.taskId, receipt);
-
-    if (!this.receiptsByAgent.has(dto.agentId)) {
-      this.receiptsByAgent.set(dto.agentId, []);
-    }
-    this.receiptsByAgent.get(dto.agentId).push(dto.taskId);
-
-    return receipt;
+    return this.receiptRepository.save(receipt);
   }
 
   async findByTaskId(taskId: string): Promise<ReceiptEntity | null> {
-    return this.receipts.get(taskId) || null;
+    return this.receiptRepository.findOne({ where: { taskId } });
   }
 
   async findByAgentId(agentId: string): Promise<ReceiptEntity[]> {
-    const taskIds = this.receiptsByAgent.get(agentId) || [];
-    return taskIds
-      .map((taskId) => this.receipts.get(taskId))
-      .filter((receipt): receipt is ReceiptEntity => receipt !== undefined);
+    return this.receiptRepository.find({ where: { agentId } });
   }
 
   async updateCid(taskId: string, cid: string): Promise<ReceiptEntity | null> {
-    const receipt = this.receipts.get(taskId);
+    const receipt = await this.findByTaskId(taskId);
     if (!receipt) {
       return null;
     }
 
     receipt.cid = cid;
-    receipt.updateTimestamp();
-    return receipt;
+    return this.receiptRepository.save(receipt);
   }
 
   async verifyCid(taskId: string, expectedHash: string): Promise<boolean> {
