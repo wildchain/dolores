@@ -16,7 +16,7 @@ export interface ExecutionResult {
   summary: string;
 }
 
-export interface ExecutionReceipt {
+export class ExecutionReceipt {
   schema_version: string;
   task_id: string;
   agent_id: string;

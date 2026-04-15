@@ -3,6 +3,7 @@ import { ColumnType, DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import { ENTITIES } from '@dolores/lib/database/entities';
 import { ConfigService } from '@nestjs/config';
+import { EnvironmentVariables } from '@dolores/config/environment.variables';
 
 config({
   path: `.env.${process.env.NODE_ENV || 'development'}`,
@@ -45,14 +46,14 @@ export const DATABASE_CONFIG: TypeOrmModuleAsyncOptions = {
       migrations: [],
       database: configService.get('DATABASE_NAME'),
       entities: ENTITIES,
-      schema: 'mmw_ai',
+      schema: 'dolores',
       port: 5432,
       ssl: process.env.APPLICATION_ENV !== 'development',
     };
   },
   inject: [ConfigService],
   dataSourceFactory: async (options) => {
-    return CustomDataSource(options);
+    return CustomDataSource(options as any);
   },
 };
 

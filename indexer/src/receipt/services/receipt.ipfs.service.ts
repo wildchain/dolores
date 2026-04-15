@@ -29,11 +29,13 @@ export class ReceiptIpfsService {
 
       return txId;
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(
         `Failed to pin receipt for task ${receipt.task_id}:`,
         error,
       );
-      throw new Error(`Failed to pin receipt to Arweave: ${error.message}`);
+      throw new Error(`Failed to pin receipt to Arweave: ${errorMessage}`);
     }
   }
 
@@ -45,9 +47,11 @@ export class ReceiptIpfsService {
       const data = await this.arweaveService.retrieve(cid);
       return JSON.parse(data) as ExecutionReceipt;
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to retrieve receipt ${cid}:`, error);
       throw new Error(
-        `Failed to retrieve receipt from Arweave: ${error.message}`,
+        `Failed to retrieve receipt from Arweave: ${errorMessage}`,
       );
     }
   }
