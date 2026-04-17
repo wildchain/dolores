@@ -1,0 +1,724 @@
+{
+    "address": "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt",
+    "metadata": {
+        "name": "dolores_registry",
+        "version": "0.1.0",
+        "spec": "0.1.0",
+        "description": "Created with Anchor"
+    },
+    "instructions": [
+        {
+            "name": "record_slash",
+            "discriminator": [
+                29,
+                255,
+                241,
+                210,
+                188,
+                77,
+                59,
+                190
+            ],
+            "accounts": [
+                {
+                    "name": "slash_authority",
+                    "docs": [
+                        "TODO production: constrain to adjudication program PDA, not operator."
+                    ],
+                    "signer": true
+                },
+                {
+                    "name": "registry",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    114,
+                                    101,
+                                    103,
+                                    105,
+                                    115,
+                                    116,
+                                    114,
+                                    121
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "registry.agent",
+                                "account": "RegistryAccount"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "args": []
+        },
+        {
+            "name": "register_agent",
+            "discriminator": [
+                135,
+                157,
+                66,
+                195,
+                2,
+                113,
+                175,
+                30
+            ],
+            "accounts": [
+                {
+                    "name": "operator",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "agent",
+                    "signer": true
+                },
+                {
+                    "name": "registry",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    114,
+                                    101,
+                                    103,
+                                    105,
+                                    115,
+                                    116,
+                                    114,
+                                    121
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "agent"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "system_program",
+                    "address": "11111111111111111111111111111111"
+                }
+            ],
+            "args": [
+                {
+                    "name": "capability_hash",
+                    "type": {
+                        "array": [
+                            "u8",
+                            32
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "submit_attestation",
+            "discriminator": [
+                238,
+                220,
+                255,
+                105,
+                183,
+                211,
+                40,
+                83
+            ],
+            "accounts": [
+                {
+                    "name": "attester",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "registry",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    114,
+                                    101,
+                                    103,
+                                    105,
+                                    115,
+                                    116,
+                                    114,
+                                    121
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "registry.agent",
+                                "account": "RegistryAccount"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "instructions_sysvar",
+                    "address": "Sysvar1nstructions1111111111111111111111111"
+                }
+            ],
+            "args": [
+                {
+                    "name": "score",
+                    "type": "u8"
+                },
+                {
+                    "name": "output_hash",
+                    "type": {
+                        "array": [
+                            "u8",
+                            32
+                        ]
+                    }
+                },
+                {
+                    "name": "agent_signature",
+                    "type": {
+                        "array": [
+                            "u8",
+                            64
+                        ]
+                    }
+                },
+                {
+                    "name": "stake_weight",
+                    "type": "u8"
+                }
+            ]
+        },
+        {
+            "name": "update_declared_stake",
+            "discriminator": [
+                151,
+                56,
+                52,
+                72,
+                6,
+                186,
+                170,
+                37
+            ],
+            "accounts": [
+                {
+                    "name": "operator",
+                    "signer": true
+                },
+                {
+                    "name": "registry",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    114,
+                                    101,
+                                    103,
+                                    105,
+                                    115,
+                                    116,
+                                    114,
+                                    121
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "registry.agent",
+                                "account": "RegistryAccount"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "args": [
+                {
+                    "name": "stake_lamports",
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "verify_agent",
+            "discriminator": [
+                206,
+                212,
+                108,
+                12,
+                105,
+                61,
+                100,
+                66
+            ],
+            "accounts": [
+                {
+                    "name": "caller",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "registry",
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    114,
+                                    101,
+                                    103,
+                                    105,
+                                    115,
+                                    116,
+                                    114,
+                                    121
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "registry.agent",
+                                "account": "RegistryAccount"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "verify_result",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    118,
+                                    101,
+                                    114,
+                                    105,
+                                    102,
+                                    121
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "caller"
+                            },
+                            {
+                                "kind": "account",
+                                "path": "registry.agent",
+                                "account": "RegistryAccount"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "system_program",
+                    "address": "11111111111111111111111111111111"
+                }
+            ],
+            "args": [
+                {
+                    "name": "min_reputation",
+                    "type": "u16"
+                },
+                {
+                    "name": "min_stake_lamports",
+                    "type": "u64"
+                }
+            ],
+            "returns": "bool"
+        },
+        {
+            "name": "write_arweave_cid",
+            "discriminator": [
+                59,
+                30,
+                121,
+                1,
+                24,
+                134,
+                4,
+                189
+            ],
+            "accounts": [
+                {
+                    "name": "authority",
+                    "signer": true
+                },
+                {
+                    "name": "registry",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    114,
+                                    101,
+                                    103,
+                                    105,
+                                    115,
+                                    116,
+                                    114,
+                                    121
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "registry.agent",
+                                "account": "RegistryAccount"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "args": [
+                {
+                    "name": "cid",
+                    "type": "string"
+                }
+            ]
+        }
+    ],
+    "accounts": [
+        {
+            "name": "RegistryAccount",
+            "discriminator": [
+                113,
+                93,
+                106,
+                201,
+                100,
+                166,
+                146,
+                98
+            ]
+        },
+        {
+            "name": "VerifyResult",
+            "discriminator": [
+                230,
+                39,
+                194,
+                17,
+                219,
+                25,
+                39,
+                49
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "AgentRegistered",
+            "discriminator": [
+                191,
+                78,
+                217,
+                54,
+                232,
+                100,
+                189,
+                85
+            ]
+        },
+        {
+            "name": "AgentSlashed",
+            "discriminator": [
+                120,
+                151,
+                39,
+                77,
+                227,
+                13,
+                229,
+                185
+            ]
+        },
+        {
+            "name": "AgentVerified",
+            "discriminator": [
+                56,
+                159,
+                70,
+                162,
+                200,
+                46,
+                208,
+                1
+            ]
+        },
+        {
+            "name": "ArweaveCidUpdated",
+            "discriminator": [
+                234,
+                39,
+                157,
+                110,
+                195,
+                68,
+                219,
+                28
+            ]
+        },
+        {
+            "name": "AttestationSubmitted",
+            "discriminator": [
+                177,
+                213,
+                117,
+                225,
+                166,
+                11,
+                54,
+                218
+            ]
+        }
+    ],
+    "errors": [
+        {
+            "code": 6000,
+            "name": "InvalidScore",
+            "msg": "Score must be between 0 and 100"
+        },
+        {
+            "code": 6001,
+            "name": "InvalidStakeWeight",
+            "msg": "Stake weight must be between 0 and 10"
+        },
+        {
+            "code": 6002,
+            "name": "CidTooLong",
+            "msg": "Arweave CID exceeds maximum length of 64 bytes"
+        },
+        {
+            "code": 6003,
+            "name": "Unauthorized",
+            "msg": "Caller is not authorized to perform this action"
+        },
+        {
+            "code": 6004,
+            "name": "InvalidSignature",
+            "msg": "Ed25519 signature verification failed"
+        },
+        {
+            "code": 6005,
+            "name": "MissingEd25519Instruction",
+            "msg": "Missing Ed25519 instruction in transaction"
+        }
+    ],
+    "types": [
+        {
+            "name": "AgentRegistered",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "agent",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "operator",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "capability_hash",
+                        "type": {
+                            "array": [
+                                "u8",
+                                32
+                            ]
+                        }
+                    },
+                    {
+                        "name": "registered_at",
+                        "type": "i64"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "AgentSlashed",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "agent",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "slash_count",
+                        "type": "u8"
+                    },
+                    {
+                        "name": "new_reputation",
+                        "type": "u16"
+                    },
+                    {
+                        "name": "slashed_at",
+                        "type": "i64"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "AgentVerified",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "agent",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "caller",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "trusted",
+                        "type": "bool"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "ArweaveCidUpdated",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "agent",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "cid",
+                        "type": "string"
+                    },
+                    {
+                        "name": "updated_at",
+                        "type": "i64"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "AttestationSubmitted",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "agent",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "score",
+                        "type": "u8"
+                    },
+                    {
+                        "name": "output_hash",
+                        "type": {
+                            "array": [
+                                "u8",
+                                32
+                            ]
+                        }
+                    },
+                    {
+                        "name": "new_reputation",
+                        "type": "u16"
+                    },
+                    {
+                        "name": "attested_at",
+                        "type": "i64"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "RegistryAccount",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "operator",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "agent",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "capability_hash",
+                        "type": {
+                            "array": [
+                                "u8",
+                                32
+                            ]
+                        }
+                    },
+                    {
+                        "name": "reputation_score",
+                        "type": "u16"
+                    },
+                    {
+                        "name": "slash_count",
+                        "type": "u8"
+                    },
+                    {
+                        "name": "arweave_cid",
+                        "type": "string"
+                    },
+                    {
+                        "name": "declared_stake",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "registered_at",
+                        "type": "i64"
+                    },
+                    {
+                        "name": "last_attested_at",
+                        "type": "i64"
+                    },
+                    {
+                        "name": "bump",
+                        "type": "u8"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "VerifyResult",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "agent",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "trusted",
+                        "type": "bool"
+                    },
+                    {
+                        "name": "checked_at",
+                        "type": "i64"
+                    },
+                    {
+                        "name": "bump",
+                        "type": "u8"
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -1,62 +1,73 @@
-import { Injectable } from '@nestjs/common';
-import { ReceiptEntity } from './receipt.entity';
-import { CreateReceiptDto } from './dto/create-receipt.dto';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ReceiptEntity } from './receipt.entity';
+import { CreateReceiptDto } from './dto/create-receipt.dto';
 
 @Injectable()
 export class ReceiptService {
+  private readonly logger = new Logger(ReceiptService.name);
+
   constructor(
     @InjectRepository(ReceiptEntity)
     private readonly receiptRepository: Repository<ReceiptEntity>,
-  ) {}
+  ) { }
 
   async create(dto: CreateReceiptDto): Promise<ReceiptEntity> {
-    const receipt = new ReceiptEntity(
-      dto.agentId,
-      dto.taskId,
-      dto.outputHash,
-      dto.timestamp,
-    );
-    receipt.id = this.idCounter++;
-
-    this.receipts.set(dto.taskId, receipt);
-
-    if (!this.receiptsByAgent.has(dto.agentId)) {
-      this.receiptsByAgent.set(dto.agentId, []);
-    }
-    this.receiptsByAgent.get(dto.agentId).push(dto.taskId);
-
-    return receipt;
+    const receipt = this.receiptRepository.create({
+      agentId: dto.agentId,
+      taskId: dto.taskId,
+      outputHash: dto.outputHash,
+      timestamp: dto.timestamp,
+      attested: false,
+    });
+    return this.receiptRepository.save(receipt);
   }
 
   async findByTaskId(taskId: string): Promise<ReceiptEntity | null> {
-    return this.receipts.get(taskId) || null;
+    return this.receiptRepository.findOne({ where: { taskId } });
   }
 
   async findByAgentId(agentId: string): Promise<ReceiptEntity[]> {
-    const taskIds = this.receiptsByAgent.get(agentId) || [];
-    return taskIds
-      .map((taskId) => this.receipts.get(taskId))
-      .filter((receipt): receipt is ReceiptEntity => receipt !== undefined);
+    return this.receiptRepository.find({
+      where: { agentId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async updateCid(taskId: string, cid: string): Promise<ReceiptEntity | null> {
-    const receipt = this.receipts.get(taskId);
-    if (!receipt) {
-      return null;
-    }
-
+    const receipt = await this.findByTaskId(taskId);
+    if (!receipt) return null;
     receipt.cid = cid;
-    receipt.updateTimestamp();
-    return receipt;
+    return this.receiptRepository.save(receipt);
+  }
+
+  // Called by AttestationService after successfully submitting on-chain
+  async markAttested(
+    taskId: string,
+    attestationTx: string,
+    score: number,
+  ): Promise<ReceiptEntity | null> {
+    const receipt = await this.findByTaskId(taskId);
+    if (!receipt) return null;
+    receipt.attested = true;
+    receipt.attestationTx = attestationTx;
+    receipt.attestationScore = score;
+    return this.receiptRepository.save(receipt);
+  }
+
+  // Find receipts that have been uploaded (have a CID) but not yet attested on-chain
+  async findPendingAttestation(): Promise<ReceiptEntity[]> {
+    return this.receiptRepository.find({
+      where: { attested: false },
+      order: { createdAt: 'ASC' },
+      take: 10, // process in batches
+    });
   }
 
   async verifyCid(taskId: string, expectedHash: string): Promise<boolean> {
     const receipt = await this.findByTaskId(taskId);
-    if (!receipt) {
-      return false;
-    }
+    if (!receipt) return false;
     return receipt.outputHash === expectedHash;
   }
 }

@@ -3,4 +3,5 @@ export interface CreateReceiptDto {
   taskId: string;
   outputHash: string;
   timestamp: number;
+  agentSignature: string;
 }

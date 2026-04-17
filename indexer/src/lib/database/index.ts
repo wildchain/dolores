@@ -3,6 +3,7 @@ import { ColumnType, DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import { ENTITIES } from '@dolores/lib/database/entities';
 import { ConfigService } from '@nestjs/config';
+import { EnvironmentVariables } from '@dolores/config/environment.variables';
 
 config({
   path: `.env.${process.env.NODE_ENV || 'development'}`,
@@ -31,27 +32,25 @@ export const CustomDataSource = (options: DataSourceOptions): DataSource => {
 
 export const DATABASE_CONFIG: TypeOrmModuleAsyncOptions = {
   useFactory: (configService: ConfigService<EnvironmentVariables>) => {
-    console.log(
-      process.env.APPLICATION_ENV === 'production'
-        ? 'mmw_ai_production'
-        : 'mmw_ai_staging',
-    );
     return {
       type: 'postgres',
       host: configService.get('DATABASE_HOST'),
       username: configService.get('DATABASE_USER'),
       password: configService.get('DATABASE_PASSWORD'),
-      synchronize: false,
+      synchronize: true,
       migrations: [],
       database: configService.get('DATABASE_NAME'),
       entities: ENTITIES,
-      schema: 'mmw_ai',
+      schema: configService.get('DATABASE_SCHEMA'),
       port: 5432,
-      ssl: process.env.APPLICATION_ENV !== 'development',
+      ssl: process.env.APPLICATION_ENV !== 'development'
+        ? { rejectUnauthorized: false }
+        : false,
     };
   },
   inject: [ConfigService],
   dataSourceFactory: async (options) => {
+    if (!options) throw new Error('DataSourceOptions not provided');
     return CustomDataSource(options);
   },
 };
