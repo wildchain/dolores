@@ -82,6 +82,8 @@ async function submitReceiptToIndexer(
         taskId: string;
         outputHash: string;
         timestamp: number;
+        agentSignature: string;
+
     }
 ) {
     const res = await fetch(`${indexerUrl}/receipts/upload`, {
