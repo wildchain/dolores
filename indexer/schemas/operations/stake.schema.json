@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/operations/stake/v1.0.0",
+  "title": "Stake Operation Details",
+  "description": "Token staking operation",
+  "type": "object",
+  "required": [
+    "staking_program",
+    "stake_pool_address",
+    "token_mint",
+    "stake_amount",
+    "stake_account",
+    "lock_period_seconds"
+  ],
+  "properties": {
+    "staking_program": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Staking program ID (native stake, liquid staking, etc.)"
+    },
+    "stake_pool_address": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "token_mint": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "stake_amount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "stake_account": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Stake account address created/updated"
+    },
+    "lock_period_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Lock period in seconds (0 = no lock)"
+    },
+    "unlock_timestamp": {
+      "type": "integer",
+      "minimum": 1577836800,
+      "description": "Unix timestamp when tokens can be unstaked"
+    },
+    "validator_address": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Validator address (if applicable)"
+    },
+    "expected_apy": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Expected APY percentage"
+    }
+  }
+}

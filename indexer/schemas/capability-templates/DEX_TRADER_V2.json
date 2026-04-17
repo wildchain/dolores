@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/capability-templates/DEX_TRADER_V2/v1.0.0",
+  "title": "DEX_TRADER_V2 - Composable Operations",
+  "description": "Trading agent with swap and limit order capabilities",
+  "type": "object",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "const": "DEX_TRADER_V2"
+    },
+    "version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "description": {
+      "type": "string",
+      "const": "DEX trading agent - swaps and limit orders on whitelisted protocols"
+    },
+    "allowed_operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["operation_type", "schema_ref"],
+        "properties": {
+          "operation_type": {
+            "type": "string"
+          },
+          "schema_ref": {
+            "type": "string",
+            "description": "Reference to operation schema"
+          },
+          "constraints": {
+            "type": "object",
+            "description": "Operation-specific constraints"
+          }
+        }
+      },
+      "contains": [
+        {
+          "properties": {
+            "operation_type": { "const": "swap" }
+          }
+        },
+        {
+          "properties": {
+            "operation_type": { "const": "limit_order" }
+          }
+        }
+      ],
+      "minItems": 2
+    },
+    "allowed_programs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "contains": {
+        "enum": [
+          "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+          "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+          "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+        ]
+      },
+      "description": "Jupiter, Orca, Raydium programs"
+    },
+    "oracle_source": {
+      "type": "string",
+      "enum": ["pyth_mainnet", "switchboard_v2"],
+      "description": "Protocol-approved oracle for price verification"
+    },
+    "global_constraints": {
+      "type": "object",
+      "description": "Constraints that apply across all operations",
+      "properties": {
+        "max_single_transaction_usdc": {
+          "type": "integer",
+          "default": 50000000000,
+          "description": "Max value per transaction (USDC micro-units)"
+        },
+        "require_deadline": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "verification_rules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Rule sets that apply to this template"
+    }
+  },
+  "example": {
+    "template_id": "DEX_TRADER_V2",
+    "version": "1.0.0",
+    "description": "DEX trading agent - swaps and limit orders on whitelisted protocols",
+    "allowed_operations": [
+      {
+        "operation_type": "swap",
+        "schema_ref": "operations/swap.schema.json",
+        "constraints": {
+          "max_slippage_percent": 2.0,
+          "max_route_hops": 3,
+          "max_price_impact_percent": 1.0
+        }
+      },
+      {
+        "operation_type": "limit_order",
+        "schema_ref": "operations/limit_order.schema.json",
+        "constraints": {
+          "max_order_spread_percent": 5.0,
+          "max_order_duration_seconds": 2592000
+        }
+      }
+    ],
+    "allowed_programs": [
+      "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+      "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+      "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+      "PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY"
+    ],
+    "oracle_source": "pyth_mainnet",
+    "global_constraints": {
+      "max_single_transaction_usdc": 50000000000,
+      "require_deadline": true
+    },
+    "verification_rules": [
+      "deadline_check",
+      "program_whitelist_check",
+      "swap_slippage_check",
+      "swap_transfer_limit_check",
+      "limit_order_price_bounds_check",
+      "limit_order_size_limit_check"
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/operations/transfer/v1.0.0",
+  "title": "Transfer Operation Details",
+  "description": "Token transfer operation",
+  "type": "object",
+  "required": ["token_mint", "amount", "recipient", "sender"],
+  "properties": {
+    "token_mint": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "amount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sender": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Sender wallet address"
+    },
+    "recipient": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Recipient wallet address"
+    },
+    "memo": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Optional transfer memo"
+    },
+    "is_ata_creation": {
+      "type": "boolean",
+      "description": "Whether this transfer created a new ATA for recipient"
+    }
+  }
+}

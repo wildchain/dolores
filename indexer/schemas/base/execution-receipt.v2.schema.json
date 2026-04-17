@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/execution-receipt/v2.0.0",
+  "title": "ExecutionReceipt v2 - Modular",
+  "description": "Base execution receipt with operation_type discriminator for composable operation schemas",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "task_id",
+    "agent_id",
+    "operator",
+    "assigned_by",
+    "timestamp_unix",
+    "operation_type",
+    "execution",
+    "result"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^2\\.\\d+$",
+      "description": "Schema version (v2.x for modular architecture)",
+      "examples": ["2.0"]
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 255,
+      "description": "Unique identifier for this task execution"
+    },
+    "agent_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 255,
+      "description": "Solana public key (base58) of the registered agent"
+    },
+    "operator": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 255,
+      "description": "Solana public key (base58) of the agent operator"
+    },
+    "assigned_by": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 255,
+      "description": "Solana public key (base58) of the trader/protocol that assigned this task"
+    },
+    "timestamp_unix": {
+      "type": "integer",
+      "minimum": 1577836800,
+      "description": "Unix timestamp (seconds) when task was completed"
+    },
+    "operation_type": {
+      "type": "string",
+      "enum": [
+        "swap",
+        "limit_order",
+        "add_liquidity",
+        "remove_liquidity",
+        "stake",
+        "unstake",
+        "borrow",
+        "repay",
+        "supply",
+        "withdraw",
+        "transfer",
+        "flash_loan",
+        "arbitrage",
+        "open_long",
+        "open_short",
+        "close_position",
+        "liquidate",
+        "claim_rewards"
+      ],
+      "description": "Type of operation - determines which operation_details schema to validate against"
+    },
+    "execution": {
+      "$ref": "#/definitions/ExecutionDetails"
+    },
+    "result": {
+      "$ref": "#/definitions/ExecutionResult"
+    },
+    "operation_details": {
+      "type": "object",
+      "description": "Operation-specific details - validated against schemas/operations/{operation_type}.schema.json"
+    }
+  },
+  "definitions": {
+    "ExecutionDetails": {
+      "type": "object",
+      "required": [
+        "tx_signatures",
+        "programs_called",
+        "instructions_executed",
+        "token_transfers"
+      ],
+      "properties": {
+        "tx_signatures": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 128
+          },
+          "minItems": 1
+        },
+        "programs_called": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 64
+          }
+        },
+        "instructions_executed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "token_transfers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TokenTransfer"
+          }
+        }
+      }
+    },
+    "TokenTransfer": {
+      "type": "object",
+      "required": ["mint", "amount", "direction"],
+      "properties": {
+        "mint": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 64
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["in", "out"]
+        }
+      }
+    },
+    "ExecutionResult": {
+      "type": "object",
+      "required": ["status", "summary"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["success", "failed"]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    }
+  }
+}

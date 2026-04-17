@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/operations/limit_order/v1.0.0",
+  "title": "Limit Order Operation Details",
+  "description": "Limit order placement operation",
+  "type": "object",
+  "required": [
+    "order_book_program",
+    "order_book_address",
+    "base_token",
+    "quote_token",
+    "side",
+    "limit_price",
+    "size",
+    "expiry_timestamp",
+    "order_id"
+  ],
+  "properties": {
+    "order_book_program": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Order book program ID (e.g., OpenBook, Phoenix)"
+    },
+    "order_book_address": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Specific order book market address"
+    },
+    "base_token": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "quote_token": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "side": {
+      "type": "string",
+      "enum": ["buy", "sell"]
+    },
+    "limit_price": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMinimum": true,
+      "description": "Price in quote token per base token"
+    },
+    "size": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Order size in base token smallest units"
+    },
+    "expiry_timestamp": {
+      "type": "integer",
+      "minimum": 1577836800,
+      "description": "Unix timestamp when order expires"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Unique order ID from order book"
+    },
+    "fee_tier": {
+      "type": "string",
+      "enum": ["maker", "taker"],
+      "description": "Fee tier applied"
+    },
+    "post_only": {
+      "type": "boolean",
+      "description": "Whether order is post-only (maker only)"
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/capability-templates/DEFI_FULL_V1/v1.0.0",
+  "title": "DEFI_FULL_V1 - Full DeFi Agent",
+  "description": "Comprehensive DeFi agent with trading, lending, liquidity, and staking capabilities",
+  "example": {
+    "template_id": "DEFI_FULL_V1",
+    "version": "1.0.0",
+    "description": "Full-spectrum DeFi agent - trading, lending, LP, staking",
+    "allowed_operations": [
+      {
+        "operation_type": "swap",
+        "schema_ref": "operations/swap.schema.json",
+        "constraints": {
+          "max_slippage_percent": 1.5,
+          "max_route_hops": 3,
+          "max_price_impact_percent": 0.75
+        }
+      },
+      {
+        "operation_type": "add_liquidity",
+        "schema_ref": "operations/add_liquidity.schema.json",
+        "constraints": {
+          "max_deposit_usdc": 100000000000,
+          "max_price_impact_percent": 0.5
+        }
+      },
+      {
+        "operation_type": "remove_liquidity",
+        "schema_ref": "operations/remove_liquidity.schema.json",
+        "constraints": {
+          "max_slippage_percent": 1.0
+        }
+      },
+      {
+        "operation_type": "borrow",
+        "schema_ref": "operations/borrow.schema.json",
+        "constraints": {
+          "max_borrow_amount_usdc": 50000000000,
+          "min_collateral_ratio_percent": 150,
+          "max_interest_rate_percent": 20
+        }
+      },
+      {
+        "operation_type": "supply",
+        "schema_ref": "operations/supply.schema.json",
+        "constraints": {
+          "max_supply_amount_usdc": 100000000000
+        }
+      },
+      {
+        "operation_type": "stake",
+        "schema_ref": "operations/stake.schema.json",
+        "constraints": {
+          "max_stake_amount_usdc": 50000000000,
+          "max_lock_period_seconds": 31536000
+        }
+      },
+      {
+        "operation_type": "transfer",
+        "schema_ref": "operations/transfer.schema.json",
+        "constraints": {
+          "max_transfer_amount_usdc": 10000000000,
+          "recipient_whitelist_enabled": true
+        }
+      }
+    ],
+    "allowed_programs": [
+      "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+      "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+      "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+      "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo",
+      "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+      "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS"
+    ],
+    "oracle_source": "pyth_mainnet",
+    "global_constraints": {
+      "max_single_transaction_usdc": 100000000000,
+      "require_deadline": true,
+      "max_total_exposure_usdc": 500000000000
+    },
+    "verification_rules": [
+      "deadline_check",
+      "program_whitelist_check",
+      "swap_slippage_check",
+      "borrow_collateral_ratio_check",
+      "stake_amount_limit_check",
+      "transfer_recipient_whitelist_check",
+      "total_exposure_check"
+    ]
+  }
+}

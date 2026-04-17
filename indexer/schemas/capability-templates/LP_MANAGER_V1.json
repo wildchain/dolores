@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/capability-templates/LP_MANAGER_V1/v1.0.0",
+  "title": "LP_MANAGER_V1 - Liquidity Management",
+  "description": "Agent authorized for liquidity provision and removal on AMMs",
+  "example": {
+    "template_id": "LP_MANAGER_V1",
+    "version": "1.0.0",
+    "description": "Liquidity pool manager - add/remove liquidity on whitelisted AMMs",
+    "allowed_operations": [
+      {
+        "operation_type": "add_liquidity",
+        "schema_ref": "operations/add_liquidity.schema.json",
+        "constraints": {
+          "max_deposit_usdc": 100000000000,
+          "max_price_impact_percent": 0.5,
+          "max_ratio_delta_percent": 1.0
+        }
+      },
+      {
+        "operation_type": "remove_liquidity",
+        "schema_ref": "operations/remove_liquidity.schema.json",
+        "constraints": {
+          "min_withdrawal_usdc": 100000,
+          "max_slippage_percent": 1.0
+        }
+      },
+      {
+        "operation_type": "claim_rewards",
+        "schema_ref": "operations/claim_rewards.schema.json",
+        "constraints": {}
+      }
+    ],
+    "allowed_programs": [
+      "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+      "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+      "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"
+    ],
+    "oracle_source": "pyth_mainnet",
+    "global_constraints": {
+      "max_single_transaction_usdc": 100000000000,
+      "require_deadline": true,
+      "min_pool_liquidity_usdc": 100000000000
+    },
+    "verification_rules": [
+      "deadline_check",
+      "program_whitelist_check",
+      "add_liquidity_pool_program_check",
+      "add_liquidity_token_ratio_check",
+      "add_liquidity_min_lp_tokens_check",
+      "remove_liquidity_lp_amount_check",
+      "remove_liquidity_min_outputs_check"
+    ]
+  }
+}

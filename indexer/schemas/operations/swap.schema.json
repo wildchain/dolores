@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/operations/swap/v1.0.0",
+  "title": "Swap Operation Details",
+  "description": "DEX swap operation details - used in operation_details field when operation_type='swap'",
+  "type": "object",
+  "required": [
+    "dex_protocol",
+    "input_token",
+    "output_token",
+    "input_amount",
+    "output_amount",
+    "expected_output",
+    "slippage_tolerance",
+    "actual_slippage"
+  ],
+  "properties": {
+    "dex_protocol": {
+      "type": "string",
+      "enum": ["jupiter", "orca", "raydium", "meteora", "phoenix"],
+      "description": "DEX protocol used"
+    },
+    "input_token": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Input token mint address"
+    },
+    "output_token": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "Output token mint address"
+    },
+    "input_amount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "output_amount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expected_output": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "slippage_tolerance": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "actual_slippage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "price_impact": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "route_hops": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "default": 1
+    },
+    "intermediate_tokens": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "effective_price": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMinimum": true
+    }
+  }
+}

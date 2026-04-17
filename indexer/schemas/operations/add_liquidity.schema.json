@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clu-protocol.com/schemas/operations/add_liquidity/v1.0.0",
+  "title": "Add Liquidity Operation Details",
+  "description": "AMM liquidity provision operation",
+  "type": "object",
+  "required": [
+    "pool_program",
+    "pool_address",
+    "token_a_mint",
+    "token_b_mint",
+    "token_a_amount",
+    "token_b_amount",
+    "lp_token_mint",
+    "lp_tokens_received",
+    "min_lp_tokens"
+  ],
+  "properties": {
+    "pool_program": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64,
+      "description": "AMM program ID (Orca, Raydium, etc.)"
+    },
+    "pool_address": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "token_a_mint": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "token_b_mint": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "token_a_amount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "token_b_amount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "lp_token_mint": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 64
+    },
+    "lp_tokens_received": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "min_lp_tokens": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Minimum LP tokens acceptable (slippage protection)"
+    },
+    "pool_token_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMinimum": true,
+      "description": "Token A / Token B ratio in pool before deposit"
+    },
+    "price_impact": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Price impact percentage from deposit"
+    }
+  }
+}
