@@ -1,5 +1,4 @@
 import {
-  Inject,
   Controller,
   Post,
   Get,
@@ -7,35 +6,41 @@ import {
   Param,
   HttpException,
   HttpStatus,
-  forwardRef
 } from '@nestjs/common';
 import { ReceiptService } from './receipt.service';
 import { AttestationService } from '@dolores/attestation/attestation.service';
 import type { CreateReceiptDto } from './dto/create-receipt.dto';
 import { ReceiptEntity } from './receipt.entity';
-import * as nacl from "tweetnacl";
-import { PublicKey } from "@solana/web3.js";
+import * as nacl from 'tweetnacl';
+import { PublicKey } from '@solana/web3.js';
 
 export interface UploadReceiptResponse {
   cid: string;
   taskId: string;
   agentId: string;
-  attestationTx: string | null;
+  submissionTx: string | null;
+  pendingAttestationPda: string | null;
 }
 
 @Controller('receipts')
 export class ReceiptController {
   constructor(
     private readonly receiptService: ReceiptService,
-    @Inject(forwardRef(() => AttestationService))
     private readonly attestationService: AttestationService,
-  ) { }
-
+  ) {}
 
   @Post('upload')
-  async uploadReceipt(@Body() dto: CreateReceiptDto): Promise<UploadReceiptResponse> {
-    const outputHashBytes = Buffer.from(dto.outputHash, "hex");
-    const signatureBytes = Buffer.from(dto.agentSignature, "hex");
+  async uploadReceipt(
+    @Body() dto: CreateReceiptDto,
+  ): Promise<UploadReceiptResponse> {
+    const outputHashBytes = Buffer.from(
+      dto.outputHash.replace(/^0x/, ''),
+      'hex',
+    );
+    const signatureBytes = Buffer.from(
+      dto.agentSignature.replace(/^0x/, ''),
+      'hex',
+    );
     const agentPubkeyBytes = new PublicKey(dto.agentId).toBytes();
 
     const valid = nacl.sign.detached.verify(
@@ -46,7 +51,7 @@ export class ReceiptController {
 
     if (!valid) {
       throw new HttpException(
-        "Invalid agent signature — receipt rejected",
+        'Invalid agent signature — receipt rejected',
         HttpStatus.UNAUTHORIZED,
       );
     }
@@ -57,14 +62,26 @@ export class ReceiptController {
     await this.receiptService.updateCid(receipt.taskId, cid);
     receipt.cid = cid;
 
-    const attestationTx = await this.attestationService.submitAttestation(receipt);
+    const submission =
+      await this.attestationService.submitPendingAttestation(receipt);
 
-    // Controller owns the markAttested call — no circular dependency
-    if (attestationTx) {
-      await this.receiptService.markAttested(receipt.taskId, attestationTx, 85);
+    if (submission.signature && submission.pendingAttestationPda) {
+      await this.receiptService.markPendingReview(
+        receipt.taskId,
+        submission.pendingAttestationPda,
+        submission.signature,
+      );
+    } else {
+      await this.receiptService.markSubmissionFailed(receipt.taskId);
     }
 
-    return { cid, taskId: receipt.taskId, agentId: receipt.agentId, attestationTx };
+    return {
+      cid,
+      taskId: receipt.taskId,
+      agentId: receipt.agentId,
+      submissionTx: submission.signature,
+      pendingAttestationPda: submission.pendingAttestationPda,
+    };
   }
 
   @Get(':taskId')
@@ -93,13 +110,40 @@ export class ReceiptController {
     return receipts;
   }
 
-  // Manually trigger processing of any receipts that missed attestation
-
   @Post('attest/retry')
   async retryPendingAttestations(): Promise<{ message: string }> {
-    const pending = await this.receiptService.findPendingAttestation();
-    await this.attestationService.processPendingAttestations(pending);
-    return { message: `Processed ${pending.length} pending attestations` };
+    const pending = await this.receiptService.findPendingSubmission();
+    await this.attestationService.processPendingSubmissions(pending);
+    return { message: `Processed ${pending.length} pending submissions` };
+  }
+
+  @Post(':taskId/approve')
+  async approveReceipt(
+    @Param('taskId') taskId: string,
+  ): Promise<{ approvalTx: string }> {
+    const receipt = await this.receiptService.findByTaskId(taskId);
+    if (!receipt) {
+      throw new HttpException(
+        `Receipt not found for taskId: ${taskId}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const approvalTx =
+      await this.attestationService.approveAttestation(receipt);
+    if (!approvalTx) {
+      throw new HttpException(
+        `Failed to approve pending attestation for taskId: ${taskId}`,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+
+    await this.receiptService.markApproved(
+      taskId,
+      approvalTx,
+      this.attestationService.getReviewerPublicKey(),
+    );
+
+    return { approvalTx };
   }
 }
-

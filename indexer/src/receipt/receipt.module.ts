@@ -1,17 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReceiptController } from './receipt.controller';
 import { ReceiptService } from './receipt.service';
-import { ReceiptEntity } from './receipt.entity';
 import { AttestationModule } from '../attestation/attestation.module';
+import { RocksDBService } from '@dolores/lib/database';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([ReceiptEntity]),
-    AttestationModule,
-  ],
+  imports: [AttestationModule],
   controllers: [ReceiptController],
   providers: [ReceiptService],
   exports: [ReceiptService],
 })
-export class ReceiptModule { }
+export class ReceiptModule {}

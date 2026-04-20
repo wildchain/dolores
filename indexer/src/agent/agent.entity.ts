@@ -1,5 +1,7 @@
-import { BaseEntity } from '@dolores/lib/database/base.entity';
-import { Entity } from 'typeorm';
+import { BaseRocksDBEntity } from '@dolores/lib/database/base-rocksdb.entity';
 
-@Entity('agents')
-export class AgentEntity extends BaseEntity {}
+export interface AgentEntity extends BaseRocksDBEntity {
+  id: string; // Agent public key
+  // On-chain data is fetched directly from Solana via AgentController
+  // This entity is here for potential future off-chain caching
+}

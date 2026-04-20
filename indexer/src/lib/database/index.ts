@@ -1,58 +1,10 @@
-import { TypeOrmModuleAsyncOptions } from '@nestjs/typeorm';
-import { ColumnType, DataSource, DataSourceOptions } from 'typeorm';
-import { config } from 'dotenv';
-import { ENTITIES } from '@dolores/lib/database/entities';
-import { ConfigService } from '@nestjs/config';
-import { EnvironmentVariables } from '@dolores/config/environment.variables';
-
-config({
-  path: `.env.${process.env.NODE_ENV || 'development'}`,
-});
-
-export const DATASOURCE_OPTIONS: DataSourceOptions = {
-  type: 'postgres',
-  host: process.env.DATABASE_HOST,
-  password: process.env.DATABASE_PASSWORD,
-  port: 5432,
-  database: process.env.DATABASE_NAME,
-  username: process.env.DATABASE_USER,
-  entities: ENTITIES as any,
-  schema: process.env.DATABASE_SCHEMA,
-  migrations: [],
-  ssl: process.env.APPLICATION_ENV !== 'development',
-  synchronize: false,
-};
-
-export const CustomDataSource = (options: DataSourceOptions): DataSource => {
-  const dataSource = new DataSource(options);
-  dataSource.driver.supportedDataTypes.push('vector' as ColumnType);
-  dataSource.driver.withLengthColumnTypes.push('vector' as ColumnType);
-  return dataSource;
-};
-
-export const DATABASE_CONFIG: TypeOrmModuleAsyncOptions = {
-  useFactory: (configService: ConfigService<EnvironmentVariables>) => {
-    return {
-      type: 'postgres',
-      host: configService.get('DATABASE_HOST'),
-      username: configService.get('DATABASE_USER'),
-      password: configService.get('DATABASE_PASSWORD'),
-      synchronize: true,
-      migrations: [],
-      database: configService.get('DATABASE_NAME'),
-      entities: ENTITIES,
-      schema: configService.get('DATABASE_SCHEMA'),
-      port: 5432,
-      ssl: process.env.APPLICATION_ENV !== 'development'
-        ? { rejectUnauthorized: false }
-        : false,
-    };
-  },
-  inject: [ConfigService],
-  dataSourceFactory: async (options) => {
-    if (!options) throw new Error('DataSourceOptions not provided');
-    return CustomDataSource(options);
-  },
-};
-
-export default CustomDataSource(DATASOURCE_OPTIONS);
+// RocksDB exports
+export { RocksDBService } from './rocksdb.service';
+export { DatabaseModule } from './database.module';
+export type { BaseRocksDBEntity } from './base-rocksdb.entity';
+export {
+  createEntity,
+  updateEntity,
+  compositeKey,
+  parseCompositeKey,
+} from './base-rocksdb.entity';

@@ -1,32 +1,49 @@
-import { Column, Entity } from 'typeorm';
-import { BaseEntity } from '../lib/database/base.entity';
+import { BaseRocksDBEntity } from '../lib/database/base-rocksdb.entity';
 
-@Entity('receipts')
-export class ReceiptEntity extends BaseEntity {
-  @Column({ name: 'agent_id' })
+export enum ReceiptStatus {
+  Received = 'received',
+  PendingReview = 'pending_review',
+  Approved = 'approved',
+  Slashed = 'slashed',
+  SubmissionFailed = 'submission_failed',
+}
+
+export interface ReceiptEntity extends BaseRocksDBEntity {
+  id: string; // taskId is the primary key
   agentId: string;
-
-  @Column({ name: 'task_id', unique: true })
   taskId: string;
-
-  @Column({ name: 'output_hash' })
   outputHash: string;
-
-  @Column({ type: 'bigint' })
   timestamp: number;
-
-  @Column({ nullable: true, name: 'cid' })
   cid?: string;
+  status: ReceiptStatus;
+  pendingAttestationPda?: string;
+  submissionTx?: string;
+  approvalTx?: string;
+  challengeTx?: string;
+  reviewerId?: string;
+  verificationOutcome?: Record<string, unknown>;
+  // Inherited from BaseRocksDBEntity:
+  // createdAt: number;
+  // updatedAt: number;
+}
 
-  // Whether submit_attestation has been sent on-chain for this receipt
-  @Column({ name: 'attested', default: false })
-  attested: boolean;
+// Key prefixes for RocksDB
+export const RECEIPT_PREFIX = 'receipt';
+export const RECEIPT_BY_AGENT_PREFIX = 'receipt:agent';
+export const RECEIPT_BY_STATUS_PREFIX = 'receipt:status';
 
-  // The on-chain tx signature from submit_attestation
-  @Column({ name: 'attestation_tx', nullable: true })
-  attestationTx?: string;
+// Helper to generate RocksDB keys
+export function getReceiptKey(taskId: string): string {
+  return `${RECEIPT_PREFIX}:${taskId}`;
+}
 
-  // Score that was submitted on-chain (0–100)
-  @Column({ name: 'attestation_score', nullable: true })
-  attestationScore?: number;
+export function getReceiptByAgentKey(agentId: string, taskId: string): string {
+  return `${RECEIPT_BY_AGENT_PREFIX}:${agentId}:${taskId}`;
+}
+
+export function getReceiptByStatusKey(
+  status: ReceiptStatus,
+  taskId: string,
+): string {
+  return `${RECEIPT_BY_STATUS_PREFIX}:${status}:${taskId}`;
 }
