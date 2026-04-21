@@ -6,6 +6,7 @@ import { AgentModule } from '@dolores/agent/agent.module';
 import { VerificationModule } from './verification/verification.module';
 import { ChallengeModule } from './challenge/challenge.module';
 import { ReviewWorkerModule } from './worker/review-worker.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ReviewWorkerModule } from './worker/review-worker.module';
     VerificationModule,
     ChallengeModule,
     ReviewWorkerModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

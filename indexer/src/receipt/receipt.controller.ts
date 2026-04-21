@@ -109,41 +109,4 @@ export class ReceiptController {
     }
     return receipts;
   }
-
-  @Post('attest/retry')
-  async retryPendingAttestations(): Promise<{ message: string }> {
-    const pending = await this.receiptService.findPendingSubmission();
-    await this.attestationService.processPendingSubmissions(pending);
-    return { message: `Processed ${pending.length} pending submissions` };
-  }
-
-  @Post(':taskId/approve')
-  async approveReceipt(
-    @Param('taskId') taskId: string,
-  ): Promise<{ approvalTx: string }> {
-    const receipt = await this.receiptService.findByTaskId(taskId);
-    if (!receipt) {
-      throw new HttpException(
-        `Receipt not found for taskId: ${taskId}`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    const approvalTx =
-      await this.attestationService.approveAttestation(receipt);
-    if (!approvalTx) {
-      throw new HttpException(
-        `Failed to approve pending attestation for taskId: ${taskId}`,
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
-
-    await this.receiptService.markApproved(
-      taskId,
-      approvalTx,
-      this.attestationService.getReviewerPublicKey(),
-    );
-
-    return { approvalTx };
-  }
 }
