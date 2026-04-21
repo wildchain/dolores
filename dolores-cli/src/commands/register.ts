@@ -3,11 +3,9 @@ import * as os from "os";
 import * as path from "path";
 import * as readline from "readline";
 import { Keypair, Connection, PublicKey } from "@solana/web3.js";
-import * as anchor from "@coral-xyz/anchor";
-
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
-import idlJson from "../idl/dolores_registry.json";
-// import idlJson from "../../../dolores-programs/target/idl/dolores_registry.json";
+import idlRegistry from "../idl/dolores_registry.json";
+import idlFund from "../idl/dolores_fund.json";
 import {
     hashManifest,
     templateChoices,
@@ -15,12 +13,17 @@ import {
     CAPABILITY_TEMPLATES,
 } from "../templates";
 
-// Constants
+
 
 const REGISTRY_SEED = Buffer.from("registry");
+const FUND_SEED = Buffer.from("fund");
+const VAULT_SEED = Buffer.from("vault");
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
 
-// Helpers 
+const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
+const FUND_PROGRAM_ID = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
+
+
 
 function ensureDoloresDir() {
     if (!fs.existsSync(DOLORES_DIR)) {
@@ -41,16 +44,6 @@ function loadKeypairFromFile(filePath: string): Keypair {
     return Keypair.fromSecretKey(Uint8Array.from(raw));
 }
 
-function deriveRegistryPda(
-    agentPubkey: PublicKey,
-    programId: PublicKey
-): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-        [REGISTRY_SEED, agentPubkey.toBuffer()],
-        programId
-    );
-}
-
 function prompt(question: string): Promise<string> {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -64,7 +57,8 @@ function prompt(question: string): Promise<string> {
     });
 }
 
-//  Main register command 
+
+
 export async function registerCommand(opts: {
     operatorKeyPath: string;
     programId: string;
@@ -76,11 +70,11 @@ export async function registerCommand(opts: {
     const operatorKeypair = loadKeypairFromFile(opts.operatorKeyPath);
     console.log(`Operator wallet : ${operatorKeypair.publicKey.toBase58()}`);
 
-    // 2. Generate agent keypair — developer doesn't need one upfront
+    // 2. Generate agent keypair
     const agentKeypair = Keypair.generate();
     console.log(`Agent keypair   : ${agentKeypair.publicKey.toBase58()} (new)\n`);
 
-    // 3. Pick capability template sourced from solana.com/skills
+    // 3. Pick capability template
     console.log("Available capability templates (sourced from solana.com/skills):\n");
     console.log(templateChoices());
     console.log();
@@ -112,12 +106,11 @@ export async function registerCommand(opts: {
         process.exit(0);
     }
 
-    // 5. Save agent keypair to ~/.dolores/agents/<pubkey>.json
+    // 5. Save keypair and manifest
     const savedPath = saveKeypair(agentKeypair);
     console.log(`\nAgent keypair saved → ${savedPath}`);
     console.log("Keep this file safe — it's the agent's signing identity.\n");
 
-    // 6. Save manifest alongside keypair for the watcher to reference
     const manifestPath = path.join(
         DOLORES_DIR,
         `${agentKeypair.publicKey.toBase58()}.manifest.json`
@@ -125,21 +118,38 @@ export async function registerCommand(opts: {
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     console.log(`Manifest saved  → ${manifestPath}\n`);
 
-    // 7. Build and send transaction — operator and agent both sign
+    // 6. Setup provider
     const connection = new Connection(opts.rpcUrl, "confirmed");
     const wallet = new Wallet(operatorKeypair);
     const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
-    const programId = new PublicKey(opts.programId);
-    const [registryPda] = deriveRegistryPda(agentKeypair.publicKey, programId);
+    const registryProgId = new PublicKey(REGISTRY_PROGRAM_ID);
+    const fundProgId = new PublicKey(FUND_PROGRAM_ID);
+
+    // 7. Derive PDAs for logging
+    const [registryPda] = PublicKey.findProgramAddressSync(
+        [REGISTRY_SEED, agentKeypair.publicKey.toBuffer()],
+        registryProgId
+    );
+    const [fundPda] = PublicKey.findProgramAddressSync(
+        [FUND_SEED, operatorKeypair.publicKey.toBuffer(), agentKeypair.publicKey.toBuffer()],
+        fundProgId
+    );
+    const [vaultPda] = PublicKey.findProgramAddressSync(
+        [VAULT_SEED, operatorKeypair.publicKey.toBuffer(), agentKeypair.publicKey.toBuffer()],
+        fundProgId
+    );
 
     console.log(`Registry PDA    : ${registryPda.toBase58()}`);
+    console.log(`Fund PDA        : ${fundPda.toBase58()}`);
+    console.log(`Vault PDA       : ${vaultPda.toBase58()}\n`);
 
-    const program = new anchor.Program(idlJson as any, provider) as any;
+    const registryProgram = new Program(idlRegistry as any, provider) as any;
+    const fundProgram = new Program(idlFund as any, provider) as any;
 
-    console.log("Sending registration transaction...\n");
-
+    // 8. Step 1 — register_agent on dolores_registry
+    console.log("Step 1/2 — Registering agent on dolores_registry...");
     try {
-        const tx = await program.methods
+        const tx1 = await registryProgram.methods
             .registerAgent(Array.from(capabilityHashBuffer))
             .accounts({
                 operator: operatorKeypair.publicKey,
@@ -148,22 +158,45 @@ export async function registerCommand(opts: {
             .signers([agentKeypair])
             .rpc();
 
-        console.log(" Agent registered successfully!");
-        console.log(`Transaction     : ${tx}`);
-        console.log(`Explorer        : https://explorer.solana.com/tx/${tx}?cluster=devnet`);
-        console.log(`\nAgent pubkey    : ${agentKeypair.publicKey.toBase58()}`);
-        console.log(`Registry PDA    : ${registryPda.toBase58()}`);
-        console.log(`Template        : ${templateKey}`);
-        console.log(`\nNext step       : dolores stake --agent-id ${agentKeypair.publicKey.toBase58()} --amount 100`);
+        console.log(` Agent registered`);
+        console.log(`Transaction     : ${tx1}`);
+        console.log(`Explorer        : https://explorer.solana.com/tx/${tx1}?cluster=devnet\n`);
     } catch (err: any) {
         console.error("\n Registration failed:");
         console.error(err?.message ?? err);
-
-        // Clean up saved files so user can retry cleanly
         [savedPath, manifestPath].forEach((f) => {
             if (fs.existsSync(f)) fs.unlinkSync(f);
         });
-        console.log("Keypair and manifest files removed (tx failed — nothing registered).");
         process.exit(1);
     }
+
+    // 9. Step 2 — initialize_fund on dolores_fund
+    console.log("Step 2/2 — Initializing fund on dolores_fund...");
+    try {
+        const tx2 = await fundProgram.methods
+            .initializeFund()
+            .accounts({
+                operator: operatorKeypair.publicKey,
+                agent: agentKeypair.publicKey,
+            })
+            .rpc();
+
+        console.log(` Fund initialized`);
+        console.log(`Transaction     : ${tx2}`);
+        console.log(`Explorer        : https://explorer.solana.com/tx/${tx2}?cluster=devnet\n`);
+    } catch (err: any) {
+        console.error("\n Fund initialization failed:");
+        console.error(err?.message ?? err);
+        console.log("Agent is registered but fund is not initialized.");
+        console.log(`Retry manually: dolores fund-init --agent-id ${agentKeypair.publicKey.toBase58()}`);
+        // Don't clean up keypair here — agent IS registered on-chain
+    }
+
+    // 10. Summary
+    console.log(" Agent fully set up!\n");
+    console.log(`Agent pubkey    : ${agentKeypair.publicKey.toBase58()}`);
+    console.log(`Registry PDA    : ${registryPda.toBase58()}`);
+    console.log(`Fund PDA        : ${fundPda.toBase58()}`);
+    console.log(`Template        : ${templateKey}`);
+    console.log(`\nNext step       : dolores stake --agent-id ${agentKeypair.publicKey.toBase58()} --amount 0.5`);
 }

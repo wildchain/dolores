@@ -13,8 +13,15 @@ import * as os from "os";
 import * as path from "path";
 import fetch from "node-fetch";
 import * as nacl from "tweetnacl";
+import { hashManifest, CAPABILITY_TEMPLATES } from "../templates";
+
+
+
 
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
+
+
+
 
 
 
@@ -30,6 +37,9 @@ function loadKeypair(pubkey: string): Keypair {
     const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     return Keypair.fromSecretKey(Uint8Array.from(raw));
 }
+
+
+
 
 function generateTaskId(): string {
     return `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -69,6 +79,8 @@ function buildReceipt(params: {
         },
     };
 }
+
+
 
 function hashReceipt(receipt: object): string {
     const canonical = JSON.stringify(receipt, Object.keys(receipt).sort());
@@ -128,6 +140,31 @@ export async function runCommand(opts: {
     // 1. Load agent keypair
     const agentKeypair = loadKeypair(opts.agentId);
     console.log(`Agent           : ${agentKeypair.publicKey.toBase58()}`);
+
+    // 2. Check capability — only SOL_TRANSFER agents can run this command
+    const manifestPath = path.join(DOLORES_DIR, `${opts.agentId}.manifest.json`);
+    if (!fs.existsSync(manifestPath)) {
+        console.error(`❌ No manifest found for agent ${opts.agentId}`);
+        console.error(`   Run: dolores register to create a new agent`);
+        process.exit(1);
+    }
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    const solTransferManifest = CAPABILITY_TEMPLATES["SOL_TRANSFER"];
+    const expectedHash = hashManifest(solTransferManifest).toString("hex");
+    const agentHash = hashManifest(manifest).toString("hex");
+
+    if (agentHash !== expectedHash) {
+        console.error(`❌ This agent is not authorized to perform SOL transfers.`);
+        console.error(`   Agent template : ${manifest.template}`);
+        console.error(`   Required       : SOL_TRANSFER`);
+        console.error(`\n   Register a new agent with the SOL_TRANSFER template:`);
+        console.error(`   dolores register`);
+        process.exit(1);
+    }
+
+    console.log(`Template        : ${manifest.template} ✅`);
+
 
     const connection = new Connection(opts.rpcUrl, "confirmed");
     const transferLamports = Math.floor(opts.amountSol * LAMPORTS_PER_SOL);
