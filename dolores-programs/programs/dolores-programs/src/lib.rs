@@ -267,7 +267,7 @@ pub struct RecordSlash<'info> {
         mut,
         seeds = [REGISTRY_SEED, registry.agent.as_ref()],
         bump  = registry.bump,
-        constraint = registry.operator == slash_authority.key() @ RegistryError::Unauthorized
+        // constraint = registry.operator == slash_authority.key() @ RegistryError::Unauthorized
     )]
     pub registry: Account<'info, RegistryAccount>,
 }

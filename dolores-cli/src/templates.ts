@@ -16,6 +16,17 @@ export interface CapabilityManifest {
 }
 
 export const CAPABILITY_TEMPLATES: Record<string, CapabilityManifest> = {
+    SOL_TRANSFER: {
+        template: "SOL_TRANSFER",
+        version: "1.0.0",
+        allowed_programs: [
+            "11111111111111111111111111111111", // System Program — SOL transfers
+        ],
+        max_transfer_usdc: 0,
+        description: "Native SOL transfers via System Program",
+        skill_ref: "https://solana.com/docs/core/transactions",
+    },
+
     JUPITER_TRADER: {
         template: "JUPITER_TRADER",
         version: "1.0.0",

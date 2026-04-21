@@ -6,6 +6,9 @@ import * as os from "os";
 import { registerCommand } from "./commands/register";
 import { historyCommand } from "./commands/history";
 import { runCommand } from "./commands/run";
+import { stakeCommand } from "./commands/stake";
+import { verifyCommand } from "./commands/verify";
+import { challengeCommand } from "./commands/challenge";
 
 const DEFAULT_OPERATOR_KEY = path.join(os.homedir(), ".config", "solana", "id.json");
 const DEFAULT_RPC = "https://api.devnet.solana.com";
@@ -18,9 +21,9 @@ program
     .name("dolores")
     .description("Dolores Protocol CLI")
     .version("0.1.0");
-
+ 
 //  register 
-
+ 
 program
     .command("register")
     .description("Generate an agent keypair and register it on-chain")
@@ -30,13 +33,13 @@ program
     .action(async (opts) => {
         await registerCommand({
             operatorKeyPath: opts.operatorKey,
-            programId: opts.programId,
-            rpcUrl: opts.rpc,
+            programId:       opts.programId,
+            rpcUrl:          opts.rpc,
         });
     });
-
-// history 
-
+ 
+//  history 
+ 
 program
     .command("history")
     .description("Fetch on-chain reputation history for an agent")
@@ -44,13 +47,13 @@ program
     .option("--indexer <url>", "Indexer base URL", DEFAULT_INDEXER_URL)
     .action(async (opts) => {
         await historyCommand({
-            agentId: opts.agentId,
+            agentId:    opts.agentId,
             indexerUrl: opts.indexer,
         });
     });
-
+ 
 //  run 
-
+ 
 program
     .command("run")
     .description("Run an agent task — transfers devnet SOL and submits attestation on-chain")
@@ -61,56 +64,68 @@ program
     .option("--rpc <url>", "Solana RPC URL", DEFAULT_RPC)
     .action(async (opts) => {
         await runCommand({
-            agentId: opts.agentId,
-            recipient: opts.recipient,
-            amountSol: parseFloat(opts.amount),
+            agentId:    opts.agentId,
+            recipient:  opts.recipient,
+            amountSol:  parseFloat(opts.amount),
             indexerUrl: opts.indexer,
-            rpcUrl: opts.rpc,
+            rpcUrl:     opts.rpc,
         });
     });
-
-//  stake (stub - needs dolores_fund) 
-
+ 
+//  stake 
+ 
 program
     .command("stake")
-    .description("Stake USDC for an agent (requires dolores_fund program)")
+    .description("Stake SOL for an agent into the FundAccount vault")
     .requiredOption("--agent-id <pubkey>", "Agent public key")
-    .requiredOption("--amount <usdc>", "Amount of USDC to stake")
-    .action((opts) => {
-        console.log(`\n  dolores stake is not available yet.`);
-        console.log(`   dolores_fund is the next program being built.\n`);
-        console.log(`   When ready, this will lock ${opts.amount} USDC into the`);
-        console.log(`   FundAccount PDA and update declared_stake on the registry`);
-        console.log(`   so verify_agent() passes minimum stake checks.\n`);
+    .requiredOption("--amount <sol>", "Amount of SOL to stake")
+    .option("--operator-key <path>", "Path to operator wallet keypair JSON", DEFAULT_OPERATOR_KEY)
+    .option("--rpc <url>", "Solana RPC URL", DEFAULT_RPC)
+    .action(async (opts) => {
+        await stakeCommand({
+            agentId:         opts.agentId,
+            amountSol:       parseFloat(opts.amount),
+            operatorKeyPath: opts.operatorKey,
+            rpcUrl:          opts.rpc,
+        });
     });
-
-//  verify (stub — needs dolores_fund) 
-
+ 
+//  verify 
+ 
 program
     .command("verify")
     .description("Verify an agent meets minimum reputation and stake thresholds")
     .requiredOption("--agent-id <pubkey>", "Agent public key")
-    .option("--min-rep <score>", "Minimum reputation score", "5000")
-    .option("--min-stake <usdc>", "Minimum stake in USDC", "100")
-    .action((opts) => {
-        console.log(`\n  dolores verify stake check requires dolores_fund.\n`);
-        console.log(`   Check reputation now via:`);
-        console.log(`   curl ${DEFAULT_INDEXER_URL}/agents/${opts.agentId}\n`);
+    .option("--min-rep <score>", "Minimum reputation score (0–10000)", "100")
+    .option("--min-stake <sol>", "Minimum stake in SOL", "0.1")
+    .option("--indexer <url>", "Indexer base URL", DEFAULT_INDEXER_URL)
+    .option("--rpc <url>", "Solana RPC URL", DEFAULT_RPC)
+    .action(async (opts) => {
+        await verifyCommand({
+            agentId:       opts.agentId,
+            minReputation: parseInt(opts.minRep),
+            minStakeSol:   parseFloat(opts.minStake),
+            indexerUrl:    opts.indexer,
+            rpcUrl:        opts.rpc,
+        });
     });
-
-//  challenge (stub — needs dolores_adjudication) 
-
+ 
+//  challenge 
+ 
 program
     .command("challenge")
-    .description("File a challenge against an agent for a failed task")
-    .requiredOption("--agent-id <pubkey>", "Agent public key")
-    .requiredOption("--task-id <id>", "Task ID to challenge")
+    .description("Register a task, file a challenge, and auto-adjudicate on-chain")
+    .requiredOption("--agent-id <pubkey>", "Agent public key to challenge")
     .requiredOption("--type <type>", "Failure type: missed-deadline | out-of-scope-call")
-    .action((opts) => {
-        console.log(`\n  dolores challenge requires dolores_adjudication program.\n`);
-        console.log(`   Agent : ${opts.agentId}`);
-        console.log(`   Task  : ${opts.taskId}`);
-        console.log(`   Type  : ${opts.type}\n`);
+    .option("--operator-key <path>", "Path to operator wallet keypair JSON", DEFAULT_OPERATOR_KEY)
+    .option("--rpc <url>", "Solana RPC URL", DEFAULT_RPC)
+    .action(async (opts) => {
+        await challengeCommand({
+            agentId:         opts.agentId,
+            failureType:     opts.type,
+            operatorKeyPath: opts.operatorKey,
+            rpcUrl:          opts.rpc,
+        });
     });
-
+ 
 program.parse(process.argv);

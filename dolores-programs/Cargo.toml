@@ -1,6 +1,8 @@
 [workspace]
 members = [
-    "programs/*"
+    "programs/dolores-programs",
+    "programs/dolores_fund",
+    "programs/dolores_adjudication",
 ]
 resolver = "2"
 

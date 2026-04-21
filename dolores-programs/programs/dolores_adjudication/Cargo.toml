@@ -1,0 +1,20 @@
+[package]
+name = "dolores_adjudication"
+version = "0.1.0"
+description = "Dolores Protocol — challenge filing and auto-adjudication"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "dolores_adjudication"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build"]
+default = []
+
+[dependencies]
+anchor-lang = "0.30.1"
