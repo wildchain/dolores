@@ -12,6 +12,11 @@ pub const AUTHORITY_SEED: &[u8] = b"authority";
 pub const MIN_BOND_LAMPORTS: u64 = 10_000_000; // 0.01 SOL
 pub const DEFAULT_SLASH_LAMPORTS: u64 = 100_000_000; // 0.1 SOL
 
+/// Maximum length of the instruction string stored on-chain.
+/// Keeps the account size bounded. Anything longer should be
+/// stored off-chain and referenced via a hash or CID.
+pub const MAX_INSTRUCTION_LEN: usize = 256;
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
 pub enum FailureType {
     MissedDeadline,
@@ -43,9 +48,6 @@ fn ix_discriminator(name: &str) -> [u8; 8] {
 }
 
 fn build_lock_fund_ix(fund_program_id: &Pubkey, authority: &Pubkey, fund: &Pubkey) -> Instruction {
-    let mut data = ix_discriminator("lock_fund").to_vec();
-    // lock_fund takes no args — discriminator only
-    let _ = data;
     Instruction {
         program_id: *fund_program_id,
         accounts: vec![
@@ -116,13 +118,26 @@ pub mod dolores_adjudication {
     use super::*;
 
     /// Register a task when a user hires an agent.
-    /// Locks the deadline on-chain — ground truth for challenge resolution.
+    ///
+    /// `instruction` is the natural-language or structured goal given to the
+    /// agent — e.g. "transfer 0.001 SOL to <pubkey>" or
+    /// "swap 1 SOL to USDC when price > $200".
+    /// It is stored on-chain as the ground truth for what the agent was asked
+    /// to do. Max 256 bytes.
+    ///
+    /// `output_hash` is left zeroed at registration time.
+    /// It is written by `complete_task()` after execution.
     pub fn register_task(
         ctx: Context<RegisterTask>,
         task_id: [u8; 32],
         deadline: i64,
-        output_hash: [u8; 32],
+        instruction: String,
     ) -> Result<()> {
+        require!(
+            instruction.len() <= MAX_INSTRUCTION_LEN,
+            AdjError::InstructionTooLong
+        );
+
         let clock = Clock::get()?;
         require!(deadline > clock.unix_timestamp, AdjError::DeadlineInPast);
 
@@ -130,7 +145,8 @@ pub mod dolores_adjudication {
         task.agent = ctx.accounts.agent.key();
         task.assigned_by = ctx.accounts.user.key();
         task.task_id = task_id;
-        task.output_hash = output_hash;
+        task.instruction = instruction.clone();
+        task.output_hash = [0u8; 32]; // zeroed — filled by complete_task()
         task.deadline = deadline;
         task.status = TaskStatus::Pending;
         task.created_at = clock.unix_timestamp;
@@ -141,6 +157,7 @@ pub mod dolores_adjudication {
             task_id,
             agent: task.agent,
             assigned_by: task.assigned_by,
+            instruction,
             deadline,
             created_at: task.created_at,
         });
@@ -148,7 +165,12 @@ pub mod dolores_adjudication {
         Ok(())
     }
 
-    /// Mark a task as completed. Only the agent can call this.
+    /// Mark a task as completed. Only the agent keypair can call this.
+    ///
+    /// `output_hash` = sha256(execution_receipt_json).
+    /// This is the agent's on-chain commitment to exactly what it did.
+    /// A challenger can fetch the receipt from Arweave, recompute the hash,
+    /// and verify it matches what is stored here.
     pub fn complete_task(ctx: Context<CompleteTask>, output_hash: [u8; 32]) -> Result<()> {
         let clock = Clock::get()?;
         let task = &mut ctx.accounts.task_record;
@@ -158,6 +180,9 @@ pub mod dolores_adjudication {
             ctx.accounts.agent.key() == task.agent,
             AdjError::Unauthorized
         );
+
+        // output_hash must not be zeroed — agent must provide a real hash
+        require!(output_hash != [0u8; 32], AdjError::OutputHashEmpty);
 
         task.output_hash = output_hash;
         task.status = TaskStatus::Completed;
@@ -260,7 +285,7 @@ pub mod dolores_adjudication {
             AdjError::TaskChallengeMismatch
         );
 
-        // Capture all values we need before any mutable borrows
+        // Capture all values before any mutable borrows
         let failure_type = ctx.accounts.challenge.failure_type.clone();
         let proof_data = ctx.accounts.challenge.proof_data.clone();
         let task_completed_at = ctx.accounts.task_record.completed_at;
@@ -278,7 +303,7 @@ pub mod dolores_adjudication {
                 missed && deadline_passed
             }
             FailureType::OutOfScopeCall => {
-                // Non-empty proof accepted — full manifest verification is a TODO
+                // Non-empty proof accepted — full manifest verification is TODO
                 !proof_data.is_empty()
             }
         };
@@ -287,9 +312,7 @@ pub mod dolores_adjudication {
         let signer_seeds = &[authority_seeds];
 
         if valid_proof {
-            // Slash path
-
-            // CPI → dolores_fund: execute_slash()
+            // CPI- dolores_fund: execute_slash()
             let ix = build_execute_slash_ix(
                 &ctx.accounts.fund_program.key(),
                 &ctx.accounts.adjudication_authority.key(),
@@ -327,7 +350,6 @@ pub mod dolores_adjudication {
                 signer_seeds,
             )?;
 
-            // Update statuses after CPIs
             ctx.accounts.challenge.status = ChallengeStatus::Resolved;
             ctx.accounts.task_record.status = TaskStatus::Slashed;
 
@@ -339,8 +361,6 @@ pub mod dolores_adjudication {
                 slashed_at: clock.unix_timestamp,
             });
         } else {
-            // Dismiss path
-
             // CPI → dolores_fund: unlock_fund()
             let ix = build_unlock_fund_ix(
                 &ctx.accounts.fund_program.key(),
@@ -375,7 +395,8 @@ pub struct TaskRecord {
     pub agent: Pubkey,             // 32
     pub assigned_by: Pubkey,       // 32
     pub task_id: [u8; 32],         // 32
-    pub output_hash: [u8; 32],     // 32
+    pub instruction: String,       // 4 + 256  ← NEW
+    pub output_hash: [u8; 32],     // 32  (zeroed at init, written by complete_task)
     pub deadline: i64,             // 8
     pub status: TaskStatus,        // 1
     pub created_at: i64,           // 8
@@ -384,7 +405,17 @@ pub struct TaskRecord {
 }
 
 impl TaskRecord {
-    pub const LEN: usize = 8 + 32 + 32 + 32 + 32 + 8 + 1 + 8 + 9 + 1;
+    pub const LEN: usize = 8      // discriminator
+        + 32                      // agent
+        + 32                      // assigned_by
+        + 32                      // task_id
+        + (4 + MAX_INSTRUCTION_LEN) // instruction (borsh Vec prefix + bytes)
+        + 32                      // output_hash
+        + 8                       // deadline
+        + 1                       // status
+        + 8                       // created_at
+        + 9                       // completed_at (Option<i64>)
+        + 1; // bump
 }
 
 #[account]
@@ -405,12 +436,12 @@ impl Challenge {
 }
 
 #[derive(Accounts)]
-#[instruction(task_id: [u8; 32], deadline: i64, output_hash: [u8; 32])]
+#[instruction(task_id: [u8; 32], deadline: i64, instruction: String)]
 pub struct RegisterTask<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    /// CHECK: agent pubkey used as PDA seed
+    /// CHECK: agent pubkey used as PDA seed only
     pub agent: AccountInfo<'info>,
 
     #[account(
@@ -459,10 +490,7 @@ pub struct FileChallenge<'info> {
     )]
     pub challenge: Account<'info, Challenge>,
 
-    #[account(
-        seeds = [AUTHORITY_SEED],
-        bump
-    )]
+    #[account(seeds = [AUTHORITY_SEED], bump)]
     /// CHECK: PDA used as CPI signer
     pub adjudication_authority: AccountInfo<'info>,
 
@@ -495,10 +523,7 @@ pub struct AutoAdjudicate<'info> {
     )]
     pub challenge: Account<'info, Challenge>,
 
-    #[account(
-        seeds = [AUTHORITY_SEED],
-        bump
-    )]
+    #[account(seeds = [AUTHORITY_SEED], bump)]
     /// CHECK: PDA used as CPI signer
     pub adjudication_authority: AccountInfo<'info>,
 
@@ -536,6 +561,7 @@ pub struct TaskRegistered {
     pub task_id: [u8; 32],
     pub agent: Pubkey,
     pub assigned_by: Pubkey,
+    pub instruction: String, //  emitted so indexer can index it
     pub deadline: i64,
     pub created_at: i64,
 }
@@ -593,4 +619,8 @@ pub enum AdjError {
     ProofDataTooLarge,
     #[msg("Caller is not authorized")]
     Unauthorized,
+    #[msg("Instruction text exceeds maximum length of 256 bytes")]
+    InstructionTooLong,
+    #[msg("output_hash cannot be all zeros — agent must provide a real hash")]
+    OutputHashEmpty,
 }

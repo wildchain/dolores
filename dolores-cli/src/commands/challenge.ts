@@ -117,12 +117,7 @@ export async function challengeCommand(opts: {
     console.log("Step 1/3 — Registering task on-chain...");
     try {
         const tx1 = await adjProgram.methods
-            .registerTask(
-                Array.from(taskId),
-                new BN(deadline),
-                Array.from(crypto.randomBytes(32)), // output_hash placeholder
-            )
-            .accounts({
+            .registerTask(Array.from(taskId), new BN(deadline), "test: missed deadline challenge").accounts({
                 user: operatorKeypair.publicKey,
                 agent: agentPubkey,
                 taskRecord: taskPda,
