@@ -3,7 +3,7 @@ use anchor_lang::solana_program::instruction::AccountMeta;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::program::invoke_signed;
 
-declare_id!("4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz");
+declare_id!("8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A");
 
 pub const TASK_SEED: &[u8] = b"task";
 pub const CHALLENGE_SEED: &[u8] = b"challenge";

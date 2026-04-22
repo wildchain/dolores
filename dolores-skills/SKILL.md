@@ -55,7 +55,7 @@ npx skills add https://github.com/wildchain/dolores/tree/feat/cli-and-programs/d
 |---|---|
 | dolores_registry | `8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt` |
 | dolores_fund | `AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5` |
-| dolores_adjudication | `4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz` |
+| dolores_adjudication | `8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A` |
 
 ## How it fits with other skills
 

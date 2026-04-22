@@ -58,7 +58,7 @@ import * as nacl from 'tweetnacl';
 
 const REGISTRY_PROGRAM_ID   = '8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt';
 const FUND_PROGRAM_ID       = 'AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5';
-const ADJ_PROGRAM_ID        = '4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz';
+const ADJ_PROGRAM_ID        = '8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A';
 
 const REGISTRY_SEED = Buffer.from('registry');
 const FUND_SEED     = Buffer.from('fund');

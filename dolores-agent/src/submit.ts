@@ -6,22 +6,18 @@ import {
     Transaction,
     sendAndConfirmTransaction,
 } from "@solana/web3.js";
-import { Program, AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
+import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 import fetch from "node-fetch";
 import { SignedReceipt, outputHashToBytes } from "./receipt";
 
 const TASK_SEED = Buffer.from("task");
-const ADJ_PROGRAM_ID = "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz";
-
-// Types 
+const ADJ_PROGRAM_ID = "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A"; // redeployed
 
 export interface SubmitResult {
-    txSignature: string;    // complete_task() on-chain tx
-    attestationTx: string | null; // submit_attestation() tx from indexer
+    txSignature: string;
+    attestationTx: string | null;
     cid: string;
 }
-
-//  Step 1: execute SOL transfer 
 
 export async function executeSolTransfer(
     connection: Connection,
@@ -36,13 +32,10 @@ export async function executeSolTransfer(
             lamports: amountLamports,
         })
     );
-
     return sendAndConfirmTransaction(connection, tx, [agentKeypair], {
         commitment: "confirmed",
     });
 }
-
-//  Step 2: complete_task() on-chain 
 
 export async function completeTaskOnChain(
     connection: Connection,
@@ -69,8 +62,6 @@ export async function completeTaskOnChain(
     });
 }
 
-// Step 3: PATCH indexer + POST receipt
-
 export async function submitToIndexer(
     indexerUrl: string,
     taskId: string,
@@ -78,7 +69,6 @@ export async function submitToIndexer(
     completedAt: number,
     onChainTx: string
 ): Promise<{ attestationTx: string | null; cid: string }> {
-    // 3a. Mark task completed in indexer DB
     await fetch(`${indexerUrl}/tasks/${taskId}/complete`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -88,7 +78,6 @@ export async function submitToIndexer(
         }),
     });
 
-    // 3b. Submit receipt - triggers submit_attestation() on-chain
     const res = await fetch(`${indexerUrl}/receipts/upload`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
