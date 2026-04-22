@@ -1,0 +1,21 @@
+{
+  "name": "@dolores/shared",
+  "version": "1.0.0",
+  "description": "Shared types, DTOs, and interfaces for Dolores Protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "dolores",
+    "shared",
+    "types"
+  ],
+  "author": "Wildchain",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
