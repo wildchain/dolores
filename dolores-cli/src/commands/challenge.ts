@@ -15,18 +15,18 @@ import idlRegistry from "../idl/dolores_registry.json";
 
 //  Constants 
 
-const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
-const ADJ_PROGRAM_ID = "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz";
-const FUND_PROGRAM_ID = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
+const DOLORES_DIR      = path.join(os.homedir(), ".dolores", "agents");
+const ADJ_PROGRAM_ID   = "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz";
+const FUND_PROGRAM_ID  = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
 const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
-const TREASURY_PUBKEY = "HGt2Q4Z5P75RkShazT9SDLfKjZTven9RZqFV12dQe8z3";
+const TREASURY_PUBKEY  = "HGt2Q4Z5P75RkShazT9SDLfKjZTven9RZqFV12dQe8z3";
 
-const TASK_SEED = Buffer.from("task");
+const TASK_SEED      = Buffer.from("task");
 const CHALLENGE_SEED = Buffer.from("challenge");
 const AUTHORITY_SEED = Buffer.from("authority");
-const FUND_SEED = Buffer.from("fund");
-const VAULT_SEED = Buffer.from("vault");
-const REGISTRY_SEED = Buffer.from("registry");
+const FUND_SEED      = Buffer.from("fund");
+const VAULT_SEED     = Buffer.from("vault");
+const REGISTRY_SEED  = Buffer.from("registry");
 
 //  Helpers 
 
@@ -35,11 +35,7 @@ function loadKeypairFromFile(filePath: string): Keypair {
     return Keypair.fromSecretKey(Uint8Array.from(raw));
 }
 
-function randomTaskId(): Buffer {
-    return crypto.randomBytes(32);
-}
-
-//  Main challenge command 
+//  Command 
 
 export async function challengeCommand(opts: {
     agentId: string;
@@ -56,24 +52,24 @@ export async function challengeCommand(opts: {
     }
 
     const operatorKeypair = loadKeypairFromFile(opts.operatorKeyPath);
-    const agentPubkey = new PublicKey(opts.agentId);
+    const agentPubkey     = new PublicKey(opts.agentId);
 
     console.log(`Operator        : ${operatorKeypair.publicKey.toBase58()}`);
     console.log(`Agent           : ${opts.agentId}`);
     console.log(`Failure type    : ${opts.failureType}\n`);
 
     const connection = new Connection(opts.rpcUrl, "confirmed");
-    const wallet = new Wallet(operatorKeypair);
-    const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
+    const wallet     = new Wallet(operatorKeypair);
+    const provider   = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
 
-    const adjProgram = new Program(idlAdjudication as any, provider) as any;
-    const fundProgId = new PublicKey(FUND_PROGRAM_ID);
+    const adjProgram  = new Program(idlAdjudication as any, provider) as any;
+    const fundProgId  = new PublicKey(FUND_PROGRAM_ID);
     const registryProgId = new PublicKey(REGISTRY_PROGRAM_ID);
-    const adjProgId = new PublicKey(ADJ_PROGRAM_ID);
+    const adjProgId   = new PublicKey(ADJ_PROGRAM_ID);
 
     //  Derive all PDAs 
 
-    const taskId = randomTaskId();
+    const taskId = crypto.randomBytes(32);
 
     const [taskPda] = PublicKey.findProgramAddressSync(
         [TASK_SEED, agentPubkey.toBuffer(), taskId],
@@ -106,21 +102,31 @@ export async function challengeCommand(opts: {
     console.log(`Authority PDA   : ${authorityPda.toBase58()}\n`);
 
     //  Step 1: register_task 
-
-    // For MissedDeadline test: set deadline 2 seconds in the past
-    // For OutOfScopeCall test: set deadline far in the future
-    const now = Math.floor(Date.now() / 1000);
+    // For MissedDeadline: deadline 3s from now — we wait for it to pass
+    // For OutOfScopeCall: deadline 1 hour from now
+    const now      = Math.floor(Date.now() / 1000);
     const deadline = opts.failureType === "missed-deadline"
-        ? now + 3    // 3 seconds from now — we'll wait for it to pass
-        : now + 3600; // 1 hour from now
+        ? now + 3
+        : now + 3600;
+
+    // instruction describes what the agent was asked to do —
+    // used as evidence context for the challenge
+    const instruction = opts.failureType === "missed-deadline"
+        ? "transfer 0.001 SOL to 9HV6oz8jWhWcArhA4Upv3NWEKB6PGMqHWbCkTzwDdFuX"
+        : "swap 1 SOL to USDC on Jupiter"; // out-of-scope for a SOL_TRANSFER agent
 
     console.log("Step 1/3 — Registering task on-chain...");
     try {
         const tx1 = await adjProgram.methods
-            .registerTask(Array.from(taskId), new BN(deadline), "test: missed deadline challenge").accounts({
-                user: operatorKeypair.publicKey,
-                agent: agentPubkey,
-                taskRecord: taskPda,
+            .registerTask(
+                Array.from(taskId),
+                new BN(deadline),
+                instruction,           // ← was output_hash placeholder before
+            )
+            .accounts({
+                user:          operatorKeypair.publicKey,
+                agent:         agentPubkey,
+                taskRecord:    taskPda,
                 systemProgram: "11111111111111111111111111111111",
             })
             .rpc();
@@ -141,10 +147,10 @@ export async function challengeCommand(opts: {
         await new Promise((r) => setTimeout(r, 5000));
     }
 
-    // proof_data: for OutOfScopeCall include a fake violating program pubkey
+    // proof_data: for OutOfScopeCall include the violating program pubkey
     const proofData = opts.failureType === "out-of-scope-call"
-        ? [...Keypair.generate().publicKey.toBuffer()]  // 32 bytes
-        : [0x01];                                        // 1 byte
+        ? [...new PublicKey("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4").toBuffer()] // Jupiter program
+        : [0x01];
 
     console.log("Step 2/3 — Filing challenge...");
     try {
@@ -155,13 +161,13 @@ export async function challengeCommand(opts: {
         const tx2 = await adjProgram.methods
             .fileChallenge(failureTypeArg, Buffer.from(proofData))
             .accounts({
-                challenger: operatorKeypair.publicKey,
-                taskRecord: taskPda,
-                challenge: challengePda,
-                adjudicationAuthority: authorityPda,
-                fundAccount: fundPda,
-                fundProgram: fundProgId,
-                systemProgram: "11111111111111111111111111111111",
+                challenger:             operatorKeypair.publicKey,
+                taskRecord:             taskPda,
+                challenge:              challengePda,
+                adjudicationAuthority:  authorityPda,
+                fundAccount:            fundPda,
+                fundProgram:            fundProgId,
+                systemProgram:          "11111111111111111111111111111111",
             })
             .rpc();
 
@@ -173,25 +179,25 @@ export async function challengeCommand(opts: {
         process.exit(1);
     }
 
-    // Step 3: auto_adjudicate 
+    //  Step 3: auto_adjudicate 
 
     console.log("Step 3/3 — Auto-adjudicating...");
     try {
         const tx3 = await adjProgram.methods
             .autoAdjudicate()
             .accounts({
-                caller: operatorKeypair.publicKey,
-                taskRecord: taskPda,
-                challenge: challengePda,
+                caller:                operatorKeypair.publicKey,
+                taskRecord:            taskPda,
+                challenge:             challengePda,
                 adjudicationAuthority: authorityPda,
-                fundAccount: fundPda,
-                vault: vaultPda,
-                challenger: operatorKeypair.publicKey,
-                treasury: new PublicKey(TREASURY_PUBKEY),
-                registry: registryPda,
-                fundProgram: fundProgId,
-                registryProgram: registryProgId,
-                systemProgram: "11111111111111111111111111111111",
+                fundAccount:           fundPda,
+                vault:                 vaultPda,
+                challenger:            operatorKeypair.publicKey,
+                treasury:              new PublicKey(TREASURY_PUBKEY),
+                registry:              registryPda,
+                fundProgram:           fundProgId,
+                registryProgram:       registryProgId,
+                systemProgram:         "11111111111111111111111111111111",
             })
             .rpc();
 

@@ -39,7 +39,7 @@ Dolores Skill  → answers WHETHER to trust the agent doing all of the above
 ## Install
 
 ```bash
-npx skills add https://github.com/dolores-protocol/dolores-skills
+npx skills add https://github.com/wildchain/dolores/tree/feat/cli-and-programs/dolores-skills
 ```
 
 ## Available Skills
@@ -63,7 +63,7 @@ Install Dolores alongside any DeFi skill:
 
 ```bash
 npx skills add https://github.com/jup-ag/agent-skills   # Jupiter
-npx skills add https://github.com/dolores-protocol/dolores-skills  # Dolores
+npx skills add https://github.com/wildchain/dolores/tree/feat/cli-and-programs/dolores-skills # Dolores
 ```
 
 Claude Code will then generate agents that:

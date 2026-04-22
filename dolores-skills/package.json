@@ -13,10 +13,10 @@
         "defi",
         "claude-code"
     ],
-    "homepage": "https://github.com/dolores-protocol/dolores-skills",
+    "homepage": "https://github.com/wildchain/dolores",
     "repository": {
         "type": "git",
-        "url": "https://github.com/dolores-protocol/dolores-skills.git"
+        "url": "https://github.com/wildchain/dolores.git"
     },
     "license": "MIT",
     "skills": [

@@ -5,13 +5,13 @@ Agent skills for the [Dolores Protocol](https://github.com/dolores-protocol) —
 ## Install
 
 ```bash
-npx skills add https://github.com/dolores-protocol/dolores-skills
+npx skills add https://github.com/wildchain/dolores/tree/feat/cli-and-programs/dolores-skills
 ```
 
 Or install a specific skill:
 
 ```bash
-npx skills add https://github.com/dolores-protocol/dolores-skills/skills/sol-transfer
+npx skills add https://github.com/wildchain/dolores/tree/feat/cli-and-programs/dolores-skills/skills/sol-transfer
 ```
 
 ## Skills
