@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { RocksDBService } from '@dolores/lib/database';
+import { RocksDBService } from '@dolores/database';
 import { AttestationService } from '@dolores/attestation/attestation.service';
 import { ReceiptService } from '@dolores/receipt';
 import { CreateChallengeDto } from '@dolores/shared';
@@ -11,7 +11,7 @@ import {
   getChallengeByReviewerKey,
   CHALLENGE_PREFIX,
 } from './challenge.entity';
-import { createEntity } from '@dolores/lib/database/base-rocksdb.entity';
+import { createEntity } from '@dolores/database';
 
 // Re-export for backward compatibility
 export { CreateChallengeDto };

@@ -1,4 +1,4 @@
-import { BaseRocksDBEntity } from '../lib/database/base-rocksdb.entity';
+import { BaseRocksDBEntity } from '@dolores/database';
 import {
   ChallengeStatus,
   ChallengeEntity as SharedChallengeEntity,

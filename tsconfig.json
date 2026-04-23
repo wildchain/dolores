@@ -8,10 +8,16 @@
       "path": "./packages/contracts"
     },
     {
+      "path": "./packages/database"
+    },
+    {
       "path": "./packages/solana-utils"
     },
     {
       "path": "./apps/indexer"
+    },
+    {
+      "path": "./apps/api"
     },
     {
       "path": "./apps/cli"

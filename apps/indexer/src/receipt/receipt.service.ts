@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RocksDBService } from '@dolores/lib/database';
+import { RocksDBService } from '@dolores/database';
 import {
   ReceiptEntity,
   ReceiptStatus,
@@ -10,10 +10,7 @@ import {
   RECEIPT_BY_STATUS_PREFIX,
 } from './receipt.entity';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
-import {
-  createEntity,
-  updateEntity,
-} from '@dolores/lib/database/base-rocksdb.entity';
+import { createEntity, updateEntity } from '@dolores/database';
 
 @Injectable()
 export class ReceiptService {

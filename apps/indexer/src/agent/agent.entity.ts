@@ -1,4 +1,4 @@
-import { BaseRocksDBEntity } from '@dolores/lib/database/base-rocksdb.entity';
+import { BaseRocksDBEntity } from '@dolores/database';
 
 export interface AgentEntity extends BaseRocksDBEntity {
   id: string; // Agent public key
