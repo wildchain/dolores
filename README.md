@@ -1,258 +1,242 @@
-# Dolores Protocol — Developer Setup
+# Dolores
 
-This guide covers how to run the indexer and CLI locally and test the full agent accountability loop on Solana devnet.
+**AI agent accountability infrastructure on Solana.**
+
+Dolores makes agent failure expensive — automatically, permanently, and without a central authority. Economic staking, automatic slashing, and on-chain reputation combine into a trust layer for the Solana agent ecosystem.
+
 
 ---
 
-## What's been built
+## The Problem
 
-| Component | What it does |
+AI agents are already managing real money on Solana — executing trades, managing liquidity, processing payments — with no accountability infrastructure behind them. When something goes wrong, there is no recourse.
+
+## The Insight
+
+Every DeFi skill on `solana.com/skills` teaches an agent **how** to use a protocol. Not one of them answers **whether** that agent should be trusted.
+
+```
+Jupiter Skill  → teaches agent HOW to trade
+Kamino Skill   → teaches agent HOW to lend
+Dolores Skill  → answers WHETHER to trust the agent doing all of the above
+```
+
+## How It Works
+
+```
+Operator registers agent → stakes SOL → agent gets capability template
+User assigns task        → instruction stored on-chain with deadline
+Agent runtime            → Claude reads SKILL.md → executes → signs receipt
+Accountability           → output_hash stored on-chain → reputation updated
+Challenge                → missed deadline or out-of-scope call → auto-slashed
+No humans involved       → ever
+```
+
+---
+
+## On-Chain Programs (Solana Devnet)
+
+| Program | Address |
 |---|---|
-| `dolores_registry` | Anchor program on Solana devnet — stores agent identity, reputation score, slash count |
-| `dolores-cli` | TypeScript CLI — register agents, run tasks, check history |
-| `indexer` | NestJS server — receives execution receipts, submits on-chain attestations, serves agent data |
+| `dolores_registry` | `8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt` |
+| `dolores_fund` | `AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5` |
+| `dolores_adjudication` | `8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A` |
 
 ---
 
-## Prerequisites
+## Repo Structure
 
+```
+dolores/
+  dolores-programs/   ← Anchor programs (registry, fund, adjudication)
+  dolores-cli/        ← CLI for operators and users
+  dolores-agent/      ← Autonomous agent runtime
+  dolores-skills/     ← Agent Skills for Claude Code
+  indexer/            ← NestJS indexer + REST API
+  dolores-jade/       ← Next.js frontend
+```
+
+---
+
+## Quick Demo (3 terminals)
+
+### Prerequisites
+- Solana CLI + devnet wallet with SOL (`solana airdrop 2`)
 - Node.js 18+
-- Solana CLI installed — `sh -c "$(curl -sSfL https://release.solana.com/stable/install)"`
-- A Solana wallet keypair at `~/.config/solana/id.json`
-- Devnet SOL — get it at https://faucet.solana.com
+- PostgreSQL running locally
+- Anthropic API key from [console.anthropic.com](https://console.anthropic.com)
 
----
-
-## 1. Indexer setup
-
+### Terminal 1 — Indexer
 ```bash
 cd indexer
+cp .env.development.example .env.development  # fill in DB credentials
 npm install
-```
-
-Create `.env.development`:
-
-```env
-APPLICATION_ENV=development
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_USER=<your-postgres-user>
-DATABASE_PASSWORD=
-DATABASE_NAME=dolores
-DATABASE_SCHEMA=public
-
-SOLANA_RPC_URL=https://api.devnet.solana.com
-WATCHER_KEYPAIR_PATH=/Users/<you>/.config/solana/id.json
-DOLORES_PROGRAM_ID=DMzRtZS76zs6ERgJdFKmjx3mVG66DzChLdEEtLzrVWvd
-DOLORES_IDL_PATH=/path/to/dolores-programs/target/idl/dolores_registry.json
-```
-
-> `AGENT_KEYPAIR_PATH` is no longer needed — agents now sign their own receipts before submitting.
-
-Create the database:
-
-```bash
-psql -d postgres -c "CREATE DATABASE dolores;"
-```
-
-Start the server:
-
-```bash
 npm run start:dev
 ```
 
-You should see:
-
+### Terminal 2 — Agent Runtime
+```bash
+cd dolores-agent
+cp .env.example .env  # fill in ANTHROPIC_API_KEY and AGENT_ID
+npm install
+npm run dev
 ```
-[AttestationService] Attestation service ready
-[AttestationService] Watcher : <your-wallet-pubkey>
-[NestApplication] Nest application successfully started
-```
 
-The server runs on port **8080**.
-
----
-
-## 2. CLI setup
-
+### Terminal 3 — CLI
 ```bash
 cd dolores-cli
 npm install
 npm run build
-npm link
+
+# Register a new agent
+node dist/src/index.js register
+
+# Stake SOL
+node dist/src/index.js stake \
+  --agent-id <AGENT_PUBKEY> \
+  --amount 0.5
+
+# Assign a task — agent picks it up within 3 seconds
+node dist/src/index.js assign \
+  --agent-id <AGENT_PUBKEY> \
+  --instruction "transfer 0.001 SOL to <RECIPIENT_PUBKEY>" \
+  --deadline 30
+
+# Check what happened
+node dist/src/index.js history --agent-id <AGENT_PUBKEY>
 ```
 
-Verify it works:
+### What you'll see
 
-```bash
-dolores --help
+```
+Agent picks up task within 3s
+Claude reads SOL_TRANSFER skill → parses instruction
+SOL transfer executes on devnet
+Receipt signed with agent keypair
+complete_task() → output_hash stored on-chain
+submit_attestation() → reputation increments
 ```
 
 ---
 
-## 3. Full test sequence
-
-### Step 1 — Register an agent
+## Test the Slash Path
 
 ```bash
-dolores register
+# Challenge an agent for a missed deadline
+node dist/src/index.js challenge \
+  --agent-id <AGENT_PUBKEY> \
+  --type missed-deadline
+
+# Check reputation dropped
+node dist/src/index.js history --agent-id <AGENT_PUBKEY>
 ```
 
-- Select a capability template (e.g. `1` for Jupiter Trader)
-- Confirm registration
-- Note the **Agent pubkey** printed at the end
-
-The agent keypair is saved to `~/.dolores/agents/<pubkey>.json`.
-The capability manifest is saved to `~/.dolores/agents/<pubkey>.manifest.json`.
-
-### Step 2 — Check initial reputation
-
-```bash
-dolores history --agent-id <AGENT_PUBKEY>
-```
-
-Expected: `Reputation: 0 / 10000`, `Last attested: never`
-
-### Step 3 — Fund the agent
-
-Go to https://faucet.solana.com, paste the agent pubkey, request **1 SOL** on devnet.
-
-### Step 4 — Run a task
-
-```bash
-dolores run --agent-id <AGENT_PUBKEY> \
-  --recipient <ANY_SOLANA_PUBKEY> \
-  --amount 0.01
-```
-
-Expected output:
-
-```
-✅ Transfer confirmed
-Transaction : <tx_signature>
-
-✅ Receipt submitted
-Attestation tx : <attestation_tx_signature>
-
-Reputation : 42 / 10000
-```
-
-Two on-chain transactions are produced:
-- The SOL transfer
-- The `submit_attestation` call on `dolores_registry`
-
-### Step 5 — Verify reputation updated
-
-```bash
-dolores history --agent-id <AGENT_PUBKEY>
-```
-
-Expected: `Reputation: 42 / 10000`, `Last attested: <timestamp>`
-
-### Step 6 — Run more tasks to build reputation
-
-```bash
-dolores run --agent-id <AGENT_PUBKEY> --recipient <ANY_PUBKEY> --amount 0.01
-dolores run --agent-id <AGENT_PUBKEY> --recipient <ANY_PUBKEY> --amount 0.01
-dolores history --agent-id <AGENT_PUBKEY>
-```
-
-Each run adds 42 reputation points.
+Slash economics:
+- 60% of staked SOL → challenger
+- 40% → treasury
+- Reputation × 0.35 (permanent decay)
+- slash_count +1 (never resets, banned at 3)
 
 ---
 
-## 4. Security test — invalid signature rejection
-
-Try submitting a fake receipt with an invalid signature:
+## CLI Commands
 
 ```bash
-curl -X POST http://localhost:8080/receipts/upload \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agentId": "<AGENT_PUBKEY>",
-    "taskId": "fake-task-001",
-    "outputHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "timestamp": 1713312000,
-    "agentSignature": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  }'
+dolores register                                    # create + register agent
+dolores stake      --agent-id <p> --amount 0.5      # stake SOL into vault
+dolores assign     --agent-id <p> --instruction "…" # assign task on-chain
+dolores task-status --task-id <hex>                 # check task progress
+dolores verify     --agent-id <p>                   # check trust level
+dolores history    --agent-id <p>                   # reputation history
+dolores challenge  --agent-id <p> --type <type>     # file challenge
+dolores run        --agent-id <p>                   # legacy: direct SOL transfer
 ```
-
-Expected: `{"statusCode":401,"message":"Invalid agent signature — receipt rejected"}`
-
-Only the agent that holds the private key can submit valid receipts for that agent ID.
 
 ---
 
-## 5. API endpoints
+## Agent Skills
 
-| Method | Endpoint | What it does |
+Install the Dolores skill into Claude Code:
+
+```bash
+npx skills add https://github.com/wildchain/dolores/tree/main/dolores-skills
+```
+
+Then talk to Claude Code naturally:
+- *"Register a new Dolores agent"*
+- *"Check the reputation of agent \<pubkey\>"*
+- *"Assign a task to transfer 0.001 SOL to \<pubkey\>"*
+- *"Challenge agent \<pubkey\> for a missed deadline"*
+
+---
+
+## Capability Templates
+
+| Template | Allowed Programs | Max Transfer |
 |---|---|---|
-| `POST` | `/receipts/upload` | Submit execution receipt — triggers on-chain attestation |
-| `GET` | `/receipts/:taskId` | Fetch a receipt by task ID |
-| `GET` | `/receipts/agent/:agentId` | Fetch all receipts for an agent |
-| `POST` | `/receipts/attest/retry` | Retry any receipts that missed attestation |
-| `GET` | `/agents/:agentId` | Fetch live on-chain reputation for an agent |
+| `SOL_TRANSFER` | System Program only | 1 SOL |
+| `JUPITER_TRADER` | Jupiter v6, Jupiter Lend | 50,000 USDC |
+| `RAYDIUM_LP` | Raydium AMM v4, CLMM, CPMM | 50,000 USDC |
+| `ORCA_WHIRLPOOL` | Orca Whirlpools | 50,000 USDC |
+| `KAMINO_LENDING` | Kamino Lending, Liquidity | 50,000 USDC |
+| `METEORA_POOLS` | Meteora DLMM, AMM | 50,000 USDC |
+| `PYTH_ORACLE_READER` | Pyth oracle | Read-only |
 
 ---
 
-## 6. CLI commands
+## verify_agent() — DeFi Protocol Integration
 
-| Command | Status | What it does |
-|---|---|---|
-| `dolores register` | ✅ Live | Generate agent keypair + register on-chain |
-| `dolores history --agent-id <pubkey>` | ✅ Live | Fetch on-chain reputation |
-| `dolores run --agent-id <pubkey>` | ✅ Live | Run a SOL transfer task + submit attestation |
-| `dolores stake --agent-id <pubkey> --amount <usdc>` | ⬜ Soon | Stake USDC — requires `dolores_fund` |
-| `dolores verify --agent-id <pubkey>` | ⬜ Soon | Verify agent meets thresholds — requires `dolores_fund` |
-| `dolores challenge --agent-id <pubkey>` | ⬜ Soon | File a challenge — requires `dolores_adjudication` |
+```rust
+let (trusted, _) = cpi::verify_agent(
+    agent_id,
+    min_reputation: 5000,
+    min_stake: 10_000_000,
+)?;
+if trusted { /* grant access */ }
+else { return Err(AgentNotTrusted) }
+// No account. No fee. No dashboard.
+```
+
+Returns `true` if:
+- `reputation_score >= min_reputation`
+- `declared_stake >= min_stake_lamports`
+- `slash_count < 3`
 
 ---
 
-## 7. How reputation works
-
-Each completed task earns an attestation. The reputation delta per task is:
+## Architecture
 
 ```
-delta = score × stake_weight / 10
-      = 85    × 5            / 10
-      = 42 points
+┌─────────────────────────────────────────────────┐
+│                  Skills Layer                    │
+│   dolores-skills → Claude Code → operator CLI   │
+└────────────────────────┬────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────┐
+│              Off-Chain Services                  │
+│   dolores-agent (runtime) + indexer (NestJS)    │
+└────────────────────────┬────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────┐
+│             On-Chain Programs                    │
+│   registry + fund + adjudication (Anchor)       │
+└─────────────────────────────────────────────────┘
 ```
-
-Maximum reputation is **10,000**. It takes roughly 238 successful tasks to reach max reputation at default settings.
-
-A slash drops reputation to **35% of its prior value** and increments `slash_count` permanently. Three slashes effectively blacklists the agent from any protocol using standard thresholds.
 
 ---
 
-## 8. On-chain program
+## Live Transactions (Devnet)
 
-- **Program ID:** `DMzRtZS76zs6ERgJdFKmjx3mVG66DzChLdEEtLzrVWvd`
-- **Network:** Solana devnet
-- **Explorer:** https://explorer.solana.com/address/DMzRtZS76zs6ERgJdFKmjx3mVG66DzChLdEEtLzrVWvd?cluster=devnet
+| Action | Explorer |
+|---|---|
+| Task assigned | [view](https://explorer.solana.com/tx/uPduQ3HexZdjCvgv6LmZRoURz42VsJFhSsAftqaBbmuFVj5eaeWMgiQNPcbvfFMh9b2cww8MThvFNyHcA8YevpP?cluster=devnet) |
+| SOL transfer executed | [view](https://explorer.solana.com/tx/hKQGMApaWjU5BD8t3WKPeA6uu3aQuwJBV2DFb8caofWFUd2Rroxr2MeF6WpSUtzUarX362GmZY4RnaCbwXWDS81?cluster=devnet) |
+| output_hash on-chain | [view](https://explorer.solana.com/tx/5YrXMwFU8B4PBDH13U7LGiCkcyNfz2CxQg5LUvnScdFD4dNoBrYC1pKarQZfRJBqczhdCwi117v5kxWe7sz3PZSo?cluster=devnet) |
+| Attestation submitted | [view](https://explorer.solana.com/tx/575URNHBe9z7mx3SYY2pWav5xv3b22wiHTM2Bcrx9QH613TUUU85CkEdFj2CcZrsPQv2Lk9AApphwLqZYYnZ1PaL?cluster=devnet) |
+| Slash executed | [view](https://explorer.solana.com/tx/3wPgMSvfKdHyE6oT7enZgAhE1qZQX32hx4ZkryeN6AmmGgNNSnjwZSrHQKstp6fK6YJCEBrJ8Ae1CDhr7mnBfGKZ?cluster=devnet) |
 
 ---
 
-## 9. Architecture overview
+## License
 
-```
-dolores register
-  → generates agent keypair
-  → sends dual-sig tx (operator + agent)
-  → creates RegistryAccount PDA on-chain
-
-dolores run
-  → agent transfers SOL on devnet
-  → builds execution receipt JSON
-  → sha256(receipt) = output_hash
-  → agent signs output_hash with its keypair
-  → POST /receipts/upload { agentId, taskId, outputHash, timestamp, agentSignature }
-  → indexer verifies ed25519 signature
-  → indexer calls submit_attestation on dolores_registry
-  → reputation_score += 42
-  → RegistryAccount PDA updated on-chain
-
-dolores history
-  → GET /agents/:agentId
-  → indexer fetches RegistryAccount PDA from Solana RPC
-  → returns live on-chain reputation data
-```
+MIT
