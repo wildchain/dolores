@@ -3,6 +3,7 @@ import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { ToastProvider } from "@/components/ui/Toast";
 import { WalletContextProvider } from "@/context/WalletContextProvider";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "Dolores — AI Agent Accountability Protocol",
@@ -18,16 +19,15 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <WalletContextProvider>
-          {" "}
-          {/* ← add this */}
-          <ToastProvider>
-            <div className="relative z-10">
-              <Navbar />
-              <main className="min-h-screen">{children}</main>
-            </div>
-          </ToastProvider>
-        </WalletContextProvider>{" "}
-        {/* ← and this */}
+          <AuthProvider>
+            <ToastProvider>
+              <div className="relative z-10">
+                <Navbar />
+                <main className="min-h-screen">{children}</main>
+              </div>
+            </ToastProvider>
+          </AuthProvider>
+        </WalletContextProvider>
       </body>
     </html>
   );
