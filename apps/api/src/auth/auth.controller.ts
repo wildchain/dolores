@@ -8,10 +8,19 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 class VerifySignatureDto {
+  @IsNotEmpty()
+  @IsString()
   wallet: string;
+
+  @IsNotEmpty()
+  @IsString()
   message: string;
+
+  @IsNotEmpty()
+  @IsString()
   signature: string;
 }
 
