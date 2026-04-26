@@ -1,38 +1,59 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { MOCK_AGENTS } from "@/lib/data";
+import { apiClient } from "@/lib/api";
+import type { AgentListItemDto } from "@dolores/shared";
 
-const INDEXER = "http://localhost:8080";
+const mapMockToListDto = (agent: any): AgentListItemDto => ({
+  agentId: agent.agentId ?? agent.address ?? agent.id ?? "unknown-agent",
+  operator: agent.operator ?? "unknown-operator",
+  name: agent.name ?? "Unknown Agent",
+  description: agent.description ?? "",
+  capabilities: agent.capabilities ?? agent.capability ?? [],
+  trustBadge: {
+    totalTasks: agent.trustBadge?.totalTasks ?? agent.totalTasks ?? 0,
+    completedTasks:
+      agent.trustBadge?.completedTasks ??
+      Math.floor((agent.successRate ?? 0) * (agent.totalTasks ?? 0) * 0.01),
+    successRate: agent.trustBadge?.successRate ?? agent.successRate ?? 0,
+    avgResponseTime: agent.trustBadge?.avgResponseTime ?? 0,
+    stakeAmount:
+      agent.trustBadge?.stakeAmount ??
+      agent.stakeAmount ??
+      agent.totalStake ??
+      0,
+    ageSince: agent.trustBadge?.ageSince ?? new Date().toISOString(),
+  },
+  isActive: agent.isActive ?? true,
+  stakeAmount: agent.stakeAmount ?? agent.totalStake ?? 0,
+});
 
 export default function ExplorerPage() {
   const [q, setQ] = useState("");
   const [cap, setCap] = useState("All");
   const [minRep, setMinRep] = useState(0);
-  const [agents, setAgents] = useState(MOCK_AGENTS); // ← start with mock, not empty
-  const [indexerOnline, setIndexerOnline] = useState(false);
 
-  useEffect(() => {
-    fetch(`${INDEXER}/agents`)
-      .then(r => {
-        if (!r.ok) throw new Error("not ok");
-        return r.json();
-      })
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setAgents(data);
-          setIndexerOnline(true);
-        }
-      })
-      .catch(() => {
-        // indexer offline — keep showing mock data, no crash
-        setIndexerOnline(false);
-      });
-  }, []);
+  const mockAgents = useMemo(() => MOCK_AGENTS.map(mapMockToListDto), []);
+
+  const agentsQuery = useQuery({
+    queryKey: ["agents", { limit: 100, offset: 0 }],
+    queryFn: () => apiClient.agents.getAgents({ limit: 100, offset: 0 }),
+  });
+
+  const indexerOnline = agentsQuery.isSuccess;
+  const agents = useMemo(
+    () =>
+      agentsQuery.data?.data && agentsQuery.data.data.length > 0
+        ? agentsQuery.data.data
+        : mockAgents,
+    [agentsQuery.data, mockAgents],
+  );
 
   const filtered = useMemo(
     () =>
-      agents.filter((a: any) => {
+      agents.filter(a => {
         const mq =
           !q ||
           a.name?.toLowerCase().includes(q.toLowerCase()) ||
@@ -138,7 +159,7 @@ export default function ExplorerPage() {
         className="grid gap-4 stagger"
         style={{ gridTemplateColumns: "repeat(auto-fill,minmax(305px,1fr))" }}
       >
-        {filtered.map((a: any) => (
+        {filtered.map(a => (
           <div key={a.agentId} className="group animate-fade-up">
             <AgentCard agent={a} />
           </div>

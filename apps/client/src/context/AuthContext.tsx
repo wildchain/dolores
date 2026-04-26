@@ -63,7 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const walletAddress = publicKey.toBase58();
 
       // Step 1: Get challenge from API
-      const { message, nonce } = await authApi.getChallenge(walletAddress);
+      const { data: challenge } = await authApi.getChallenge(walletAddress);
+      const { message, nonce } = challenge;
 
       console.log("🔐 Challenge received:", { message, nonce });
 
@@ -85,9 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Step 4: Store token
       if (typeof window !== "undefined") {
-        localStorage.setItem("dolores_auth_token", response.token);
+        localStorage.setItem("dolores_auth_token", response.data.token);
       }
-      setToken(response.token);
+      setToken(response.data.token);
       setError(null);
     } catch (err) {
       console.error("❌ Authentication failed:", err);

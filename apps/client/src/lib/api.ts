@@ -1,64 +1,11 @@
-/**
- * API Client for Dolores Backend
- */
+import type {
+  AgentDetailsDto,
+  AgentListItemDto,
+  AgentTaskDto,
+} from "@dolores/shared";
+import axios, { AxiosInstance, AxiosResponse } from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public data?: any,
-  ) {
-    super(message);
-    this.name = "ApiError";
-  }
-}
-
-/**
- * Make authenticated API request
- */
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("dolores_auth_token")
-      : null;
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (options.headers) {
-    Object.assign(headers, options.headers);
-  }
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new ApiError(
-      errorData.message || `API Error: ${response.status}`,
-      response.status,
-      errorData,
-    );
-  }
-
-  return response.json();
-}
-
-// ============================================================================
-// Auth API
-// ============================================================================
+const API_BASE_URL = "http://localhost:3001";
 
 export interface ChallengeResponse {
   message: string;
@@ -74,146 +21,140 @@ export interface VerifyRequest {
 export interface VerifyResponse {
   token: string;
   wallet: string;
-  expiresAt: string;
+  expiresAt: number;
 }
 
-export const authApi = {
-  /**
-   * Get authentication challenge for a wallet
-   */
-  getChallenge: async (wallet: string): Promise<ChallengeResponse> => {
-    return apiRequest(`/auth/challenge/${wallet}`);
-  },
-
-  /**
-   * Verify signature and get JWT token
-   */
-  verifySignature: async (data: VerifyRequest): Promise<VerifyResponse> => {
-    return apiRequest("/auth/verify", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
+type TaskFilterParams = {
+  agentId?: string;
+  requester?: string;
+  status?: string;
+  capabilityName?: string;
+  limit?: number;
+  offset?: number;
 };
 
-// ============================================================================
-// Agents API
-// ============================================================================
+export class ApiClient {
+  private readonly client: AxiosInstance;
 
-export const agentsApi = {
-  /**
-   * Get paginated list of agents
-   */
-  getAgents: async (params?: { limit?: number; offset?: number }) => {
-    const query = new URLSearchParams();
-    if (params?.limit) query.set("limit", params.limit.toString());
-    if (params?.offset) query.set("offset", params.offset.toString());
-    return apiRequest(`/agents?${query}`);
-  },
-
-  /**
-   * Get agent details
-   */
-  getAgentDetails: async (agentId: string) => {
-    return apiRequest(`/agents/${agentId}`);
-  },
-
-  /**
-   * Get agent's tasks
-   */
-  getAgentTasks: async (
-    agentId: string,
-    params?: { limit?: number; offset?: number },
-  ) => {
-    const query = new URLSearchParams();
-    if (params?.limit) query.set("limit", params.limit.toString());
-    if (params?.offset) query.set("offset", params.offset.toString());
-    return apiRequest(`/agents/${agentId}/tasks?${query}`);
-  },
-};
-
-// ============================================================================
-// Tasks API
-// ============================================================================
-
-export const tasksApi = {
-  /**
-   * Get filtered tasks
-   */
-  getTasks: async (params?: {
-    agentId?: string;
-    requester?: string;
-    status?: string;
-    capabilityName?: string;
-    limit?: number;
-    offset?: number;
-  }) => {
-    const query = new URLSearchParams();
-    if (params?.agentId) query.set("agentId", params.agentId);
-    if (params?.requester) query.set("requester", params.requester);
-    if (params?.status) query.set("status", params.status);
-    if (params?.capabilityName)
-      query.set("capabilityName", params.capabilityName);
-    if (params?.limit) query.set("limit", params.limit.toString());
-    if (params?.offset) query.set("offset", params.offset.toString());
-    return apiRequest(`/tasks?${query}`);
-  },
-
-  /**
-   * Get task details
-   */
-  getTaskDetails: async (taskId: string) => {
-    return apiRequest(`/tasks/${taskId}`);
-  },
-
-  /**
-   * Build unsigned transaction for registering a task (requires auth)
-   */
-  buildRegisterTask: async (data: {
-    agentId: string;
-    capabilityName: string;
-    parameters: Record<string, any>;
-    stakeAmount: number;
-  }) => {
-    return apiRequest("/tasks/build-register", {
-      method: "POST",
-      body: JSON.stringify(data),
+  constructor(private readonly baseUrl: string = API_BASE_URL) {
+    this.client = axios.create({
+      baseURL: this.baseUrl,
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
-  },
-};
 
-// ============================================================================
-// Challenges API
-// ============================================================================
+    this.client.interceptors.request.use(config => {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("dolores_auth_token")
+          : null;
 
-export const challengesApi = {
-  /**
-   * Get challenge details
-   */
-  getChallengeDetails: async (challengeId: string) => {
-    return apiRequest(`/challenges/${challengeId}`);
-  },
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
 
-  /**
-   * Build unsigned transaction for filing a challenge (requires auth)
-   */
-  buildFileChallenge: async (data: { taskId: string; receiptUrl: string }) => {
-    return apiRequest("/challenges/build-file", {
-      method: "POST",
-      body: JSON.stringify(data),
+      return config;
     });
-  },
+  }
 
-  /**
-   * Build unsigned transaction for auto-adjudication (requires auth)
-   */
-  buildAutoAdjudicate: async (data: {
-    challengeId: string;
-    approved: boolean;
-  }) => {
-    return apiRequest("/challenges/build-auto-adjudicate", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-};
+  // Auth endpoints
+  auth = {
+    getChallenge: (
+      wallet: string,
+    ): Promise<AxiosResponse<ChallengeResponse>> => {
+      return this.client.get<ChallengeResponse>(`/auth/challenge/${wallet}`);
+    },
+
+    verifySignature: (
+      data: VerifyRequest,
+    ): Promise<AxiosResponse<VerifyResponse>> => {
+      return this.client.post<VerifyResponse>("/auth/verify", data);
+    },
+  };
+
+  // Agents endpoints
+  agents = {
+    getAgents: (params?: {
+      limit?: number;
+      offset?: number;
+    }): Promise<AxiosResponse<AgentListItemDto[]>> => {
+      return this.client.get<AgentListItemDto[]>("/agents", {
+        params,
+      });
+    },
+
+    getAgentDetails: (
+      agentId: string,
+    ): Promise<AxiosResponse<AgentDetailsDto>> => {
+      return this.client.get<AgentDetailsDto>(`/agents/${agentId}`);
+    },
+
+    getAgentTasks: (
+      agentId: string,
+      params?: { limit?: number; offset?: number },
+    ): Promise<AxiosResponse<AgentTaskDto[]>> => {
+      return this.client.get<AgentTaskDto[]>(`/agents/${agentId}/tasks`, {
+        params,
+      });
+    },
+  };
+
+  // Tasks endpoints
+  tasks = {
+    getTasks: (
+      params?: TaskFilterParams,
+    ): Promise<AxiosResponse<unknown[]>> => {
+      return this.client.get<unknown[]>("/tasks", {
+        params,
+      });
+    },
+
+    getTaskDetails: (taskId: string): Promise<AxiosResponse<unknown>> => {
+      return this.client.get<unknown>(`/tasks/${taskId}`);
+    },
+
+    buildRegisterTask: (data: {
+      agentId: string;
+      capabilityName: string;
+      parameters: Record<string, unknown>;
+      stakeAmount: number;
+    }): Promise<AxiosResponse<unknown>> => {
+      return this.client.post<unknown>("/tasks/build-register", data);
+    },
+  };
+
+  // Challenges endpoints
+  challenges = {
+    getChallengeDetails: (
+      challengeId: string,
+    ): Promise<AxiosResponse<unknown>> => {
+      return this.client.get<unknown>(`/challenges/${challengeId}`);
+    },
+
+    buildFileChallenge: (data: {
+      taskId: string;
+      receiptUrl: string;
+    }): Promise<AxiosResponse<unknown>> => {
+      return this.client.post<unknown>("/challenges/build-file", data);
+    },
+
+    buildAutoAdjudicate: (data: {
+      challengeId: string;
+      approved: boolean;
+    }): Promise<AxiosResponse<unknown>> => {
+      return this.client.post<unknown>(
+        "/challenges/build-auto-adjudicate",
+        data,
+      );
+    },
+  };
+}
+
+export const apiClient = new ApiClient();
+
+// Backwards-compatible named exports
+export const authApi = apiClient.auth;
+export const agentsApi = apiClient.agents;
+export const tasksApi = apiClient.tasks;
+export const challengesApi = apiClient.challenges;

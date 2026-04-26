@@ -3,17 +3,21 @@ import { Card, RepRing, Badge, Button } from "@/components/ui";
 import { formatUsdc } from "@/lib/data";
 import { useToast } from "@/components/ui/Toast";
 import type { Agent } from "@/types";
+import type { AgentListItemDto } from "@dolores/shared";
 
-export function AgentCard({ agent }: { agent: Agent }) {
+type AgentCardData = Agent | AgentListItemDto;
+
+export function AgentCard({ agent }: { agent: AgentCardData }) {
   const { toast } = useToast();
 
-  const address = agent.agentId;
+  const address =
+    agent.agentId ?? ("address" in agent ? (agent.address ?? "") : "");
   const score = agent.trustBadge?.successRate ?? 0;
   const totalTasks = agent.trustBadge?.totalTasks ?? 0;
   const successRate = agent.trustBadge?.successRate ?? 0;
   const staked = agent.stakeAmount ?? agent.trustBadge?.stakeAmount ?? 0;
-  const slashCount = agent.slashCount ?? 0;
-  const featured = agent.featured ?? false;
+  const slashCount = "slashCount" in agent ? (agent.slashCount ?? 0) : 0;
+  const featured = "featured" in agent ? (agent.featured ?? false) : false;
 
   return (
     <Card hover className={featured ? "border-l-2 border-l-jadeDark" : ""}>

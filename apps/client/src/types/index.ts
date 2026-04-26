@@ -14,13 +14,13 @@ export type TaskStatus =
   | "slashed";
 
 export interface Agent {
-  // Align with shared `AgentListItemDto`
-  agentId: string; // Pubkey as base58 string
+  // Shared API shape (`AgentListItemDto`)
+  agentId?: string; // Pubkey as base58 string
   operator: string; // Pubkey as base58 string
   name: string;
   description?: string;
-  capabilities: CapabilityTemplate[]; // Array of capability names
-  trustBadge: {
+  capabilities?: CapabilityTemplate[]; // Array of capability names
+  trustBadge?: {
     totalTasks: number;
     completedTasks: number;
     successRate: number; // 0-100
@@ -28,10 +28,25 @@ export interface Agent {
     stakeAmount: number; // in lamports
     ageSince: string; // ISO date string
   };
-  isActive: boolean;
-  stakeAmount: number; // in lamports
-  // Optional legacy/preview fields used by UI
+
+  isActive?: boolean;
+  stakeAmount?: number; // in lamports
+
+  // Legacy mock/preview shape still used in parts of UI
+  id?: string;
+  address?: string;
+  capability?: CapabilityTemplate[];
+  capabilityHash?: string;
+  reputationScore?: number;
   slashCount?: number;
+  totalTasks?: number;
+  successRate?: number;
+  totalStake?: number;
+  validatorStake?: number;
+  communityStake?: number;
+  stakerCount?: number;
+  arweaveCid?: string;
+  registeredAt?: string;
   featured?: boolean;
 }
 

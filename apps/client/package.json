@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@dolores/shared": "workspace:*",
+    "@mantine/core": "^9.1.0",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-phantom": "^0.9.29",
     "@solana/wallet-adapter-react": "^0.15.39",
@@ -17,6 +18,8 @@
     "@solana/wallet-adapter-solflare": "^0.6.33",
     "@solana/wallet-adapter-wallets": "^0.19.38",
     "@solana/web3.js": "^1.98.4",
+    "@tanstack/react-query": "^5.100.5",
+    "axios": "^1.15.2",
     "bs58": "^6.0.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.400.0",
