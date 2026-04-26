@@ -8,7 +8,6 @@ import { AuthGuard } from './auth.guard';
   imports: [
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'dolores-dev-secret-change-in-prod',
-      signOptions: { expiresIn: '24h' },
     }),
   ],
   controllers: [AuthController],
