@@ -4,6 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { ToastProvider } from "@/components/ui/Toast";
 import { WalletContextProvider } from "@/context/WalletContextProvider";
 import { AuthProvider } from "@/context/AuthContext";
+import { AppQueryProvider } from "@/context/QueryProvider";
 
 export const metadata: Metadata = {
   title: "Dolores — AI Agent Accountability Protocol",
@@ -18,16 +19,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <WalletContextProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <div className="relative z-10">
-                <Navbar />
-                <main className="min-h-screen">{children}</main>
-              </div>
-            </ToastProvider>
-          </AuthProvider>
-        </WalletContextProvider>
+        <AppQueryProvider>
+          <WalletContextProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <div className="relative z-10">
+                  <Navbar />
+                  <main className="min-h-screen">{children}</main>
+                </div>
+              </ToastProvider>
+            </AuthProvider>
+          </WalletContextProvider>
+        </AppQueryProvider>
       </body>
     </html>
   );
