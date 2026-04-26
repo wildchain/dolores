@@ -2,54 +2,20 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AgentCard } from "@/components/agents/AgentCard";
-import { MOCK_AGENTS } from "@/lib/data";
 import { apiClient } from "@/lib/api";
 import type { AgentListItemDto } from "@dolores/shared";
-
-const mapMockToListDto = (agent: any): AgentListItemDto => ({
-  agentId: agent.agentId ?? agent.address ?? agent.id ?? "unknown-agent",
-  operator: agent.operator ?? "unknown-operator",
-  name: agent.name ?? "Unknown Agent",
-  description: agent.description ?? "",
-  capabilities: agent.capabilities ?? agent.capability ?? [],
-  trustBadge: {
-    totalTasks: agent.trustBadge?.totalTasks ?? agent.totalTasks ?? 0,
-    completedTasks:
-      agent.trustBadge?.completedTasks ??
-      Math.floor((agent.successRate ?? 0) * (agent.totalTasks ?? 0) * 0.01),
-    successRate: agent.trustBadge?.successRate ?? agent.successRate ?? 0,
-    avgResponseTime: agent.trustBadge?.avgResponseTime ?? 0,
-    stakeAmount:
-      agent.trustBadge?.stakeAmount ??
-      agent.stakeAmount ??
-      agent.totalStake ??
-      0,
-    ageSince: agent.trustBadge?.ageSince ?? new Date().toISOString(),
-  },
-  isActive: agent.isActive ?? true,
-  stakeAmount: agent.stakeAmount ?? agent.totalStake ?? 0,
-});
 
 export default function ExplorerPage() {
   const [q, setQ] = useState("");
   const [cap, setCap] = useState("All");
   const [minRep, setMinRep] = useState(0);
 
-  const mockAgents = useMemo(() => MOCK_AGENTS.map(mapMockToListDto), []);
-
   const agentsQuery = useQuery({
     queryKey: ["agents", { limit: 100, offset: 0 }],
     queryFn: () => apiClient.agents.getAgents({ limit: 100, offset: 0 }),
   });
 
-  const indexerOnline = agentsQuery.isSuccess;
-  const agents = useMemo(
-    () =>
-      agentsQuery.data?.data && agentsQuery.data.data.length > 0
-        ? agentsQuery.data.data
-        : mockAgents,
-    [agentsQuery.data, mockAgents],
-  );
+  const agents = agentsQuery.data?.data ?? [];
 
   const filtered = useMemo(
     () =>
@@ -91,22 +57,6 @@ export default function ExplorerPage() {
           Browse registered agents by reputation, stake, and capability
         </p>
       </div>
-
-      {/* Indexer status banner */}
-      {!indexerOnline && (
-        <div
-          className="mb-5 px-4 py-2.5 rounded-sm font-mono text-[11px] flex items-center gap-2"
-          style={{
-            background: "rgba(139,106,44,0.08)",
-            border: "1px solid rgba(139,106,44,0.2)",
-            color: "#8B6A2C",
-          }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-amber flex-shrink-0" />
-          Indexer offline — showing mock data. Start the indexer on port 8080 to
-          see live agents.
-        </div>
-      )}
 
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <input
@@ -151,20 +101,54 @@ export default function ExplorerPage() {
         </select>
         <span className="font-mono text-[12px] text-jadeMid">
           {filtered.length} agent{filtered.length !== 1 ? "s" : ""}
-          {indexerOnline && <span className="ml-2 text-success">● live</span>}
+          {agentsQuery.isSuccess && (
+            <span className="ml-2 text-success">● live</span>
+          )}
         </span>
       </div>
 
-      <div
-        className="grid gap-4 stagger"
-        style={{ gridTemplateColumns: "repeat(auto-fill,minmax(305px,1fr))" }}
-      >
-        {filtered.map(a => (
-          <div key={a.agentId} className="group animate-fade-up">
-            <AgentCard agent={a} />
-          </div>
-        ))}
-      </div>
+      {agentsQuery.isLoading && (
+        <div className="text-center py-16">
+          <p className="font-mono text-[13px] text-jadeMid">
+            Loading agents...
+          </p>
+        </div>
+      )}
+
+      {!agentsQuery.isLoading && agents.length === 0 && (
+        <div className="text-center py-16">
+          <p className="font-mono text-[13px] text-jadeMid mb-2">
+            No agents registered
+          </p>
+          <p className="text-[12px] text-muted">
+            Start the indexer to see live agents
+          </p>
+        </div>
+      )}
+
+      {!agentsQuery.isLoading && agents.length > 0 && filtered.length === 0 && (
+        <div className="text-center py-16">
+          <p className="font-mono text-[13px] text-jadeMid mb-2">
+            No agents match your filters
+          </p>
+          <p className="text-[12px] text-muted">
+            Try adjusting your search or filter criteria
+          </p>
+        </div>
+      )}
+
+      {!agentsQuery.isLoading && filtered.length > 0 && (
+        <div
+          className="grid gap-4 stagger"
+          style={{ gridTemplateColumns: "repeat(auto-fill,minmax(305px,1fr))" }}
+        >
+          {filtered.map(a => (
+            <div key={a.agentId} className="group animate-fade-up">
+              <AgentCard agent={a} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
