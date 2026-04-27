@@ -18,6 +18,7 @@ import { ChallengeCacheData } from '../challenges/challenge-cache.entity';
 export class SyncService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SyncService.name);
   private listenerIds: number[] = [];
+  private registryLogSubscriptionId: number | null = null;
 
   constructor(
     private solanaService: SolanaService,
@@ -42,31 +43,65 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
       const registryProgram = this.solanaService.getRegistryProgram();
       const fundProgram = this.solanaService.getFundProgram();
       const adjudicationProgram = this.solanaService.getAdjudicationProgram();
+      const connection = this.solanaService.getConnection();
 
-      // Listen to Registry events
-      const registryListenerId = registryProgram.addEventListener(
-        'AgentRegistered',
-        async (event: any) => {
-          await this.handleAgentRegistered(event);
+      // Listen to Registry events using connection.onLogs
+      this.logger.log(
+        `Starting Registry log listener for program: ${registryProgram.programId.toBase58()}`,
+      );
+      this.registryLogSubscriptionId = connection.onLogs(
+        registryProgram.programId,
+        (logInfo) => {
+          this.logger.log('New Registry Transaction Detected');
+          this.logger.log(
+            `Signature: ${logInfo.signature}, Logs: ${logInfo.logs.length} entries`,
+          );
+
+          // Skip invalid signatures
+          if (logInfo.signature.includes('111111')) return;
+
+          // Check for AgentRegistered event
+          const isAgentRegistered = logInfo?.logs?.some((log: string) =>
+            log.includes('AgentRegistered'),
+          );
+          if (isAgentRegistered) {
+            this.logger.log(
+              `AgentRegistered event detected: ${logInfo.signature}`,
+            );
+            this.handleRegistryTransactionLog(logInfo, 'AgentRegistered');
+            return;
+          }
+
+          // Check for AgentDeactivated event
+          const isAgentDeactivated = logInfo?.logs?.some((log: string) =>
+            log.includes('AgentDeactivated'),
+          );
+          if (isAgentDeactivated) {
+            this.logger.log(
+              `AgentDeactivated event detected: ${logInfo.signature}`,
+            );
+            this.handleRegistryTransactionLog(logInfo, 'AgentDeactivated');
+            return;
+          }
+
+          // Check for AgentReactivated event
+          const isAgentReactivated = logInfo?.logs?.some((log: string) =>
+            log.includes('AgentReactivated'),
+          );
+          if (isAgentReactivated) {
+            this.logger.log(
+              `AgentReactivated event detected: ${logInfo.signature}`,
+            );
+            this.handleRegistryTransactionLog(logInfo, 'AgentReactivated');
+            return;
+          }
+
+          // Log any other registry program transactions
+          this.logger.log(
+            `Other Registry transaction detected: ${logInfo.signature}`,
+          );
         },
       );
-      this.listenerIds.push(registryListenerId);
-
-      const deactivateListenerId = registryProgram.addEventListener(
-        'AgentDeactivated',
-        async (event: any) => {
-          await this.handleAgentDeactivated(event);
-        },
-      );
-      this.listenerIds.push(deactivateListenerId);
-
-      const reactivateListenerId = registryProgram.addEventListener(
-        'AgentReactivated',
-        async (event: any) => {
-          await this.handleAgentReactivated(event);
-        },
-      );
-      this.listenerIds.push(reactivateListenerId);
 
       // Listen to Fund events
       const fundCreatedListenerId = fundProgram.addEventListener(
@@ -161,13 +196,21 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
    */
   private async stopEventListeners() {
     try {
-      const registryProgram = this.solanaService.getRegistryProgram();
+      const connection = this.solanaService.getConnection();
       const fundProgram = this.solanaService.getFundProgram();
       const adjudicationProgram = this.solanaService.getAdjudicationProgram();
 
+      // Remove registry log listener
+      if (this.registryLogSubscriptionId !== null) {
+        await connection.removeOnLogsListener(this.registryLogSubscriptionId);
+        this.logger.log(
+          `Removed registry log listener: ${this.registryLogSubscriptionId}`,
+        );
+      }
+
+      // Remove other event listeners
       for (const id of this.listenerIds) {
-        // Remove from all programs (one will succeed)
-        await registryProgram.removeEventListener(id);
+        // Remove from fund and adjudication programs
         await fundProgram.removeEventListener(id);
         await adjudicationProgram.removeEventListener(id);
       }
@@ -179,6 +222,31 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   // Event handlers
+
+  /**
+   * Handle registry transaction logs
+   */
+  private async handleRegistryTransactionLog(
+    logInfo: any,
+    eventType: 'AgentRegistered' | 'AgentDeactivated' | 'AgentReactivated',
+  ) {
+    try {
+      this.logger.log(`Processing ${eventType} from transaction log`);
+      // Log the full transaction details
+      this.logger.log(`Transaction Signature: ${logInfo.signature}`);
+      this.logger.log(`Logs: ${JSON.stringify(logInfo.logs, null, 2)}`);
+
+      // You can fetch full transaction details if needed for parsing event data
+      // const connection = this.solanaService.getConnection();
+      // const tx = await connection.getTransaction(logInfo.signature);
+      // Parse transaction accounts and data to extract event information
+
+      // For now, just log the event detection
+      this.logger.log(`${eventType} event logged successfully`);
+    } catch (error) {
+      this.logger.error(`Failed to handle ${eventType} transaction log`, error);
+    }
+  }
 
   private async handleAgentRegistered(event: any) {
     this.logger.log(`AgentRegistered: ${event.agent.toBase58()}`);

@@ -25,11 +25,11 @@ export class AgentsService {
    */
   async getAgents(limit = 20, offset = 0): Promise<AgentListItemDto[]> {
     try {
-      // Get all agents from cache
-      const cachedAgents = await this.getAllCachedAgents();
+      // Fetch all agents directly from Solana
+      const agents = await this.fetchAllAgentsFromSolana();
 
       // Apply pagination
-      const paginatedAgents = cachedAgents
+      const paginatedAgents = agents
         .slice(offset, offset + limit)
         .map((agent) => this.mapToListDto(agent));
 
@@ -86,6 +86,50 @@ export class AgentsService {
       return [];
     } catch (error) {
       this.logger.error(`Failed to get tasks for agent ${agentId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch all agents from Solana registry contract
+   */
+  private async fetchAllAgentsFromSolana(): Promise<AgentCacheData[]> {
+    try {
+      const registryProgram = this.solanaService.getRegistryProgram();
+
+      // Fetch all registry accounts from the contract
+      const registryAccounts =
+        await registryProgram.account['registryAccount'].all();
+
+      this.logger.log(
+        `Fetched ${registryAccounts.length} agents from Solana registry`,
+      );
+
+      // Fetch full details for each agent
+      const agents: AgentCacheData[] = [];
+      for (const accountInfo of registryAccounts) {
+        try {
+          // Extract agent public key from the account
+          const agentPubkey = accountInfo.account.agent as PublicKey;
+          const agentData = await this.fetchAgentFromSolana(agentPubkey);
+
+          if (agentData) {
+            agents.push(agentData);
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Failed to fetch details for agent, skipping`,
+            error,
+          );
+        }
+      }
+
+      // Sort by registration date (newest first)
+      agents.sort((a, b) => b.registeredAt - a.registeredAt);
+
+      return agents;
+    } catch (error) {
+      this.logger.error('Failed to fetch all agents from Solana', error);
       throw error;
     }
   }
