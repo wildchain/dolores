@@ -1,0 +1,34 @@
+{
+    "name": "dolores-skills",
+    "version": "0.1.0",
+    "description": "Agent skills for the Dolores Protocol — trust and accountability layer for AI agents on Solana",
+    "keywords": [
+        "solana",
+        "agent-skills",
+        "dolores",
+        "accountability",
+        "staking",
+        "slashing",
+        "reputation",
+        "defi",
+        "claude-code"
+    ],
+    "homepage": "https://github.com/wildchain/dolores",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wildchain/dolores.git"
+    },
+    "license": "MIT",
+    "skills": [
+        {
+            "name": "dolores-core",
+            "path": "./skills/dolores-core/SKILL.md",
+            "description": "Core Dolores primitives — registration, staking, receipts, verify_agent() CPI"
+        },
+        {
+            "name": "sol-transfer",
+            "path": "./skills/sol-transfer/SKILL.md",
+            "description": "SOL_TRANSFER template — native SOL transfers with full Dolores accountability"
+        }
+    ]
+}

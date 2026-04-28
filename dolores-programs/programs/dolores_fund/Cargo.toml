@@ -1,0 +1,20 @@
+[package]
+name = "dolores_fund"
+version = "0.1.0"
+description = "Dolores Protocol — agent staking and fund management"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "dolores_fund"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build"]
+default = []
+
+[dependencies]
+anchor-lang = { version = "0.30.1", features = ["init-if-needed"] }

@@ -1,0 +1,43 @@
+{
+  "name": "agent",
+  "version": "0.1.0",
+  "description": "Dolores autonomous agent runtime",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test:jupiter": "ts-node src/test-jupiter.ts",
+    "test:kamino": "ts-node src/test-kamino.ts",
+    "test:meteora": "ts-node src/test-meteora.ts",
+    "test:raydium": "ts-node src/test-raydium.ts",
+    "test:pumpfun": "ts-node src/test-pumpfun.ts",
+    "test:pyth": "ts-node src/test-pyth.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@coral-xyz/anchor": "^0.30.0",
+    "@dolores/contracts": "workspace:*",
+    "@dolores/shared": "workspace:*",
+    "@dolores/solana-utils": "workspace:*",
+    "@kamino-finance/klend-sdk": "^6.0.5",
+    "@meteora-ag/dlmm": "^1.9.7",
+    "@pythnetwork/hermes-client": "^3.1.0",
+    "@raydium-io/raydium-sdk-v2": "^0.2.41-alpha",
+    "@solana-program/compute-budget": "^0.15.0",
+    "@solana/kit": "^2.3.0",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.95.0",
+    "decimal.js": "^10.6.0",
+    "dotenv": "^17.4.2",
+    "node-fetch": "^2.7.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/bs58": "^4.0.4",
+    "@types/node": "^20.0.0",
+    "@types/node-fetch": "^2.6.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
