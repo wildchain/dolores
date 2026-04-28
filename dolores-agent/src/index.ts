@@ -8,19 +8,19 @@ import idlAdjudication from "../idl/dolores_adjudication.json";
 
 import { startPolling, PendingTask } from "./poll";
 import { executeTask, AgentDecision } from "./execute";
-import { executeJupiterTask, JupiterDecision } from "./execute-jupiter";
+import { executeJupiterTask, JupiterDecision } from "./jupiter/execute-jupiter";
+import { buildJupiterReceipt, signJupiterReceipt, executeJupiterSwap, completeJupiterTaskOnChain } from "./jupiter/submit-jupiter";
 import { buildReceipt, signReceipt } from "./receipt";
-import { buildJupiterReceipt, signJupiterReceipt, executeJupiterSwap, completeJupiterTaskOnChain } from "./submit-jupiter";
 import { executeSolTransfer, completeTaskOnChain, submitToIndexer } from "./submit";
 
 // Config 
 
-const DOLORES_DIR   = path.join(os.homedir(), ".dolores", "agents");
-const RPC_URL       = process.env.SOLANA_RPC_URL   || "https://api.devnet.solana.com";
-const INDEXER_URL   = process.env.INDEXER_URL       || "http://localhost:8080";
+const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
+const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
+const INDEXER_URL = process.env.INDEXER_URL || "http://localhost:8080";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || "3000");
-const AGENT_ID      = process.env.AGENT_ID;
-const TEMPLATE      = process.env.AGENT_TEMPLATE   || "SOL_TRANSFER";
+const AGENT_ID = process.env.AGENT_ID;
+const TEMPLATE = process.env.AGENT_TEMPLATE || "SOL_TRANSFER";
 
 if (!AGENT_ID) {
   console.error("❌ AGENT_ID env var required");
@@ -63,7 +63,7 @@ async function processSolTransferTask(
     await fetch(`${INDEXER_URL}/tasks/${task.taskId}/status`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "dismissed" }),
-    }).catch(() => {});
+    }).catch(() => { });
     return;
   }
 
@@ -84,7 +84,7 @@ async function processSolTransferTask(
   console.log(`   ✅ TX: ${txSignature}`);
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const receipt   = buildReceipt({
+  const receipt = buildReceipt({
     taskId: task.taskId, agentId: agentKeypair.publicKey.toBase58(),
     instruction: task.instruction, action: decision, txSignature, timestamp,
   });
@@ -144,10 +144,12 @@ async function processJupiterTask(
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
-    await fetch(`${INDEXER_URL}/tasks/${task.taskId}/status`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "dismissed" }),
-    }).catch(() => {});
+    return;
+  }
+
+  if (decision.action === "wait") {
+    console.log(`   ⏳ ${decision.reason}`);
+    console.log(`   Current: $${decision.currentPrice} | Target: $${decision.targetPrice}`);
     return;
   }
 
@@ -168,13 +170,13 @@ async function processJupiterTask(
   console.log(`   Out: ${swapResult.outputAmount} ${decision.outputSymbol}`);
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const receipt   = buildJupiterReceipt({
-    taskId:       task.taskId,
-    agentId:      agentKeypair.publicKey.toBase58(),
-    instruction:  task.instruction,
-    action:       decision,
-    txSignature:  swapResult.txSignature,
-    inputAmount:  swapResult.inputAmount,
+  const receipt = buildJupiterReceipt({
+    taskId: task.taskId,
+    agentId: agentKeypair.publicKey.toBase58(),
+    instruction: task.instruction,
+    action: decision,
+    txSignature: swapResult.txSignature,
+    inputAmount: swapResult.inputAmount,
     outputAmount: swapResult.outputAmount,
     timestamp,
   });
@@ -205,7 +207,7 @@ async function processJupiterTask(
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         agentId: agentKeypair.publicKey.toBase58(),
-        taskId:  task.taskId, outputHash, timestamp, agentSignature,
+        taskId: task.taskId, outputHash, timestamp, agentSignature,
       }),
     });
 
@@ -228,10 +230,10 @@ async function main() {
   console.log(`Poll interval: ${POLL_INTERVAL}ms\n`);
 
   const agentKeypair = loadAgentKeypair(AGENT_ID!);
-  const connection   = new Connection(RPC_URL, "confirmed");
-  const wallet       = new Wallet(agentKeypair);
-  const provider     = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
-  const adjProgram   = new Program(idlAdjudication as any, provider);
+  const connection = new Connection(RPC_URL, "confirmed");
+  const wallet = new Wallet(agentKeypair);
+  const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
+  const adjProgram = new Program(idlAdjudication as any, provider);
 
   const balance = await connection.getBalance(agentKeypair.publicKey);
   console.log(`Balance      : ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);

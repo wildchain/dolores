@@ -11,7 +11,7 @@ import * as crypto from "crypto";
 import * as nacl from "tweetnacl";
 import fetch from "node-fetch";
 import { SwapAction } from "./execute-jupiter";
-import { outputHashToBytes } from "./receipt";
+import { outputHashToBytes } from "../receipt";
 
 const TASK_SEED      = Buffer.from("task");
 const ADJ_PROGRAM_ID = "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A";
@@ -26,7 +26,6 @@ const mainnetConnection = new Connection(
   "confirmed"
 );
 
-// ─── Jupiter API helper ───────────────────────────────────────────────────────
 
 async function jupiterFetch<T>(path: string, init?: any): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -43,7 +42,7 @@ async function jupiterFetch<T>(path: string, init?: any): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// ─── Step 1: Execute Jupiter swap on MAINNET ──────────────────────────────────
+//  Step 1: Execute Jupiter swap on MAINNET 
 
 export async function executeJupiterSwap(
   agentKeypair: Keypair,
@@ -105,7 +104,7 @@ export async function executeJupiterSwap(
   };
 }
 
-// ─── Step 2: Build receipt ────────────────────────────────────────────────────
+//  Step 2: Build receipt 
 
 export function buildJupiterReceipt(params: {
   taskId:       string;
@@ -151,7 +150,7 @@ export function buildJupiterReceipt(params: {
   };
 }
 
-// ─── Step 3: Sign receipt ─────────────────────────────────────────────────────
+//  Step 3: Sign receipt 
 
 export function signJupiterReceipt(
   receipt: object,
@@ -165,7 +164,7 @@ export function signJupiterReceipt(
   return { outputHash, agentSignature };
 }
 
-// ─── Step 4: complete_task() on DEVNET ────────────────────────────────────────
+//  Step 4: complete_task() on DEVNET 
 
 export async function completeJupiterTaskOnChain(
   devnetConnection: Connection,  // devnet — Dolores programs live here
