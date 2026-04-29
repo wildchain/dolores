@@ -14,6 +14,13 @@ export interface AgentCacheData extends BaseRocksDBEntity {
   fundCreatedAt: number;
   isActive: boolean;
   stakeAmount: number;
+  // Registry account fields
+  capabilityHash: number[]; // 32-byte hash
+  reputationScore: number;
+  slashCount: number;
+  arweaveCid: string;
+  declaredStake: number;
+  lastAttestedAt: number;
   // Trust metrics
   totalTasks: number;
   completedTasks: number;

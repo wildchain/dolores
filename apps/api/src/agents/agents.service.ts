@@ -100,7 +100,6 @@ export class AgentsService {
       // Fetch all registry accounts from the contract
       const registryAccounts =
         await registryProgram.account['registryAccount'].all();
-
       this.logger.log(
         `Fetched ${registryAccounts.length} agents from Solana registry`,
       );
@@ -169,14 +168,17 @@ export class AgentsService {
 
       // Fetch manifest from Arweave
       let manifest: any = null;
-      try {
-        const manifestUrl = `https://arweave.net/${registryAccount.manifestCid}`;
-        const response = await axios.get(manifestUrl, { timeout: 5000 });
-        manifest = response.data;
-      } catch (error) {
-        this.logger.warn(
-          `Failed to fetch manifest for agent ${agentPubkey.toBase58()}`,
-        );
+      const arweaveCid = registryAccount.arweaveCid || '';
+      if (arweaveCid) {
+        try {
+          const manifestUrl = `https://arweave.net/${arweaveCid}`;
+          const response = await axios.get(manifestUrl, { timeout: 5000 });
+          manifest = response.data;
+        } catch (error) {
+          this.logger.warn(
+            `Failed to fetch manifest for agent ${agentPubkey.toBase58()}`,
+          );
+        }
       }
 
       // Extract data
@@ -191,7 +193,7 @@ export class AgentsService {
         name: manifest?.name || 'Unknown Agent',
         description: manifest?.description || '',
         capabilities,
-        manifestUrl: `https://arweave.net/${registryAccount.manifestCid}`,
+        manifestUrl: arweaveCid ? `https://arweave.net/${arweaveCid}` : '',
         manifest,
         registryPda: registryPda.toBase58(),
         fundPda: fundPda.toBase58(),
@@ -199,6 +201,14 @@ export class AgentsService {
         fundCreatedAt: fundAccount?.createdAt?.toNumber() || 0,
         isActive: registryAccount.isActive || false,
         stakeAmount: fundAccount?.stakeAmount?.toNumber() || 0,
+        // Registry account fields
+        capabilityHash: Array.from(registryAccount.capabilityHash || []),
+        reputationScore: registryAccount.reputationScore || 0,
+        slashCount: registryAccount.slashCount || 0,
+        arweaveCid: arweaveCid,
+        declaredStake: registryAccount.declaredStake?.toNumber() || 0,
+        lastAttestedAt: registryAccount.lastAttestedAt?.toNumber() || 0,
+        // Trust metrics
         totalTasks: 0,
         completedTasks: 0,
         failedTasks: 0,
@@ -207,7 +217,6 @@ export class AgentsService {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
-
       return agentData;
     } catch (error) {
       this.logger.error(
@@ -280,6 +289,8 @@ export class AgentsService {
       trustBadge,
       isActive: data.isActive,
       stakeAmount: data.stakeAmount,
+      reputationScore: data.reputationScore,
+      slashCount: data.slashCount,
     };
   }
 
@@ -297,6 +308,12 @@ export class AgentsService {
       fundPda: data.fundPda,
       registeredAt: data.registeredAt,
       fundCreatedAt: data.fundCreatedAt,
+      capabilityHash: data.capabilityHash,
+      reputationScore: data.reputationScore,
+      slashCount: data.slashCount,
+      arweaveCid: data.arweaveCid,
+      declaredStake: data.declaredStake,
+      lastAttestedAt: data.lastAttestedAt,
     };
   }
 }

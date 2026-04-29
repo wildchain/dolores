@@ -17,6 +17,8 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
   const successRate = agent.trustBadge?.successRate ?? 0;
   const staked = agent.stakeAmount ?? agent.trustBadge?.stakeAmount ?? 0;
   const slashCount = "slashCount" in agent ? (agent.slashCount ?? 0) : 0;
+  const reputationScore =
+    "reputationScore" in agent ? (agent.reputationScore ?? 0) : 0;
   const featured = "featured" in agent ? (agent.featured ?? false) : false;
 
   return (
@@ -36,7 +38,7 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
         <RepRing score={score} />
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-4">
         {[
           {
             label: "Staked",
@@ -49,6 +51,7 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
             cls: "text-moss",
           },
           { label: "Success", val: `${successRate}%`, cls: "text-success" },
+          { label: "Rep", val: reputationScore.toString(), cls: "text-jade" },
         ].map(s => (
           <div
             key={s.label}
