@@ -11,7 +11,8 @@
     "dev:cli": "pnpm --filter @dolores/cli run dev",
     "clean": "pnpm -r exec rm -rf dist node_modules",
     "lint": "pnpm -r run lint",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "dev:agent": "pnpm --filter @dolores/agent run dev"
   },
   "keywords": [
     "solana",

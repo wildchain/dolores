@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "rm -f tsconfig.tsbuildinfo && tsc && mkdir -p dist/idl && cp -r src/idl/* dist/idl/",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -17,5 +17,9 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "typescript": "^5.4.5"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./idl/*": "./src/idl/*.json"
   }
 }

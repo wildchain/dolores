@@ -9,6 +9,9 @@ import {
   Request,
   ParseIntPipe,
   DefaultValuePipe,
+  HttpCode,
+  HttpStatus,
+  Patch
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -22,11 +25,8 @@ import {
 
 @Controller('tasks')
 export class TasksController {
-  constructor(private tasksService: TasksService) {}
+  constructor(private tasksService: TasksService) { }
 
-  /**
-   * GET /tasks - Get filtered tasks with pagination
-   */
   @Get()
   async getTasks(
     @Query('agentId') agentId?: string,
@@ -36,35 +36,70 @@ export class TasksController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset?: number,
   ): Promise<TaskListItemDto[]> {
-    return this.tasksService.getTasks({
-      agentId,
-      requester,
-      status,
-      capabilityName,
-      limit,
-      offset,
-    });
+    return this.tasksService.getTasks({ agentId, requester, status, capabilityName, limit, offset });
   }
 
-  /**
-   * GET /tasks/:id - Get task details
-   */
+  // Must come before :id to avoid route shadowing
+  @Get('agent/:id/pending')
+  async getPendingTasksForAgent(@Param('id') agentId: string): Promise<any[]> {
+    const tasks = await this.tasksService.getTasks({ agentId, status: TaskStatus.PENDING });
+    return tasks.map((t) => ({
+      taskId: t.taskId,
+      agentId: t.agentId,
+      assignedBy: t.requester,
+      instruction: t.capabilityName,
+      deadline: (t as any).deadline ?? 0,
+      onChainCreatedAt: t.createdAt,
+      status: t.status,
+    }));
+  }
+
   @Get(':id')
   async getTaskDetails(@Param('id') taskId: string): Promise<TaskDetailsDto> {
     return this.tasksService.getTaskDetails(taskId);
   }
 
-  /**
-   * POST /tasks/build-register - Build unsigned transaction for registering a task
-   * Requires authentication
-   */
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  async seedTask(
+    @Body() body: { taskId: string; agentId: string; assignedBy: string; instruction: string; deadline: number; onChainCreatedAt: number },
+  ): Promise<{ ok: boolean }> {
+    await this.tasksService.cacheTask({
+      taskId: body.taskId,
+      agentId: body.agentId,
+      agentName: body.agentId.slice(0, 8) + '...',
+      requester: body.assignedBy,
+      status: 'pending',
+      capabilityName: body.instruction,
+      parametersJson: JSON.stringify({ instruction: body.instruction }),
+      challengePda: '',
+      stakeAmount: 0,
+      createdAt: body.onChainCreatedAt,
+      deadline: body.deadline,
+    } as any);
+    return { ok: true };
+  }
+
   @Post('build-register')
   @UseGuards(AuthGuard)
   async buildRegisterTask(
     @Body() dto: BuildRegisterTaskDto,
     @Request() req: any,
   ): Promise<UnsignedTransactionDto> {
-    const requesterWallet = req.user.wallet;
-    return this.tasksService.buildRegisterTask(dto, requesterWallet);
+    return this.tasksService.buildRegisterTask(dto, req.user.wallet);
+  }
+
+
+  @Patch(':id')
+  async updateTaskStatus(
+    @Param('id') taskId: string,
+    @Body() body: { status: string },
+  ): Promise<{ ok: boolean }> {
+    const allTasks = await this.tasksService.getTasks({});
+    const task = allTasks.find(t => t.taskId === taskId);
+    if (task) {
+      await this.tasksService.updateTaskStatus(task.agentId, taskId, body.status as any);
+    }
+    return { ok: true };
   }
 }
