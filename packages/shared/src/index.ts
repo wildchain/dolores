@@ -1,3 +1,6 @@
+// Capability
+export * from "./capability";
+
 // DTOs
 export * from "./receipt.dto";
 export * from "./challenge.dto";

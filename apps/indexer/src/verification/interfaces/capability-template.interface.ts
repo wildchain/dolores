@@ -1,25 +1,17 @@
-export interface CapabilityTemplate {
-  template_id: string;
-  version: string;
-  description: string;
-  allowed_operations: AllowedOperation[];
-  allowed_programs: string[];
-  oracle_source: 'pyth_mainnet' | 'switchboard_v2';
-  global_constraints: GlobalConstraints;
-  verification_rules: string[];
-}
+import {
+  CapabilityManifest,
+  AllowedOperation,
+  GlobalConstraints,
+} from '@dolores/shared';
 
-export interface AllowedOperation {
-  operation_type: string;
-  schema_ref: string;
-  constraints: Record<string, any>;
-}
+// Re-export shared types so existing consumers of this file need no changes.
+export type { AllowedOperation, GlobalConstraints };
 
-export interface GlobalConstraints {
-  max_single_transaction_usdc: number;
-  require_deadline: boolean;
-  max_total_exposure_usdc?: number;
-}
+/**
+ * CapabilityTemplate is the indexer's name for the canonical CapabilityManifest.
+ * All verification services use this alias so they continue to work unchanged.
+ */
+export type CapabilityTemplate = CapabilityManifest;
 
 export interface ConstraintViolation {
   rule: string;
