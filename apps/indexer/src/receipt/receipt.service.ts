@@ -16,7 +16,7 @@ import { createEntity, updateEntity } from '@dolores/database';
 export class ReceiptService {
   private readonly logger = new Logger(ReceiptService.name);
 
-  constructor(private readonly db: RocksDBService) {}
+  constructor(private readonly db: RocksDBService) { }
 
   async create(dto: CreateReceiptDto): Promise<ReceiptEntity> {
     const receipt = createEntity<ReceiptEntity>(dto.taskId, {
@@ -24,6 +24,7 @@ export class ReceiptService {
       taskId: dto.taskId,
       outputHash: dto.outputHash,
       timestamp: dto.timestamp,
+      agentSignature: dto.agentSignature,
       status: ReceiptStatus.Received,
     });
 

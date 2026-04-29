@@ -12,11 +12,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { ReceiptEntity } from '../receipt/receipt.entity';
+import { Ed25519Program } from '@solana/web3.js';
 
 export interface PendingSubmissionResult {
   signature: string | null;
   pendingAttestationPda: string | null;
 }
+
+
 
 @Injectable()
 export class AttestationService implements OnModuleInit {
@@ -25,7 +28,7 @@ export class AttestationService implements OnModuleInit {
   private reviewerKeypair: Keypair | null = null;
   private connection: Connection | null = null;
 
-  constructor() {}
+  constructor() { }
 
   onModuleInit() {
     this.initializeSolanaClient();
@@ -90,12 +93,7 @@ export class AttestationService implements OnModuleInit {
   async submitPendingAttestation(
     receipt: ReceiptEntity,
   ): Promise<PendingSubmissionResult> {
-    const agentKeypair = this.loadAgentKeypair(receipt.agentId);
-    if (!agentKeypair) {
-      return { signature: null, pendingAttestationPda: null };
-    }
-
-    if (!this.program || !this.connection) {
+    if (!this.program || !this.connection || !this.reviewerKeypair) {
       this.logger.warn(
         `Submission skipped for ${receipt.taskId} — Solana client not initialized`,
       );
@@ -124,35 +122,37 @@ export class AttestationService implements OnModuleInit {
         return { signature: null, pendingAttestationPda: null };
       }
 
-      const [registryPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from('registry'), agentKeypair.publicKey.toBuffer()],
-        this.program.programId,
-      );
+      const agentPublicKey = new PublicKey(receipt.agentId);
 
-      const [pendingAttestationPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('pending_attestation'),
-          agentKeypair.publicKey.toBuffer(),
-          outputHashBytes,
-        ],
+      const [registryPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('registry'), agentPublicKey.toBuffer()],
         this.program.programId,
       );
+      const agentSignatureBytes = Buffer.from(receipt.agentSignature ?? '', 'hex');
+
+      const ed25519Ix = Ed25519Program.createInstructionWithPublicKey({
+        publicKey: agentPublicKey.toBytes(),
+        message: outputHashBytes,
+        signature: agentSignatureBytes,
+      });
 
       const submitIx = await (this.program.methods as any)
-        .submitAttestation(Array.from(outputHashBytes), receipt.cid ?? '')
+        .submitAttestation(
+          85,
+          Array.from(outputHashBytes),
+          Array.from(agentSignatureBytes),
+          1,
+        )
         .accounts({
-          agent: agentKeypair.publicKey,
+          attester: this.reviewerKeypair.publicKey,
           registry: registryPda,
-          pendingAttestation: pendingAttestationPda,
-          systemProgram: SystemProgram.programId,
         })
         .instruction();
-
-      const tx = new Transaction().add(submitIx);
+      const tx = new Transaction().add(ed25519Ix, submitIx); // ed25519 first
       const sig = await sendAndConfirmTransaction(
         this.connection,
         tx,
-        [agentKeypair],
+        [this.reviewerKeypair],
         { commitment: 'confirmed' },
       );
 
@@ -160,10 +160,7 @@ export class AttestationService implements OnModuleInit {
         `Pending attestation submitted — agent: ${receipt.agentId} taskId: ${receipt.taskId} tx: ${sig}`,
       );
 
-      return {
-        signature: sig,
-        pendingAttestationPda: pendingAttestationPda.toBase58(),
-      };
+      return { signature: sig, pendingAttestationPda: null };
     } catch (err: any) {
       this.logger.error(
         `Failed to submit pending attestation for ${receipt.taskId}: ${err?.message ?? err}`,

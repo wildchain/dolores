@@ -25,6 +25,7 @@ export interface ReceiptEntity extends BaseEntity {
   agentId: string;
   taskId: string;
   outputHash: string;
+  agentSignature?: string;
   timestamp: number;
   cid?: string;
   status: ReceiptStatus;

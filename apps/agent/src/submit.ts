@@ -12,6 +12,8 @@ import { SignedReceipt, outputHashToBytes } from "./receipt";
 
 const TASK_SEED = Buffer.from("task");
 const ADJ_PROGRAM_ID = "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A"; // redeployed
+const RECEIPT_URL = process.env.RECEIPT_URL || "http://localhost:8080";
+
 
 export interface SubmitResult {
     txSignature: string;
@@ -78,14 +80,14 @@ export async function submitToIndexer(
         }),
     });
 
-    const res = await fetch(`${indexerUrl}/receipts/upload`, {
+    const res = await fetch(`${process.env.RECEIPT_URL || "http://localhost:8080"}/receipts/upload`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             agentId: signedReceipt.receipt.agent_id,
-            taskId: signedReceipt.receipt.task_id,
+            taskId: taskId,
             outputHash: signedReceipt.outputHash,
-            timestamp: signedReceipt.receipt.timestamp_unix,
+            timestamp: completedAt,
             agentSignature: signedReceipt.agentSignature,
         }),
     });

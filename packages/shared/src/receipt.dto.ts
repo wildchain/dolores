@@ -8,6 +8,7 @@ export interface CreateReceiptDto {
   outputHash: string;
   timestamp: number;
   agentSignature: string;
+
 }
 
 /**
