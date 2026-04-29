@@ -6,6 +6,11 @@ import { Step1GenerateAgent } from "@/components/register/Step1GenerateAgent";
 import { Step2SelectCapabilities } from "@/components/register/Step2SelectCapabilities";
 import { Step3RegisterOnChain } from "@/components/register/Step3RegisterOnChain";
 import { useAgentRegistration } from "@/hooks/useAgentRegistration";
+import {
+  CAPABILITY_TEMPLATES,
+  hashManifest,
+  type CapabilityTemplateId,
+} from "@dolores/shared";
 
 type Step = 1 | 2 | 3;
 
@@ -54,10 +59,14 @@ export default function RegisterPage() {
 
     setRegistrationError(undefined);
 
-    // Create capability hash (simplified - in real implementation, use proper hashing)
-    const capabilityHash = Array.from({ length: 32 }, () =>
-      Math.floor(Math.random() * 256),
-    );
+    // Hash the first selected capability's canonical manifest.
+    const templateId = selectedCapabilities[0] as CapabilityTemplateId;
+    const manifest = CAPABILITY_TEMPLATES[templateId];
+    if (!manifest) {
+      toast("Unknown capability template", "error");
+      return;
+    }
+    const capabilityHash = await hashManifest(manifest);
 
     await register({
       capabilityHash,
