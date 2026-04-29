@@ -19,7 +19,7 @@ export class ReceiptController {
   constructor(
     private readonly receiptService: ReceiptService,
     private readonly attestationService: AttestationService,
-  ) {}
+  ) { }
 
   @Post('upload')
   async uploadReceipt(
@@ -46,10 +46,10 @@ export class ReceiptController {
     const submission =
       await this.attestationService.submitPendingAttestation(receipt);
 
-    if (submission.signature && submission.pendingAttestationPda) {
+    if (submission.signature) {
       await this.receiptService.markPendingReview(
         receipt.taskId,
-        submission.pendingAttestationPda,
+        submission.pendingAttestationPda ?? '',
         submission.signature,
       );
     } else {
