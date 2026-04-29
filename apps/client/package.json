@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@dolores/shared": "workspace:*",
-    "@mantine/core": "^9.1.0",
+    "@mantine/core": "^7.17.8",
+    "@mantine/hooks": "^7.17.8",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-phantom": "^0.9.29",
     "@solana/wallet-adapter-react": "^0.15.39",

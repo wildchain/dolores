@@ -1,7 +1,9 @@
 "use client";
+import { useState } from "react";
 import { Card, RepRing, Badge, Button } from "@/components/ui";
 import { formatUsdc } from "@/lib/data";
 import { useToast } from "@/components/ui/Toast";
+import { AgentDetailsModal } from "./AgentDetailsModal";
 import type { Agent } from "@/types";
 import type { AgentListItemDto } from "@dolores/shared";
 
@@ -9,6 +11,7 @@ type AgentCardData = Agent | AgentListItemDto;
 
 export function AgentCard({ agent }: { agent: AgentCardData }) {
   const { toast } = useToast();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const address =
     agent.agentId ?? ("address" in agent ? (agent.address ?? "") : "");
@@ -35,7 +38,7 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
             {agent.name}
           </div>
         </div>
-        <RepRing score={score} />
+        <RepRing score={reputationScore} />
       </div>
 
       <div className="grid grid-cols-4 gap-2 mb-4">
@@ -81,7 +84,11 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
             : `${slashCount} slash${slashCount > 1 ? "es" : ""}`}
         </div>
         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+          >
             View
           </Button>
           <Button size="sm" onClick={() => toast(`Hired ${agent.name}`)}>
@@ -89,6 +96,12 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
           </Button>
         </div>
       </div>
+
+      <AgentDetailsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        agentId={address}
+      />
     </Card>
   );
 }
