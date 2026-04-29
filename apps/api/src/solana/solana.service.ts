@@ -30,6 +30,15 @@ export class SolanaService implements OnModuleInit {
     await this.initialize();
   }
 
+  getIsInitialized(): boolean {
+    return !!(
+      this.connection &&
+      this.registryProgram &&
+      this.fundProgram &&
+      this.adjudicationProgram
+    );
+  }
+
   private async initialize() {
     try {
       const rpcUrl =
