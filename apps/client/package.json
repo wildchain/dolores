@@ -9,7 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@dolores/contracts": "workspace:*",
     "@dolores/shared": "workspace:*",
+    "@hookform/resolvers": "^5.2.2",
     "@mantine/core": "^7.17.8",
     "@mantine/hooks": "^7.17.8",
     "@solana/wallet-adapter-base": "^0.9.27",
@@ -27,7 +29,9 @@
     "next": "14.2.3",
     "react": "^18",
     "react-dom": "^18",
-    "recharts": "^2.12.7"
+    "react-hook-form": "^7.74.0",
+    "recharts": "^2.12.7",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
