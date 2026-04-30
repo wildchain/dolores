@@ -1,0 +1,57 @@
+FROM node:20-alpine AS builder
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Copy manifests only first (better layer caching)
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/shared/package.json        ./packages/shared/
+COPY packages/database/package.json      ./packages/database/
+COPY packages/contracts/package.json     ./packages/contracts/
+COPY packages/solana-utils/package.json  ./packages/solana-utils/
+COPY apps/api/package.json               ./apps/api/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy source
+COPY packages/ ./packages/
+COPY apps/api/ ./apps/api/
+COPY tsconfig.json ./
+
+# Build workspace packages first, then the API
+RUN pnpm --filter @dolores/shared build
+RUN pnpm --filter @dolores/database build
+RUN pnpm --filter @dolores/contracts build
+RUN pnpm --filter @dolores/solana-utils build
+RUN pnpm --filter api build
+
+# ── Runtime image ──────────────────────────────────────────────
+FROM node:20-alpine
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages/shared/package.json        ./packages/shared/
+COPY packages/database/package.json      ./packages/database/
+COPY packages/contracts/package.json     ./packages/contracts/
+COPY packages/solana-utils/package.json  ./packages/solana-utils/
+COPY apps/api/package.json               ./apps/api/
+
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built artefacts from builder
+COPY --from=builder /app/packages/shared/dist       ./packages/shared/dist
+COPY --from=builder /app/packages/database/dist     ./packages/database/dist
+COPY --from=builder /app/packages/contracts/dist    ./packages/contracts/dist
+COPY --from=builder /app/packages/solana-utils/dist ./packages/solana-utils/dist
+COPY --from=builder /app/apps/api/dist              ./apps/api/dist
+
+RUN chown -R node:node /app
+USER node
+
+EXPOSE 3001
+
+CMD ["node", "apps/api/dist/main.js"]
