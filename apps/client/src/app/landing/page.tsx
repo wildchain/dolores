@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { ProtocolGlance } from "@/components/landing/ProtocolGlance";
+import { HowItWorks } from "@/components/landing/HowItWorks";
 
 const NAV_LINKS = [
   { href: "#protocol", label: "Protocol" },
@@ -341,6 +343,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <ProtocolGlance />
+      <HowItWorks />
     </div>
   );
 }
