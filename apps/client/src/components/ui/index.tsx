@@ -280,11 +280,13 @@ export function StatTile({
   value,
   sub,
   valueClass,
+  valueStyle,
 }: {
   label: string;
   value: string;
   sub?: string;
   valueClass?: string;
+  valueStyle?: React.CSSProperties;
 }) {
   return (
     <div
@@ -313,6 +315,7 @@ export function StatTile({
           fontSize: "var(--fs-16)",
           fontWeight: 600,
           color: "var(--fg)",
+          ...valueStyle,
         }}
       >
         {value}
