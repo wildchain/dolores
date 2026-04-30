@@ -166,12 +166,14 @@ export class AgentsService {
 
       const fundAccount: any = fundAccountInfo;
 
-      // Fetch manifest from Arweave
+      // Fetch manifest from IPFS
       let manifest: any = null;
-      const arweaveCid = registryAccount.arweaveCid || '';
-      if (arweaveCid) {
+      const manifestCid = registryAccount.arweaveCid || '';
+      if (manifestCid) {
         try {
-          const manifestUrl = `https://arweave.net/${arweaveCid}`;
+          const ipfsGateway =
+            process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs';
+          const manifestUrl = `${ipfsGateway}/${manifestCid}`;
           const response = await axios.get(manifestUrl, { timeout: 5000 });
           manifest = response.data;
         } catch (error) {
@@ -193,7 +195,9 @@ export class AgentsService {
         name: manifest?.name || 'Unknown Agent',
         description: manifest?.description || '',
         capabilities,
-        manifestUrl: arweaveCid ? `https://arweave.net/${arweaveCid}` : '',
+        manifestUrl: manifestCid
+          ? `${process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs'}/${manifestCid}`
+          : '',
         manifest,
         registryPda: registryPda.toBase58(),
         fundPda: fundPda.toBase58(),
@@ -205,7 +209,7 @@ export class AgentsService {
         capabilityHash: Array.from(registryAccount.capabilityHash || []),
         reputationScore: registryAccount.reputationScore || 0,
         slashCount: registryAccount.slashCount || 0,
-        arweaveCid: arweaveCid,
+        arweaveCid: manifestCid,
         declaredStake: registryAccount.declaredStake?.toNumber() || 0,
         lastAttestedAt: registryAccount.lastAttestedAt?.toNumber() || 0,
         // Trust metrics
