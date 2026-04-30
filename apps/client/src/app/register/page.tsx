@@ -29,6 +29,8 @@ export default function RegisterPage() {
   );
   const [registrationError, setRegistrationError] = useState<string>();
   const [onChainSignature, setOnChainSignature] = useState<string>();
+  const [agentName, setAgentName] = useState("");
+  const [agentDescription, setAgentDescription] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState<{
     signature: string;
     manifestCid: string;
@@ -53,8 +55,14 @@ export default function RegisterPage() {
     setStep(2);
   };
 
-  const handleStep2Next = (capabilities: string[]) => {
+  const handleStep2Next = (
+    capabilities: string[],
+    name: string,
+    description: string,
+  ) => {
     setSelectedCapabilities(capabilities);
+    setAgentName(name);
+    setAgentDescription(description);
     setStep(3);
   };
 
@@ -104,7 +112,12 @@ export default function RegisterPage() {
     let manifestCid: string;
     try {
       setRegistrationPhase("uploading");
-      manifestCid = await pinManifest(manifest);
+      const pinnedManifest: Record<string, unknown> = {
+        ...(manifest as unknown as Record<string, unknown>),
+        name: agentName,
+        description: agentDescription || manifest.description,
+      };
+      manifestCid = await pinManifest(pinnedManifest);
     } catch (error) {
       const msg = (error as Error).message ?? "IPFS pin failed";
       setRegistrationError(msg);

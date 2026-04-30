@@ -2,13 +2,20 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/components/ui";
+import { FormInput } from "@/components/forms/FormInput";
 import { CapabilitySelector } from "./CapabilitySelector";
 import { RegistrationSummary } from "./RegistrationSummary";
 import { CAPABILITY_TEMPLATES } from "@/lib/data";
 import type { Keypair } from "@solana/web3.js";
 
 const schema = z.object({
+  name: z
+    .string()
+    .min(1, "Agent name is required")
+    .max(50, "Name must be 50 characters or less"),
+  description: z
+    .string()
+    .max(200, "Description must be 200 characters or less"),
   capabilities: z
     .array(z.string())
     .min(1, "Select at least one capability template"),
@@ -22,7 +29,7 @@ type FormData = z.infer<typeof schema>;
 interface Step2Props {
   agentKeypair: Keypair;
   onBack: () => void;
-  onNext: (capabilities: string[]) => void;
+  onNext: (capabilities: string[], name: string, description: string) => void;
   onDownloadKeypair: () => void;
 }
 
@@ -33,6 +40,7 @@ export function Step2SelectCapabilities({
   onDownloadKeypair,
 }: Step2Props) {
   const {
+    register,
     control,
     handleSubmit,
     watch,
@@ -41,6 +49,8 @@ export function Step2SelectCapabilities({
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
+      name: "",
+      description: "",
       capabilities: [],
       confirmDownload: false,
     },
@@ -50,7 +60,7 @@ export function Step2SelectCapabilities({
   const confirmDownload = watch("confirmDownload");
 
   const onSubmit = (data: FormData) => {
-    onNext(data.capabilities);
+    onNext(data.capabilities, data.name, data.description);
   };
 
   return (
@@ -71,6 +81,31 @@ export function Step2SelectCapabilities({
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
+        <FormInput
+          name="name"
+          control={control as any}
+          label="Agent Name"
+          placeholder="e.g. DeFi Yield Optimizer"
+        />
+
+        <div className="mb-3">
+          <label className="font-mono text-[11px] text-jadeMid mb-1.5 block">
+            Description{" "}
+            <span className="text-jade/50 font-normal">(optional)</span>
+          </label>
+          <textarea
+            {...register("description")}
+            placeholder="Briefly describe what this agent does..."
+            rows={3}
+            className="w-full bg-stone border border-jade/25 rounded-sm px-3.5 py-2.5 text-ink font-mono text-[13px] placeholder:text-jade/60 focus:border-jadeDark focus:bg-white transition-all outline-none resize-none"
+          />
+          {errors.description && (
+            <p className="text-[11px] text-danger mt-1">
+              {errors.description.message}
+            </p>
+          )}
+        </div>
+
         <div className="mb-5">
           <CapabilitySelector
             capabilities={CAPABILITY_TEMPLATES}
@@ -112,14 +147,13 @@ export function Step2SelectCapabilities({
           <div className="font-mono text-[11px] font-semibold text-amber mb-3">
             📥 Download Agent Keypair
           </div>
-          <Button
+          <button
             type="button"
-            variant="secondary"
-            className="w-full mb-3"
             onClick={onDownloadKeypair}
+            className="w-full mb-3 font-semibold transition-all duration-150 border px-4 py-2 text-[13px] rounded-sm bg-jade/15 text-jadeDark border-jade/35 hover:bg-jade/25"
           >
             Download agent-{agentKeypair.publicKey.toBase58().slice(0, 8)}.json
-          </Button>
+          </button>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -139,21 +173,20 @@ export function Step2SelectCapabilities({
         </div>
 
         <div className="flex gap-3">
-          <Button
+          <button
             type="button"
-            variant="secondary"
-            className="flex-1"
             onClick={onBack}
+            className="flex-1 font-semibold transition-all duration-150 border px-4 py-2 text-[13px] rounded-sm bg-jade/15 text-jadeDark border-jade/35 hover:bg-jade/25"
           >
             ← Back
-          </Button>
-          <Button
+          </button>
+          <button
             type="submit"
-            className="flex-1"
             disabled={!confirmDownload || capabilities.length === 0}
+            className="flex-1 font-semibold transition-all duration-150 border px-4 py-2 text-[13px] rounded-sm bg-jadeDeep text-stone hover:bg-moss border-transparent disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Continue to Registration →
-          </Button>
+          </button>
         </div>
       </form>
     </div>

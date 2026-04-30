@@ -1,9 +1,7 @@
-import type { CapabilityManifest } from "@dolores/shared";
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export async function pinManifest(
-  manifest: CapabilityManifest,
+  manifest: Record<string, unknown>,
 ): Promise<string> {
   const response = await fetch(`${API_BASE_URL}/ipfs/pin-manifest`, {
     method: "POST",
