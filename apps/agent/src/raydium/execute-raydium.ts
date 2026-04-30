@@ -1,7 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, VersionedTransaction } from "@solana/web3.js";
 import { Raydium, TxVersion, Percent } from "@raydium-io/raydium-sdk-v2";
 import BN from "bn.js";
+
+
+
 
 
 const client = new Anthropic();
@@ -26,7 +29,7 @@ export const VERIFIED_TOKENS: Record<string, { mint: string; decimals: number }>
     BONK: { mint: "DezXAZ8z7PnrnRJjz3wXBoRgixVqXaSL1shNorWMaWRd", decimals: 5 },
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
 
 export type RaydiumOp =
     | "swap"
@@ -67,68 +70,111 @@ export async function executeRaydiumAction(
         "confirmed"
     );
 
+    // Use Trade API for swaps (pure HTTP, fastest path to mainnet inclusion)
+    if (decision.action === "swap") {
+        const tokenInInfo = VERIFIED_TOKENS[decision.tokenIn ?? "SOL"];
+        const tokenOutInfo = VERIFIED_TOKENS[decision.tokenOut ?? "USDC"];
+        const inAmountLamports = Math.floor(
+            (decision.amountIn ?? 0) * Math.pow(10, tokenInInfo.decimals)
+        );
+        const slippageBps = Math.floor((decision.slippage ?? 0.01) * 10000);
+
+        // 1. Get priority fee
+        const feeRes = await fetch("https://transaction-v1.raydium.io/priority-fee");
+        const feeText = await feeRes.text();
+        let computeUnitPriceMicroLamports = "10000"; // fallback
+        try {
+            const feeData = JSON.parse(feeText);
+            computeUnitPriceMicroLamports = String(feeData.data.default.h);
+        } catch {
+            console.warn(`   ⚠️  Priority fee fetch failed, using fallback`);
+        }
+
+        // 2. Get swap quote
+        const quoteUrl = `https://transaction-v1.raydium.io/compute/swap-base-in?inputMint=${tokenInInfo.mint}&outputMint=${tokenOutInfo.mint}&amount=${inAmountLamports}&slippageBps=${slippageBps}&txVersion=V0`;
+        console.log(`   Quote URL: ${quoteUrl}`);
+        const quoteRes = await fetch(quoteUrl);
+        const quoteText = await quoteRes.text();
+        console.log(`   Quote status: ${quoteRes.status}, body: ${quoteText.slice(0, 200)}`);
+        const quoteData = JSON.parse(quoteText);
+        if (!quoteData.success) {
+            throw new Error(`Raydium quote failed: ${JSON.stringify(quoteData)}`);
+        }
+
+        // 3. Build transaction
+        const txRes = await fetch("https://transaction-v1.raydium.io/transaction/swap-base-in", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                computeUnitPriceMicroLamports,
+                swapResponse: quoteData,
+                txVersion: "V0",
+                wallet: agentKeypair.publicKey.toBase58(),
+                wrapSol: decision.tokenIn === "SOL",
+                unwrapSol: decision.tokenOut === "SOL",
+            }),
+        });
+        const txText = await txRes.text();
+        console.log(`   TX build status: ${txRes.status}, body: ${txText.slice(0, 200)}`);
+        const txData = JSON.parse(txText);
+        if (!txData.success) {
+            throw new Error(`Raydium tx build failed: ${JSON.stringify(txData)}`);
+        }
+
+        // 4. Sign and send
+        const txBuf = Buffer.from(txData.data[0].transaction, "base64");
+        const tx = VersionedTransaction.deserialize(txBuf);
+
+        // Get fresh blockhash before sending
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+        tx.message.recentBlockhash = blockhash;
+
+        tx.sign([agentKeypair]);
+
+        const txId = await connection.sendTransaction(tx, {
+            skipPreflight: true,
+            maxRetries: 5,
+            preflightCommitment: "confirmed"
+        });
+        console.log(`   📤 Sent: ${txId}`);
+
+        // Poll status manually with longer timeout
+        const start = Date.now();
+        const TIMEOUT_MS = 90_000;
+        while (Date.now() - start < TIMEOUT_MS) {
+            const status = await connection.getSignatureStatus(txId);
+            if (status?.value?.confirmationStatus === "confirmed" || status?.value?.confirmationStatus === "finalized") {
+                if (status.value.err) {
+                    throw new Error(`TX failed: ${JSON.stringify(status.value.err)}`);
+                }
+                return { action: "swap", txSignature: txId };
+            }
+            await new Promise(r => setTimeout(r, 2000));
+        }
+        throw new Error(`Confirmation timeout for ${txId}`);
+    }
+
+    // Liquidity ops still use SDK (Trade API doesn't support them)
     const raydium = await Raydium.load({
         connection,
         owner: agentKeypair,
         cluster: "mainnet",
         disableFeatureCheck: true,
         disableLoadToken: true,
-        blockhashCommitment: "confirmed",
+        blockhashCommitment: "finalized",
     });
 
     const poolId = decision.poolId ?? DEFAULT_POOL;
-    const poolType = decision.poolType ?? DEFAULT_POOL_TYPE;
-
-    // Fetch pool info from Raydium API
     const poolData = await raydium.api.fetchPoolById({ ids: poolId });
     if (!poolData || !poolData[0]) {
-        throw new Error(`Pool ${poolId} not found or wrong pool type`);
+        throw new Error(`Pool ${poolId} not found`);
     }
     const poolInfo = poolData[0] as any;
 
     switch (decision.action) {
-        case "swap": {
-            const tokenInInfo = VERIFIED_TOKENS[decision.tokenIn ?? "SOL"];
-            const inAmountLamports = new BN(
-                Math.floor((decision.amountIn ?? 0) * Math.pow(10, tokenInInfo.decimals))
-            );
-            const baseIn = decision.tokenIn === poolInfo.mintA.address ||
-                decision.tokenIn === "SOL";
-
-            const { transaction } = await raydium.cpmm.swap({
-                poolInfo,
-                baseIn,
-                inputAmount: inAmountLamports,
-                swapResult: { inputAmount: inAmountLamports, outputAmount: new BN(0) },
-                slippage: decision.slippage ?? 0.01,
-                txVersion: TxVersion.V0,
-                computeBudgetConfig: {
-                    units: 600000,
-                    microLamports: 50000,
-                },
-            });
-
-            let txId: string | null = null;
-            for (let attempt = 0; attempt < 3; attempt++) {
-                try {
-                    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-                    transaction.message.recentBlockhash = blockhash;
-                    transaction.sign([agentKeypair]);
-                    txId = await connection.sendTransaction(transaction, { skipPreflight: true, maxRetries: 5 });
-                    await connection.confirmTransaction({ signature: txId, blockhash, lastValidBlockHeight }, "confirmed");
-                    break;
-                } catch (retryErr: any) {
-                    if (attempt === 2) throw retryErr;
-                    console.log(`   ⏳ Retry ${attempt + 1}/3...`);
-                    await new Promise(r => setTimeout(r, 2000));
-                }
-            }
-            return { action: "swap", txSignature: txId! };
-        }
-
         case "add_liquidity": {
             const inputAmount = new BN(decision.amountIn ?? 1000000);
-            const slippage = new Percent(1, 100); // 1%
+            const slippage = new Percent(1, 100);
             const { execute } = await raydium.cpmm.addLiquidity({
                 poolInfo,
                 inputAmount,

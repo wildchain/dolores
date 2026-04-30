@@ -13,11 +13,12 @@ import { buildReceipt, signReceipt } from "./receipt";
 import { executeSolTransfer, completeTaskOnChain, submitToIndexer } from "./submit";
 import idlAdjudication from "../../../apps/cli/src/idl/dolores_adjudication.json";
 import { parsePythCommand, executePythDecision, PythExecutionResult } from "./pyth/execute-pyth";
-
-import { executePumpFunTask, PumpDecision } from "./pumpfun/execute-pumpfun";
 import { executeKaminoTask, executeKaminoAction, KaminoDecision, KaminoActionDecision, KaminoExecutionResult } from "./kamino/execute-kamino";
 import { executeMeteoraTask, executeMeteoraAction, MeteoraDecision, MeteoraExecutionResult } from "./meteora/execute-meteora";
 import { executeRaydiumTask, executeRaydiumAction, RaydiumDecision, RaydiumExecutionResult } from "./raydium/execute-raydium";
+import { PublicKey, VersionedTransaction } from "@solana/web3.js";
+import { executePumpFunTask, executePumpFunAction, PumpDecision, PumpExecutionResult } from "./pumpfun/execute-pumpfun";
+
 
 
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
@@ -603,7 +604,7 @@ async function processRaydiumTask(
       err?.message?.includes('not found') ||
       err?.message?.includes('block height') ||
       !err?.message) {
-        console.warn(`   ⚠️  Raydium failed — skipping: ${err?.message}`);
+      console.warn(`   ⚠️  Raydium failed — skipping: ${err?.message}`);
       await markTaskCompleted(task.taskId);
       return;
     }
@@ -652,6 +653,91 @@ async function processRaydiumTask(
   }
 
   console.log(`\n✅ Raydium task complete: ${task.taskId.slice(0, 16)}...\n`);
+}
+
+// PUMPFUN_TRADER
+
+async function processPumpFunTask(
+  task: PendingTask,
+  agentKeypair: Keypair,
+  connection: Connection,
+  adjProgram: Program
+): Promise<void> {
+  console.log(`\n🤖 Asking Claude (template: PUMPFUN_TRADER)...`);
+
+  let decision: PumpDecision;
+  try {
+    decision = await executePumpFunTask(task.instruction);
+  } catch (err: any) {
+    console.error(`   ❌ Claude failed: ${err?.message}`);
+    return;
+  }
+  console.log(`   Decision    : ${JSON.stringify(decision)}`);
+
+  if (decision.action === "reject") {
+    console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    return;
+  }
+  if (decision.action === "status") {
+    console.log(`   ℹ️  Status check`);
+    return;
+  }
+
+  console.log(`\n⚡ Executing PumpFun ${decision.action}...`);
+  console.log(`   Mint   : ${decision.mint}`);
+  console.log(`   Amount : ${decision.action === "buy" ? `${decision.solAmount} SOL` : `${decision.tokenAmount} tokens`}`);
+
+  let result: PumpExecutionResult;
+  try {
+    result = await executePumpFunAction(agentKeypair, decision);
+    console.log(`   ✅ TX: ${result.txSignature}`);
+  } catch (err: any) {
+    console.error(`   ❌ PumpFun execution failed: ${err?.message}`);
+    await markTaskCompleted(task.taskId);
+    return;
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const crypto = require("crypto");
+  const nacl = require("tweetnacl");
+  const outputHash = crypto.createHash("sha256")
+    .update(JSON.stringify({ result, timestamp }))
+    .digest("hex");
+  const outputHashBytes = Buffer.from(outputHash, "hex");
+  const agentSignature = Buffer.from(
+    nacl.sign.detached(outputHashBytes, agentKeypair.secretKey)
+  ).toString("hex");
+
+  console.log(`\n📝 output_hash: ${outputHash}`);
+  console.log(`🔗 Writing on-chain...`);
+
+  const taskIdBuffer = Buffer.from(task.taskId, "hex");
+  try {
+    const completeTx = await completeTaskOnChain(
+      connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
+    );
+    console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
+  } catch (err: any) {
+    console.error(`   ❌ complete_task failed: ${err?.message}`);
+    return;
+  }
+
+  console.log(`\n📡 Submitting to indexer...`);
+  try {
+    await uploadReceipt({
+      agentId: agentKeypair.publicKey.toBase58(),
+      taskId: task.taskId,
+      outputHash,
+      timestamp,
+      agentSignature,
+    });
+    console.log(`   ✅ Receipt submitted`);
+  } catch (err: any) {
+    console.error(`   ❌ Indexer failed: ${err?.message}`);
+  }
+
+  console.log(`\n✅ PumpFun task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
 
@@ -705,8 +791,8 @@ async function main() {
           case "RAYDIUM_LP":
             await processRaydiumTask(task, agentKeypair, connection, adjProgram);
             break;
-          case "PUMPFUN":
-            await processDefiDecisionTask("PUMPFUN", executePumpFunTask, task, agentKeypair, connection, adjProgram);
+          case "PUMPFUN_TRADER":
+            await processPumpFunTask(task, agentKeypair, connection, adjProgram);
             break;
           default:
             await processSolTransferTask(task, agentKeypair, connection, adjProgram);

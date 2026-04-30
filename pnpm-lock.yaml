@@ -35,6 +35,9 @@ importers:
       '@meteora-ag/dlmm':
         specifier: ^1.9.7
         version: 1.9.7(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@pump-fun/pump-sdk':
+        specifier: ^1.33.0
+        version: 1.33.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@pythnetwork/hermes-client':
         specifier: ^3.1.0
         version: 3.1.0(axios@1.15.2)
@@ -787,6 +790,10 @@ packages:
 
   '@coral-xyz/anchor@0.31.0':
     resolution: {integrity: sha512-Yb1NwP1s4cWhAw7wL7vOLHSWWw3cD5D9pRCVSeJpdqPaI+w7sfRLScnVJL6ViYMZynB7nAG/5HcUPKUnY0L9rw==}
+    engines: {node: '>=17'}
+
+  '@coral-xyz/anchor@0.31.1':
+    resolution: {integrity: sha512-QUqpoEK+gi2S6nlYc2atgT2r41TT3caWr/cPUEL8n8Md9437trZ68STknq897b82p5mW0XrTBNOzRbmIRJtfsA==}
     engines: {node: '>=17'}
 
   '@coral-xyz/anchor@0.32.1':
@@ -1735,6 +1742,13 @@ packages:
 
   '@protobufjs/utf8@1.1.0':
     resolution: {integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==}
+
+  '@pump-fun/pump-sdk@1.33.0':
+    resolution: {integrity: sha512-Efd0rcqL7P1w3R5RQUeMspWpuejKY/SovMfVZCzrllAB0PoMM8WNYJQinFMxV5f7NdeG6gis+P6ZsmJ+wtrpIg==}
+
+  '@pump-fun/pump-swap-sdk@1.15.0':
+    resolution: {integrity: sha512-1fuUE2iXjQSLBr/WGjxD7rdlQuTZ4vNYldKHdo5ArCrYt/yGuCw0DlyQJdGdpJbxBzE5tzvnIUoStFdVdHKS4A==}
+    engines: {node: '>=16'}
 
   '@pythnetwork/client@2.22.1':
     resolution: {integrity: sha512-/RjUB7BMWl42Hr3qSezmO+tsOPBdtrNNXkjskJgZx0kYi+O1UlAweWuwjWBXTNOqlL9jab24odomx8KCAzFjtg==}
@@ -8064,10 +8078,12 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuidv4@6.2.13:
@@ -8690,6 +8706,27 @@ snapshots:
       - utf-8-validate
 
   '@coral-xyz/anchor@0.31.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+    dependencies:
+      '@coral-xyz/anchor-errors': 0.31.1
+      '@coral-xyz/borsh': 0.31.1(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3))
+      '@noble/hashes': 1.8.0
+      '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      bn.js: 5.2.3
+      bs58: 4.0.1
+      buffer-layout: 1.2.2
+      camelcase: 6.3.0
+      cross-fetch: 3.2.0
+      eventemitter3: 4.0.7
+      pako: 2.1.0
+      superstruct: 0.15.5
+      toml: 3.0.0
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - typescript
+      - utf-8-validate
+
+  '@coral-xyz/anchor@0.31.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
     dependencies:
       '@coral-xyz/anchor-errors': 0.31.1
       '@coral-xyz/borsh': 0.31.1(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3))
@@ -10355,6 +10392,35 @@ snapshots:
   '@protobufjs/pool@1.1.0': {}
 
   '@protobufjs/utf8@1.1.0': {}
+
+  '@pump-fun/pump-sdk@1.33.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+    dependencies:
+      '@coral-xyz/anchor': 0.31.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@pump-fun/pump-swap-sdk': 1.15.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/spl-token': 0.4.14(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      bn.js: 5.2.3
+      undici-types: 6.21.0
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - fastestsmallesttextencoderdecoder
+      - typescript
+      - utf-8-validate
+
+  '@pump-fun/pump-swap-sdk@1.15.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+    dependencies:
+      '@coral-xyz/anchor': 0.31.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/spl-token': 0.4.14(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      bn.js: 5.2.3
+      bs58: 6.0.0
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - fastestsmallesttextencoderdecoder
+      - typescript
+      - utf-8-validate
 
   '@pythnetwork/client@2.22.1(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
     dependencies:

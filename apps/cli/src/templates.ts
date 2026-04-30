@@ -54,15 +54,16 @@ export const CAPABILITY_TEMPLATES: Record<string, CapabilityManifest> = {
         skill_ref: "https://github.com/sendaifun/skills/tree/72ef2aa/skills/raydium",
     },
 
-    ORCA_WHIRLPOOL: {
-        template: "ORCA_WHIRLPOOL",
+    PUMPFUN_TRADER: {
+        template: "PUMPFUN_TRADER",
         version: "1.0.0",
         allowed_programs: [
-            "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc", // Orca Whirlpools
+            "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P", // Pump.fun bonding curve program
+            "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",  // PumpSwap AMM (graduated tokens)
         ],
-        max_transfer_usdc: 50_000,
-        description: "Orca Whirlpools concentrated liquidity — swaps and position management",
-        skill_ref: "https://github.com/sendaifun/skills/tree/72ef2aa/skills/orca",
+        max_transfer_usdc: 1_000, // small cap on meme token trades
+        description: "PumpFun bonding curve buy/sell — meme tokens",
+        skill_ref: "https://github.com/sendaifun/skills/tree/main/skills/pumpfun",
     },
 
     KAMINO_LENDING: {
