@@ -31,6 +31,16 @@ export class AgentsController {
   }
 
   /**
+   * GET /agents/operator/:address - Get agents by operator wallet
+   */
+  @Get('operator/:address')
+  async getAgentsByOperator(
+    @Param('address') address: string,
+  ): Promise<AgentListItemDto[]> {
+    return this.agentsService.getAgentsByOperator(address);
+  }
+
+  /**
    * GET /agents/:id - Get agent details
    */
   @Get(':id')
