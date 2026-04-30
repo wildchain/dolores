@@ -11,6 +11,9 @@ import { verifyCommand }     from "./commands/verify";
 import { challengeCommand }  from "./commands/challenge";
 import { assignCommand }     from "./commands/assign";
 import { taskStatusCommand } from "./commands/task-status";
+import { communityStakeCommand } from "./commands/community-stake";
+import { depositRewardsCommand } from "./commands/deposit-rewards";
+import { claimRewardsCommand } from "./commands/claim-rewards";
 
 const DEFAULT_OPERATOR_KEY = path.join(os.homedir(), ".config", "solana", "id.json");
 const DEFAULT_RPC          = "https://api.devnet.solana.com";
@@ -163,6 +166,64 @@ program
     await taskStatusCommand({
       taskId:     opts.taskId,
       indexerUrl: opts.indexer,
+    });
+  });
+
+// community-stake
+
+program
+  .command("community-stake")
+  .description("Stake SOL on an agent as a community staker")
+  .requiredOption("--agent-id <pubkey>", "Agent public key")
+  .requiredOption("--operator-id <pubkey>", "Operator public key (agent owner)")
+  .requiredOption("--amount <sol>", "Amount in SOL to stake")
+  .option("--staker-key <path>", "Path to staker keypair JSON", DEFAULT_OPERATOR_KEY)
+  .option("--rpc <url>", "Solana RPC URL", DEFAULT_RPC)
+  .action(async (opts) => {
+    await communityStakeCommand({
+      agentId: opts.agentId,
+      operatorId: opts.operatorId,
+      amountSol: parseFloat(opts.amount),
+      stakerKeyPath: opts.stakerKey,
+      rpcUrl: opts.rpc,
+    });
+  });
+
+// deposit-rewards
+
+program
+  .command("deposit-rewards")
+  .description("Deposit SOL as hire fee into agent rewards pool")
+  .requiredOption("--agent-id <pubkey>", "Agent public key")
+  .requiredOption("--operator-id <pubkey>", "Operator public key (agent owner)")
+  .requiredOption("--amount <sol>", "Amount in SOL to deposit")
+  .option("--payer-key <path>", "Path to payer keypair JSON", DEFAULT_OPERATOR_KEY)
+  .option("--rpc <url>", "Solana RPC URL", DEFAULT_RPC)
+  .action(async (opts) => {
+    await depositRewardsCommand({
+      agentId: opts.agentId,
+      operatorId: opts.operatorId,
+      amountSol: parseFloat(opts.amount),
+      payerKeyPath: opts.payerKey,
+      rpcUrl: opts.rpc,
+    });
+  });
+
+// claim-rewards
+
+program
+  .command("claim-rewards")
+  .description("Claim staking rewards from agent fund vault")
+  .requiredOption("--agent-id <pubkey>", "Agent public key")
+  .requiredOption("--operator-id <pubkey>", "Operator public key (agent owner)")
+  .option("--claimer-key <path>", "Path to claimer keypair JSON", DEFAULT_OPERATOR_KEY)
+  .option("--rpc <url>", "Solana RPC URL", DEFAULT_RPC)
+  .action(async (opts) => {
+    await claimRewardsCommand({
+      agentId: opts.agentId,
+      operatorId: opts.operatorId,
+      claimerKeyPath: opts.claimerKey,
+      rpcUrl: opts.rpc,
     });
   });
 
