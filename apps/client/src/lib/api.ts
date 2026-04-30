@@ -84,6 +84,14 @@ export class ApiClient {
       });
     },
 
+    getAgentsByOperator: (
+      operatorAddress: string,
+    ): Promise<AxiosResponse<AgentListItemDto[]>> => {
+      return this.client.get<AgentListItemDto[]>(
+        `/agents/operator/${operatorAddress}`,
+      );
+    },
+
     getAgentDetails: (
       agentId: string,
     ): Promise<AxiosResponse<AgentDetailsDto>> => {

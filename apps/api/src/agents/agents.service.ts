@@ -21,6 +21,26 @@ export class AgentsService {
   ) {}
 
   /**
+   * Get agents by operator wallet address
+   */
+  async getAgentsByOperator(
+    operatorAddress: string,
+  ): Promise<AgentListItemDto[]> {
+    try {
+      const agents = await this.fetchAllAgentsFromSolana();
+      return agents
+        .filter((a) => a.operator === operatorAddress)
+        .map((a) => this.mapToListDto(a));
+    } catch (error) {
+      this.logger.error(
+        `Failed to get agents for operator ${operatorAddress}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Get paginated list of agents
    */
   async getAgents(limit = 20, offset = 0): Promise<AgentListItemDto[]> {
