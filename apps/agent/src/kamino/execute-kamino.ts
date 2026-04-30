@@ -2,7 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import * as fs from "fs";
 import * as path from "path";
 
+import { Connection, Keypair, PublicKey, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { KaminoMarket, KaminoAction, VanillaObligation } from "@kamino-finance/klend-sdk";
+import { DEFAULT_KLEND_PROGRAM_ID } from "@kamino-finance/klend-sdk/dist/utils/constants";
+
+
 const client = new Anthropic();
+
+
 
 
 export const KAMINO_TOKENS: Record<string, { mint: string; decimals: number }> = {
@@ -32,17 +39,20 @@ export const KAMINO_TOKENS: Record<string, { mint: string; decimals: number }> =
     },
 };
 
+
 //Types 
 
 export type KaminoOp = "deposit" | "withdraw" | "borrow" | "repay" | "status";
 
-export interface KaminoAction {
+export interface KaminoActionDecision {
     action: KaminoOp;
     token: string;
     amount: number;
     amountBase: string;
     useMax?: boolean;
 }
+
+
 
 export interface KaminoStatus {
     action: "status";
@@ -52,8 +62,9 @@ export interface KaminoReject {
     action: "reject";
     reason: string;
 }
+export type KaminoDecision = KaminoActionDecision | KaminoStatus | KaminoReject;
 
-export type KaminoDecision = KaminoAction | KaminoStatus | KaminoReject;
+
 
 // Load skill 
 
@@ -152,4 +163,86 @@ Rules:
         amount,
         amountBase,
     };
+}
+
+// ─── Execution ──────────────────────────────────────────────────────────────
+
+export interface KaminoExecutionResult {
+    action: string;
+    txSignature?: string;
+    token?: string;
+    amount?: number;
+    reason?: string;
+}
+
+export async function executeKaminoAction(
+    agentKeypair: Keypair,
+    decision: KaminoActionDecision,
+): Promise<KaminoExecutionResult> {
+    const connection = new Connection(
+        process.env.JUPITER_RPC_URL || "https://api.mainnet-beta.solana.com",
+        "confirmed"
+    );
+    const KLEND_PROGRAM_ID = new PublicKey(DEFAULT_KLEND_PROGRAM_ID);
+    const marketAddress = new PublicKey("7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF");
+    const mintPubkey = new PublicKey(KAMINO_TOKENS[decision.token].mint);
+    const owner = agentKeypair.publicKey;
+
+    const market = await KaminoMarket.load(connection, marketAddress, 400, KLEND_PROGRAM_ID, false, true);
+    if (!market) throw new Error("Failed to load Kamino market");
+
+    const reserve = market.getReserveByMint(mintPubkey);
+    if (!reserve) throw new Error(`No Kamino reserve found for ${decision.token}`);
+
+    const amount = decision.useMax ? "18446744073709551615" : decision.amountBase;
+    const obligationType = new VanillaObligation(KLEND_PROGRAM_ID);
+    const currentSlot = await connection.getSlot();
+
+    let kaminoTx: KaminoAction;
+
+
+
+    switch (decision.action) {
+        case "deposit":
+            kaminoTx = await KaminoAction.buildDepositTxns(
+                market, amount, mintPubkey, owner, obligationType,
+                1_000_000, true
+            );
+            break;
+        case "withdraw":
+            kaminoTx = await KaminoAction.buildWithdrawTxns(
+                market, amount, mintPubkey, owner, obligationType,
+                1_000_000, true
+            );
+            break;
+        case "borrow":
+            kaminoTx = await KaminoAction.buildBorrowTxns(
+                market, amount, mintPubkey, owner, obligationType,
+                1_000_000, true
+            );
+            break;
+        case "repay":
+            kaminoTx = await KaminoAction.buildRepayTxns(
+                market, amount, mintPubkey, owner, obligationType,
+                currentSlot, undefined, 1_000_000, true
+            );
+            break;
+        default:
+            throw new Error(`Unknown Kamino action: ${decision.action}`);
+    }
+
+    const allIxs = [
+        ...kaminoTx.setupIxs,
+        ...kaminoTx.lendingIxs,
+        ...kaminoTx.inBetweenIxs,
+        ...kaminoTx.cleanupIxs,
+    ];
+
+    const tx = new Transaction().add(...allIxs);
+    tx.feePayer = owner;
+    const txSignature = await sendAndConfirmTransaction(
+        connection, tx, [agentKeypair], { commitment: "confirmed" }
+    );
+
+    return { action: decision.action, txSignature, token: decision.token, amount: decision.amount };
 }

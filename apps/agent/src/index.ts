@@ -5,7 +5,6 @@ import * as path from "path";
 import { Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 
-
 import { startPolling, PendingTask } from "./poll";
 import { executeTask, AgentDecision } from "./execute";
 import { executeJupiterTask, JupiterDecision } from "./jupiter/execute-jupiter";
@@ -13,12 +12,18 @@ import { buildJupiterReceipt, signJupiterReceipt, executeJupiterSwap, completeJu
 import { buildReceipt, signReceipt } from "./receipt";
 import { executeSolTransfer, completeTaskOnChain, submitToIndexer } from "./submit";
 import idlAdjudication from "../../../apps/cli/src/idl/dolores_adjudication.json";
+import { parsePythCommand, executePythDecision, PythExecutionResult } from "./pyth/execute-pyth";
 
-// Config 
+import { executePumpFunTask, PumpDecision } from "./pumpfun/execute-pumpfun";
+import { executeKaminoTask, executeKaminoAction, KaminoDecision, KaminoActionDecision, KaminoExecutionResult } from "./kamino/execute-kamino";
+import { executeMeteoraTask, executeMeteoraAction, MeteoraDecision, MeteoraExecutionResult } from "./meteora/execute-meteora";
+import { executeRaydiumTask, executeRaydiumAction, RaydiumDecision, RaydiumExecutionResult } from "./raydium/execute-raydium";
+
 
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 const INDEXER_URL = process.env.INDEXER_URL || "http://localhost:3001";
+const RECEIPT_URL = process.env.RECEIPT_URL || "http://localhost:8080";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || "3000");
 const AGENT_ID = process.env.AGENT_ID;
 const TEMPLATE = process.env.AGENT_TEMPLATE || "SOL_TRANSFER";
@@ -28,7 +33,6 @@ if (!AGENT_ID) {
   process.exit(1);
 }
 
-// Load keypair 
 
 function loadAgentKeypair(agentId: string): Keypair {
   const keyPath = path.join(DOLORES_DIR, `${agentId}.json`);
@@ -40,7 +44,37 @@ function loadAgentKeypair(agentId: string): Keypair {
   return Keypair.fromSecretKey(Uint8Array.from(raw));
 }
 
-// Process SOL_TRANSFER task 
+/** Mark a task completed in the API cache — prevents retry loops */
+async function markTaskCompleted(taskId: string): Promise<void> {
+  try {
+    await fetch(`${INDEXER_URL}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed" }),
+    });
+  } catch { /* best-effort */ }
+}
+
+/** Upload a signed receipt to the indexer */
+async function uploadReceipt(params: {
+  agentId: string;
+  taskId: string;
+  outputHash: string;
+  timestamp: number;
+  agentSignature: string;
+}): Promise<void> {
+  const res = await fetch(`${RECEIPT_URL}/receipts/upload`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Receipt upload failed ${res.status}: ${text}`);
+  }
+}
+
+// SOL_TRANSFER 
 
 async function processSolTransferTask(
   task: PendingTask,
@@ -49,6 +83,7 @@ async function processSolTransferTask(
   adjProgram: Program
 ): Promise<void> {
   console.log(`\n🤖 Asking Claude (template: SOL_TRANSFER)...`);
+
   let decision: AgentDecision;
   try {
     decision = await executeTask(task.instruction, "SOL_TRANSFER");
@@ -56,15 +91,10 @@ async function processSolTransferTask(
     console.error(`   ❌ Claude failed: ${err?.message}`);
     return;
   }
-
   console.log(`   Decision    : ${JSON.stringify(decision)}`);
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
-    await fetch(`${INDEXER_URL}/tasks/${task.taskId}/status`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "dismissed" }),
-    }).catch(() => { });
     return;
   }
 
@@ -81,7 +111,6 @@ async function processSolTransferTask(
     console.error(`   ❌ Transfer failed: ${err?.message}`);
     return;
   }
-
   console.log(`   ✅ TX: ${txSignature}`);
 
   const timestamp = Math.floor(Date.now() / 1000);
@@ -100,13 +129,7 @@ async function processSolTransferTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, signed.outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
-    try {
-      await fetch(`${INDEXER_URL}/tasks/${task.taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' }),
-      });
-    } catch { }
+    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
     return;
@@ -126,7 +149,7 @@ async function processSolTransferTask(
   console.log(`\n✅ Task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-//Process JUPITER_TRADER task
+// JUPITER_TRADER 
 
 async function processJupiterTask(
   task: PendingTask,
@@ -140,6 +163,7 @@ async function processJupiterTask(
   }
 
   console.log(`\n🤖 Asking Claude (template: JUPITER_TRADER)...`);
+
   let decision: JupiterDecision;
   try {
     decision = await executeJupiterTask(task.instruction);
@@ -147,14 +171,12 @@ async function processJupiterTask(
     console.error(`   ❌ Claude failed: ${err?.message}`);
     return;
   }
-
   console.log(`   Decision    : ${JSON.stringify(decision)}`);
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
     return;
   }
-
   if (decision.action === "wait") {
     console.log(`   ⏳ ${decision.reason}`);
     console.log(`   Current: $${decision.currentPrice} | Target: $${decision.targetPrice}`);
@@ -164,6 +186,7 @@ async function processJupiterTask(
   console.log(`\n⚡ Executing Jupiter swap...`);
   console.log(`   ${decision.amountSol} ${decision.inputSymbol} → ${decision.outputSymbol}`);
   console.log(`   Slippage: ${decision.slippageBps} bps`);
+  console.log(`   Using mainnet RPC: ${process.env.JUPITER_RPC_URL || "https://api.mainnet-beta.solana.com"}`);
 
   let swapResult: { txSignature: string; inputAmount: string; outputAmount: string };
   try {
@@ -172,7 +195,6 @@ async function processJupiterTask(
     console.error(`   ❌ Swap failed: ${err?.message}`);
     return;
   }
-
   console.log(`   ✅ TX: ${swapResult.txSignature}`);
   console.log(`   In : ${swapResult.inputAmount} ${decision.inputSymbol}`);
   console.log(`   Out: ${swapResult.outputAmount} ${decision.outputSymbol}`);
@@ -199,6 +221,7 @@ async function processJupiterTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
     return;
@@ -206,19 +229,13 @@ async function processJupiterTask(
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
-    const res = await fetch(`${INDEXER_URL}/tasks/${task.taskId}/complete`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ outputHash, completedAt: timestamp }),
+    await uploadReceipt({
+      agentId: agentKeypair.publicKey.toBase58(),
+      taskId: task.taskId,
+      outputHash,
+      timestamp,
+      agentSignature,
     });
-
-    await fetch(`${INDEXER_URL}/receipts/upload`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        agentId: agentKeypair.publicKey.toBase58(),
-        taskId: task.taskId, outputHash, timestamp, agentSignature,
-      }),
-    });
-
     console.log(`   ✅ Receipt submitted`);
   } catch (err: any) {
     console.error(`   ❌ Indexer failed: ${err?.message}`);
@@ -227,7 +244,418 @@ async function processJupiterTask(
   console.log(`\n✅ Jupiter task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-// Main
+// PYTH_ORACLE_READER 
+
+async function processPythTask(
+  task: PendingTask,
+  agentKeypair: Keypair,
+  connection: Connection,
+  adjProgram: Program
+): Promise<void> {
+  console.log(`\n🤖 Asking Claude (template: PYTH_ORACLE_READER)...`);
+
+  let result: PythExecutionResult;
+  try {
+    const decision = await parsePythCommand(task.instruction);
+    console.log(`   Decision    : ${JSON.stringify(decision)}`);
+    if (decision.action === "reject") {
+      console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+      return;
+    }
+    result = await executePythDecision(decision);
+  } catch (err: any) {
+    console.error(`   ❌ Pyth failed: ${err?.message}`);
+    return;
+  }
+
+  // Print price results
+  if (result.action === "price" && result.prices) {
+    for (const p of result.prices) {
+      console.log(`   📊 ${p.symbol}: $${p.price.toFixed(4)} (conf: ±${p.confidence?.toFixed(4)})`);
+    }
+  } else if (result.action === "list" && result.supportedSymbols) {
+    console.log(`   📋 Supported: ${result.supportedSymbols.join(", ")}`);
+  }
+
+  const timestamp = result.timestamp ?? Math.floor(Date.now() / 1000);
+  const outputHash = require("crypto")
+    .createHash("sha256")
+    .update(JSON.stringify(result))
+    .digest("hex");
+  const { sign } = require("tweetnacl");
+  const outputHashBytes = Buffer.from(outputHash, "hex");
+  const agentSignature = Buffer.from(
+    sign.detached(outputHashBytes, agentKeypair.secretKey)
+  ).toString("hex");
+
+  console.log(`\n📝 output_hash: ${outputHash}`);
+  console.log(`🔗 Writing on-chain...`);
+
+  const taskIdBuffer = Buffer.from(task.taskId, "hex");
+  try {
+    const completeTx = await completeTaskOnChain(
+      connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
+    );
+    console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
+  } catch (err: any) {
+    console.error(`   ❌ complete_task failed: ${err?.message}`);
+    return;
+  }
+
+  console.log(`\n📡 Submitting to indexer...`);
+  try {
+    await uploadReceipt({
+      agentId: agentKeypair.publicKey.toBase58(),
+      taskId: task.taskId,
+      outputHash,
+      timestamp,
+      agentSignature,
+    });
+    console.log(`   ✅ Receipt submitted`);
+  } catch (err: any) {
+    console.error(`   ❌ Indexer failed: ${err?.message}`);
+  }
+
+  console.log(`\n✅ Pyth task complete: ${task.taskId.slice(0, 16)}...\n`);
+}
+
+
+// Generic DeFi Decision Handler 
+// Used for templates that parse decisions but don't execute on-chain yet
+// (KAMINO_LENDING, METEORA_POOLS, RAYDIUM_LP, PUMPFUN)
+
+async function processDefiDecisionTask(
+  template: string,
+  executeTask: (instruction: string) => Promise<any>,
+  task: PendingTask,
+  agentKeypair: Keypair,
+  connection: Connection,
+  adjProgram: Program
+): Promise<void> {
+  console.log(`\n🤖 Asking Claude (template: ${template})...`);
+
+  let decision: any;
+  try {
+    decision = await executeTask(task.instruction);
+  } catch (err: any) {
+    console.error(`   ❌ Claude failed: ${err?.message}`);
+    return;
+  }
+  console.log(`   Decision    : ${JSON.stringify(decision)}`);
+
+  if (decision.action === "reject") {
+    console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    return;
+  }
+
+  console.log(`\n⚡ Decision parsed — execution not yet implemented for ${template}`);
+  console.log(`   Action: ${decision.action}`);
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const crypto = require("crypto");
+  const nacl = require("tweetnacl");
+  const outputHash = crypto
+    .createHash("sha256")
+    .update(JSON.stringify({ decision, timestamp }))
+    .digest("hex");
+  const outputHashBytes = Buffer.from(outputHash, "hex");
+  const agentSignature = Buffer.from(
+    nacl.sign.detached(outputHashBytes, agentKeypair.secretKey)
+  ).toString("hex");
+
+  console.log(`\n📝 output_hash: ${outputHash}`);
+  console.log(`🔗 Writing on-chain...`);
+
+  const taskIdBuffer = Buffer.from(task.taskId, "hex");
+  try {
+    const completeTx = await completeTaskOnChain(
+      connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
+    );
+    console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
+  } catch (err: any) {
+    console.error(`   ❌ complete_task failed: ${err?.message}`);
+    return;
+  }
+
+  console.log(`\n📡 Submitting to indexer...`);
+  try {
+    await uploadReceipt({
+      agentId: agentKeypair.publicKey.toBase58(),
+      taskId: task.taskId,
+      outputHash,
+      timestamp,
+      agentSignature,
+    });
+    console.log(`   ✅ Receipt submitted`);
+  } catch (err: any) {
+    console.error(`   ❌ Indexer failed: ${err?.message}`);
+  }
+
+  console.log(`\n✅ ${template} task complete: ${task.taskId.slice(0, 16)}...\n`);
+}
+
+// KAMINO_LENDING
+
+async function processKaminoTask(
+  task: PendingTask,
+  agentKeypair: Keypair,
+  connection: Connection,
+  adjProgram: Program
+): Promise<void> {
+  console.log(`\n🤖 Asking Claude (template: KAMINO_LENDING)...`);
+
+  let decision: KaminoDecision;
+  try {
+    decision = await executeKaminoTask(task.instruction);
+  } catch (err: any) {
+    console.error(`   ❌ Claude failed: ${err?.message}`);
+    return;
+  }
+  console.log(`   Decision    : ${JSON.stringify(decision)}`);
+
+  if (decision.action === "reject") {
+    console.warn(`   ⚠️  Rejected: ${(decision as any).reason}`);
+    return;
+  }
+  if (decision.action === "status") {
+    console.log(`   ℹ️  Status check — no execution needed`);
+    return;
+  }
+
+  const kaminoDecision = decision as KaminoActionDecision;
+  console.log(`\n⚡ Executing Kamino ${kaminoDecision.action}...`);
+  console.log(`   Token  : ${kaminoDecision.token}`);
+  console.log(`   Amount : ${kaminoDecision.amount}`);
+
+  let result: KaminoExecutionResult;
+  try {
+    result = await executeKaminoAction(agentKeypair, kaminoDecision);
+    console.log(`   ✅ TX: ${result.txSignature}`);
+  } catch (err: any) {
+    console.error(`   ❌ Kamino execution failed: ${err?.message}`);
+    return;
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const crypto = require("crypto");
+  const nacl = require("tweetnacl");
+  const outputHash = crypto.createHash("sha256")
+    .update(JSON.stringify({ result, timestamp }))
+    .digest("hex");
+  const outputHashBytes = Buffer.from(outputHash, "hex");
+  const agentSignature = Buffer.from(
+    nacl.sign.detached(outputHashBytes, agentKeypair.secretKey)
+  ).toString("hex");
+
+  console.log(`\n📝 output_hash: ${outputHash}`);
+  console.log(`🔗 Writing on-chain...`);
+
+  const taskIdBuffer = Buffer.from(task.taskId, "hex");
+  try {
+    const completeTx = await completeTaskOnChain(
+      connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
+    );
+    console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
+  } catch (err: any) {
+    console.error(`   ❌ complete_task failed: ${err?.message}`);
+    return;
+  }
+
+  console.log(`\n📡 Submitting to indexer...`);
+  try {
+    await uploadReceipt({
+      agentId: agentKeypair.publicKey.toBase58(),
+      taskId: task.taskId,
+      outputHash,
+      timestamp,
+      agentSignature,
+    });
+    console.log(`   ✅ Receipt submitted`);
+  } catch (err: any) {
+    console.error(`   ❌ Indexer failed: ${err?.message}`);
+  }
+
+  console.log(`\n✅ Kamino task complete: ${task.taskId.slice(0, 16)}...\n`);
+}
+
+// METEORA_POOLS 
+
+async function processMeteoraTask(
+  task: PendingTask,
+  agentKeypair: Keypair,
+  connection: Connection,
+  adjProgram: Program
+): Promise<void> {
+  console.log(`\n🤖 Asking Claude (template: METEORA_POOLS)...`);
+
+  let decision: MeteoraDecision;
+  try {
+    decision = await executeMeteoraTask(task.instruction);
+  } catch (err: any) {
+    console.error(`   ❌ Claude failed: ${err?.message}`);
+    return;
+  }
+  console.log(`   Decision    : ${JSON.stringify(decision)}`);
+
+  if (decision.action === "reject") {
+    console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    return;
+  }
+  if (decision.action === "status") {
+    console.log(`   ℹ️  Status check`);
+    return;
+  }
+
+  console.log(`\n⚡ Executing Meteora ${decision.action}...`);
+
+  let result: MeteoraExecutionResult;
+  try {
+    result = await executeMeteoraAction(agentKeypair, decision);
+    console.log(`   ✅ TX: ${result.txSignature}`);
+  } catch (err: any) {
+    console.error(`   ❌ Meteora execution failed: ${err?.message}`);
+    return;
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const crypto = require("crypto");
+  const nacl = require("tweetnacl");
+  const outputHash = crypto.createHash("sha256")
+    .update(JSON.stringify({ result, timestamp }))
+    .digest("hex");
+  const outputHashBytes = Buffer.from(outputHash, "hex");
+  const agentSignature = Buffer.from(
+    nacl.sign.detached(outputHashBytes, agentKeypair.secretKey)
+  ).toString("hex");
+
+  console.log(`\n📝 output_hash: ${outputHash}`);
+  console.log(`🔗 Writing on-chain...`);
+
+  const taskIdBuffer = Buffer.from(task.taskId, "hex");
+  try {
+    const completeTx = await completeTaskOnChain(
+      connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
+    );
+    console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
+  } catch (err: any) {
+    console.error(`   ❌ complete_task failed: ${err?.message}`);
+    return;
+  }
+
+  console.log(`\n📡 Submitting to indexer...`);
+  try {
+    await uploadReceipt({
+      agentId: agentKeypair.publicKey.toBase58(),
+      taskId: task.taskId,
+      outputHash,
+      timestamp,
+      agentSignature,
+    });
+    console.log(`   ✅ Receipt submitted`);
+  } catch (err: any) {
+    console.error(`   ❌ Indexer failed: ${err?.message}`);
+  }
+
+  console.log(`\n✅ Meteora task complete: ${task.taskId.slice(0, 16)}...\n`);
+}
+
+// RAYDIUM_LP 
+
+async function processRaydiumTask(
+  task: PendingTask,
+  agentKeypair: Keypair,
+  connection: Connection,
+  adjProgram: Program
+): Promise<void> {
+  console.log(`\n🤖 Asking Claude (template: RAYDIUM_LP)...`);
+
+  let decision: RaydiumDecision;
+  try {
+    decision = await executeRaydiumTask(task.instruction);
+  } catch (err: any) {
+    console.error(`   ❌ Claude failed: ${err?.message}`);
+    return;
+  }
+  console.log(`   Decision    : ${JSON.stringify(decision)}`);
+
+  if (decision.action === "reject") {
+    console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    return;
+  }
+  if (decision.action === "status") {
+    console.log(`   ℹ️  Status check`);
+    return;
+  }
+
+  console.log(`\n⚡ Executing Raydium ${decision.action}...`);
+
+  let result: RaydiumExecutionResult;
+  try {
+    result = await executeRaydiumAction(agentKeypair, decision);
+    console.log(`   ✅ TX: ${result.txSignature}`);
+  } catch (err: any) {
+    console.error(`   ❌ Full error:`, err);
+    if (err?.message?.includes('429') ||
+      err?.message?.includes('not found') ||
+      err?.message?.includes('block height') ||
+      !err?.message) {
+        console.warn(`   ⚠️  Raydium failed — skipping: ${err?.message}`);
+      await markTaskCompleted(task.taskId);
+      return;
+    }
+    console.error(`   ❌ Raydium execution failed: ${err?.message}`);
+    return;
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const crypto = require("crypto");
+  const nacl = require("tweetnacl");
+  const outputHash = crypto.createHash("sha256")
+    .update(JSON.stringify({ result, timestamp }))
+    .digest("hex");
+  const outputHashBytes = Buffer.from(outputHash, "hex");
+  const agentSignature = Buffer.from(
+    nacl.sign.detached(outputHashBytes, agentKeypair.secretKey)
+  ).toString("hex");
+
+  console.log(`\n📝 output_hash: ${outputHash}`);
+  console.log(`🔗 Writing on-chain...`);
+
+  const taskIdBuffer = Buffer.from(task.taskId, "hex");
+  try {
+    const completeTx = await completeTaskOnChain(
+      connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
+    );
+    console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
+  } catch (err: any) {
+    console.error(`   ❌ complete_task failed: ${err?.message}`);
+    return;
+  }
+
+  console.log(`\n📡 Submitting to indexer...`);
+  try {
+    await uploadReceipt({
+      agentId: agentKeypair.publicKey.toBase58(),
+      taskId: task.taskId,
+      outputHash,
+      timestamp,
+      agentSignature,
+    });
+    console.log(`   ✅ Receipt submitted`);
+  } catch (err: any) {
+    console.error(`   ❌ Indexer failed: ${err?.message}`);
+  }
+
+  console.log(`\n✅ Raydium task complete: ${task.taskId.slice(0, 16)}...\n`);
+}
+
+
+// Main 
 
 async function main() {
   console.log("\n🤖 Dolores Agent Runtime\n");
@@ -235,6 +663,7 @@ async function main() {
   console.log(`Template     : ${TEMPLATE}`);
   console.log(`RPC          : ${RPC_URL}`);
   console.log(`Indexer      : ${INDEXER_URL}`);
+  console.log(`Receipt URL  : ${RECEIPT_URL}`);
   console.log(`Poll interval: ${POLL_INTERVAL}ms\n`);
 
   const agentKeypair = loadAgentKeypair(AGENT_ID!);
@@ -260,15 +689,33 @@ async function main() {
         console.log(`\n📋 Task: ${task.taskId.slice(0, 16)}...`);
         console.log(`   Instruction : ${task.instruction}`);
         console.log(`   Deadline    : ${new Date(task.deadline * 1000).toISOString()}`);
-
-        if (TEMPLATE === "JUPITER_TRADER") {
-          await processJupiterTask(task, agentKeypair, connection, adjProgram);
-        } else {
-          await processSolTransferTask(task, agentKeypair, connection, adjProgram);
+        switch (TEMPLATE) {
+          case "JUPITER_TRADER":
+            await processJupiterTask(task, agentKeypair, connection, adjProgram);
+            break;
+          case "PYTH_ORACLE_READER":
+            await processPythTask(task, agentKeypair, connection, adjProgram);
+            break;
+          case "KAMINO_LENDING":
+            await processKaminoTask(task, agentKeypair, connection, adjProgram);
+            break;
+          case "METEORA_POOLS":
+            await processMeteoraTask(task, agentKeypair, connection, adjProgram);
+            break;
+          case "RAYDIUM_LP":
+            await processRaydiumTask(task, agentKeypair, connection, adjProgram);
+            break;
+          case "PUMPFUN":
+            await processDefiDecisionTask("PUMPFUN", executePumpFunTask, task, agentKeypair, connection, adjProgram);
+            break;
+          default:
+            await processSolTransferTask(task, agentKeypair, connection, adjProgram);
         }
       }
     }
   );
+
+
 
   process.on("SIGINT", () => {
     console.log("\n\nStopping agent...");

@@ -1,4 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Raydium, TxVersion, Percent } from "@raydium-io/raydium-sdk-v2";
+import BN from "bn.js";
+
 
 const client = new Anthropic();
 
@@ -11,8 +15,8 @@ export const RAYDIUM_POOLS: Record<string, string> = {
     "RAY-USDC-AMM": "6UmmUiYoBjSrhakAobJw8BvkmJtDVxaeBtbt7rxWo1mg",
 };
 
-export const DEFAULT_POOL = RAYDIUM_POOLS["SOL-USDC-AMM"];
-export const DEFAULT_POOL_TYPE: "cpmm" | "clmm" | "amm" = "amm";
+export const DEFAULT_POOL = RAYDIUM_POOLS["SOL-USDC-CPMM"];
+export const DEFAULT_POOL_TYPE: "cpmm" | "clmm" | "amm" = "cpmm";
 
 export const VERIFIED_TOKENS: Record<string, { mint: string; decimals: number }> = {
     SOL: { mint: "So11111111111111111111111111111111111111112", decimals: 9 },
@@ -42,6 +46,116 @@ export interface RaydiumDecision {
     baseIn?: boolean;   // for add_liquidity: true = amount is tokenA side
     lpAmount?: number;    // for remove_liquidity
     reason?: string;
+}
+
+export interface RaydiumExecutionResult {
+    action: string;
+    txSignature?: string;
+    reason?: string;
+}
+
+export async function executeRaydiumAction(
+    agentKeypair: Keypair,
+    decision: RaydiumDecision,
+): Promise<RaydiumExecutionResult> {
+    if (decision.action === "reject" || decision.action === "status") {
+        return { action: decision.action, reason: decision.reason };
+    }
+
+    const connection = new Connection(
+        process.env.JUPITER_RPC_URL || "https://api.mainnet-beta.solana.com",
+        "confirmed"
+    );
+
+    const raydium = await Raydium.load({
+        connection,
+        owner: agentKeypair,
+        cluster: "mainnet",
+        disableFeatureCheck: true,
+        disableLoadToken: true,
+        blockhashCommitment: "confirmed",
+    });
+
+    const poolId = decision.poolId ?? DEFAULT_POOL;
+    const poolType = decision.poolType ?? DEFAULT_POOL_TYPE;
+
+    // Fetch pool info from Raydium API
+    const poolData = await raydium.api.fetchPoolById({ ids: poolId });
+    if (!poolData || !poolData[0]) {
+        throw new Error(`Pool ${poolId} not found or wrong pool type`);
+    }
+    const poolInfo = poolData[0] as any;
+
+    switch (decision.action) {
+        case "swap": {
+            const tokenInInfo = VERIFIED_TOKENS[decision.tokenIn ?? "SOL"];
+            const inAmountLamports = new BN(
+                Math.floor((decision.amountIn ?? 0) * Math.pow(10, tokenInInfo.decimals))
+            );
+            const baseIn = decision.tokenIn === poolInfo.mintA.address ||
+                decision.tokenIn === "SOL";
+
+            const { transaction } = await raydium.cpmm.swap({
+                poolInfo,
+                baseIn,
+                inputAmount: inAmountLamports,
+                swapResult: { inputAmount: inAmountLamports, outputAmount: new BN(0) },
+                slippage: decision.slippage ?? 0.01,
+                txVersion: TxVersion.V0,
+                computeBudgetConfig: {
+                    units: 600000,
+                    microLamports: 50000,
+                },
+            });
+
+            let txId: string | null = null;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+                    transaction.message.recentBlockhash = blockhash;
+                    transaction.sign([agentKeypair]);
+                    txId = await connection.sendTransaction(transaction, { skipPreflight: true, maxRetries: 5 });
+                    await connection.confirmTransaction({ signature: txId, blockhash, lastValidBlockHeight }, "confirmed");
+                    break;
+                } catch (retryErr: any) {
+                    if (attempt === 2) throw retryErr;
+                    console.log(`   ⏳ Retry ${attempt + 1}/3...`);
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+            return { action: "swap", txSignature: txId! };
+        }
+
+        case "add_liquidity": {
+            const inputAmount = new BN(decision.amountIn ?? 1000000);
+            const slippage = new Percent(1, 100); // 1%
+            const { execute } = await raydium.cpmm.addLiquidity({
+                poolInfo,
+                inputAmount,
+                baseIn: decision.baseIn ?? true,
+                slippage,
+                txVersion: TxVersion.V0,
+            });
+            const { txId } = await execute({ sendAndConfirm: true, skipPreflight: true });
+            return { action: "add_liquidity", txSignature: txId };
+        }
+
+        case "remove_liquidity": {
+            const lpAmount = new BN(decision.lpAmount ?? 0);
+            const slippage = new Percent(1, 100);
+            const { execute } = await raydium.cpmm.withdrawLiquidity({
+                poolInfo,
+                lpAmount,
+                slippage,
+                txVersion: TxVersion.V0,
+            });
+            const { txId } = await execute({ sendAndConfirm: true, skipPreflight: true });
+            return { action: "remove_liquidity", txSignature: txId };
+        }
+
+        default:
+            throw new Error(`Unknown Raydium action: ${decision.action}`);
+    }
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

@@ -1,4 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { Connection, Keypair, PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
+import DLMM, { StrategyType } from "@meteora-ag/dlmm";
+import BN from "bn.js";
 
 const client = new Anthropic();
 
@@ -41,6 +44,112 @@ export interface MeteoraDecision {
     poolAddress?: string;
     bps?: number;      // for remove_liquidity: 0-10000 (10000 = 100%)
     reason?: string;      // for reject
+}
+
+export interface MeteoraExecutionResult {
+    action: string;
+    txSignature?: string;
+    reason?: string;
+}
+
+export async function executeMeteoraAction(
+    agentKeypair: Keypair,
+    decision: MeteoraDecision,
+): Promise<MeteoraExecutionResult> {
+    if (decision.action === "reject" || decision.action === "status") {
+        return { action: decision.action, reason: decision.reason };
+    }
+
+    const connection = new Connection(
+        process.env.JUPITER_RPC_URL || "https://api.mainnet-beta.solana.com",
+        "confirmed"
+    );
+    const poolAddress = new PublicKey(decision.poolAddress ?? DEFAULT_POOL);
+    const owner = agentKeypair.publicKey;
+    const dlmm = await DLMM.create(connection, poolAddress);
+
+    switch (decision.action) {
+        case "swap": {
+            const tokenX = new PublicKey(VERIFIED_TOKENS[decision.tokenX!].mint);
+            const tokenY = new PublicKey(VERIFIED_TOKENS[decision.tokenY!].mint);
+            const swapForY = decision.tokenX === "SOL"; // swap X→Y
+            const inAmountLamports = new BN(
+                Math.floor((decision.amountX ?? 0) * Math.pow(10, VERIFIED_TOKENS[decision.tokenX!].decimals))
+            );
+            const binArrays = await dlmm.getBinArrayForSwap(swapForY);
+            const swapQuote = dlmm.swapQuote(inAmountLamports, swapForY, new BN(50), binArrays);
+            const swapTx = await dlmm.swap({
+                inToken: tokenX,
+                outToken: tokenY,
+                inAmount: inAmountLamports,
+                minOutAmount: swapQuote.minOutAmount,
+                lbPair: poolAddress,
+                user: owner,
+                binArraysPubkey: swapQuote.binArraysPubkey,
+            });
+            const txSignature = await sendAndConfirmTransaction(connection, swapTx, [agentKeypair], { commitment: "confirmed" });
+            return { action: "swap", txSignature };
+        }
+
+        case "add_liquidity": {
+            const positionKeypair = new Keypair();
+            const tokenXInfo = VERIFIED_TOKENS[decision.tokenX ?? "SOL"];
+            const tokenYInfo = VERIFIED_TOKENS[decision.tokenY ?? "USDC"];
+            const totalXAmount = new BN(Math.floor((decision.amountX ?? 0) * Math.pow(10, tokenXInfo.decimals)));
+            const totalYAmount = new BN(Math.floor((decision.amountY ?? 0) * Math.pow(10, tokenYInfo.decimals)));
+            const activeBin = await dlmm.getActiveBin();
+            const binRange = decision.binRange ?? 10;
+            const tx = await dlmm.initializePositionAndAddLiquidityByStrategy({
+                positionPubKey: positionKeypair.publicKey,
+                totalXAmount,
+                totalYAmount,
+                strategy: {
+                    maxBinId: activeBin.binId + binRange,
+                    minBinId: activeBin.binId - binRange,
+                    strategyType: StrategyType.Spot
+                },
+                user: owner,
+                slippage: 1,
+            });
+            const txSignature = await sendAndConfirmTransaction(connection, tx, [agentKeypair, positionKeypair], { commitment: "confirmed" });
+            return { action: "add_liquidity", txSignature };
+        }
+
+        case "remove_liquidity": {
+            const { userPositions } = await dlmm.getPositionsByUserAndLbPair(owner);
+            if (!userPositions.length) throw new Error("No positions found");
+            const position = userPositions[0]; // full LbPosition
+            const bpsBN = new BN(decision.bps ?? 10000);
+            const txs = await dlmm.removeLiquidity({
+                user: owner,
+                position: position.publicKey,  // ← removeLiquidity takes PublicKey
+                fromBinId: position.positionData.lowerBinId,
+                toBinId: position.positionData.upperBinId,
+                bps: bpsBN,
+                shouldClaimAndClose: decision.bps === 10000,
+            });
+            let txSignature = "";
+            for (const tx of txs) {
+                txSignature = await sendAndConfirmTransaction(connection, tx, [agentKeypair], { commitment: "confirmed" });
+            }
+            return { action: "remove_liquidity", txSignature };
+        }
+
+        case "collect_fees": {
+            const { userPositions } = await dlmm.getPositionsByUserAndLbPair(owner);
+            if (!userPositions.length) throw new Error("No positions found");
+            const position = userPositions[0];
+            const txs = await dlmm.claimSwapFee({ owner, position });
+            let txSignature = "";
+            for (const tx of txs) {
+                txSignature = await sendAndConfirmTransaction(connection, tx, [agentKeypair], { commitment: "confirmed" });
+            }
+            return { action: "collect_fees", txSignature };
+        }
+
+        default:
+            throw new Error(`Unknown Meteora action: ${decision.action}`);
+    }
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
