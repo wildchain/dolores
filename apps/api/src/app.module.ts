@@ -9,6 +9,7 @@ import { AgentsModule } from './agents/agents.module';
 import { TasksModule } from './tasks/tasks.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { SyncModule } from './sync/sync.module';
+import { IpfsModule } from './ipfs/ipfs.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SyncModule } from './sync/sync.module';
     TasksModule,
     ChallengesModule,
     SyncModule,
+    IpfsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

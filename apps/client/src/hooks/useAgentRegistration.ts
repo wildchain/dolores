@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   Keypair,
@@ -19,11 +19,26 @@ interface RegistrationParams {
   onError?: (error: Error) => void;
 }
 
+export type RegistrationPhase =
+  | "idle"
+  | "registering"
+  | "uploading"
+  | "writing_cid"
+  | "done"
+  | "error";
+
 export function useAgentRegistration() {
   const { connection } = useConnection();
   const wallet = useWallet();
-  const [loading, setLoading] = useState(false);
+  const [registrationPhase, setRegistrationPhase] =
+    useState<RegistrationPhase>("idle");
   const [agentKeypair, setAgentKeypair] = useState<Keypair | null>(null);
+  const isInFlight = useRef(false);
+
+  const loading =
+    registrationPhase !== "idle" &&
+    registrationPhase !== "done" &&
+    registrationPhase !== "error";
 
   const generateAgent = () => {
     const keypair = Keypair.generate();
@@ -61,7 +76,9 @@ export function useAgentRegistration() {
       return;
     }
 
-    setLoading(true);
+    if (isInFlight.current) return;
+    isInFlight.current = true;
+    setRegistrationPhase("registering");
 
     try {
       // Create provider (wallet will be used as fallback signer)
@@ -136,17 +153,56 @@ export function useAgentRegistration() {
       onSuccess?.(agentKeypair.publicKey.toBase58(), signature);
     } catch (error) {
       console.error("Registration failed:", error);
+      setRegistrationPhase("error");
       onError?.(error as Error);
     } finally {
-      setLoading(false);
+      isInFlight.current = false;
+    }
+  };
+
+  const writeArweaveCid = async (cid: string): Promise<void> => {
+    if (!wallet.publicKey || !agentKeypair) {
+      throw new Error("Wallet or agent keypair not available");
+    }
+
+    setRegistrationPhase("writing_cid");
+
+    try {
+      const provider = new AnchorProvider(connection, wallet as any, {
+        commitment: "confirmed",
+      });
+
+      const registryProgram = new Program(doloresRegistryIdl as any, provider);
+
+      const [registryPda] = PublicKey.findProgramAddressSync(
+        [REGISTRY_SEED, agentKeypair.publicKey.toBuffer()],
+        REGISTRY_PROGRAM_ID,
+      );
+
+      await registryProgram.methods
+        .writeArweaveCid(cid)
+        .accounts({
+          authority: wallet.publicKey,
+          registry: registryPda,
+        })
+        .rpc();
+
+      setRegistrationPhase("done");
+    } catch (error) {
+      console.error("writeArweaveCid failed:", error);
+      setRegistrationPhase("error");
+      throw error;
     }
   };
 
   return {
     loading,
+    registrationPhase,
+    setRegistrationPhase,
     agentKeypair,
     generateAgent,
     downloadKeypair,
     register,
+    writeArweaveCid,
   };
 }
