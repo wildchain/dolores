@@ -9,6 +9,7 @@
     "dev:api": "pnpm --filter api run start:dev",
     "dev:client": "pnpm --filter client run dev",
     "dev:cli": "pnpm --filter @dolores/cli run dev",
+    "dev:ipfs": "pnpm --filter ipfs-node run start:dev",
     "clean": "pnpm -r exec rm -rf dist node_modules",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test"
@@ -27,5 +28,10 @@
   },
   "devDependencies": {
     "typescript": "^5.4.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@ipshipyard/node-datachannel"
+    ]
   }
 }

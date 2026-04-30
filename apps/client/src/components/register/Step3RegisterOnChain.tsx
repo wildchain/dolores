@@ -7,6 +7,7 @@ import { FormInput } from "@/components/forms/FormInput";
 import { RegistrationSummary } from "./RegistrationSummary";
 import { Terminal } from "./Terminal";
 import type { Keypair } from "@solana/web3.js";
+import type { RegistrationPhase } from "@/hooks/useAgentRegistration";
 
 const schema = z.object({
   stakeAmount: z
@@ -25,8 +26,9 @@ interface Step3Props {
   onBack: () => void;
   onRegister: (stakeAmount: string) => void;
   loading: boolean;
+  registrationPhase: RegistrationPhase;
   error?: string;
-  success?: { signature: string };
+  success?: { signature: string; manifestCid: string };
 }
 
 export function Step3RegisterOnChain({
@@ -35,6 +37,7 @@ export function Step3RegisterOnChain({
   onBack,
   onRegister,
   loading,
+  registrationPhase,
   error,
   success,
 }: Step3Props) {
@@ -70,14 +73,20 @@ export function Step3RegisterOnChain({
           lines={[
             { text: "✓ Agent registered on dolores_registry", cls: "success" },
             { text: "✓ Fund initialized on dolores_fund", cls: "success" },
+            { text: "✓ Manifest pinned to IPFS", cls: "success" },
             { text: "" },
             {
               text: `Agent: ${agentKeypair.publicKey.toBase58()}`,
               cls: "info",
             },
             { text: `Transaction: ${success.signature}`, cls: "info" },
+            { text: `CID: ${success.manifestCid}`, cls: "info" },
             {
               text: `Explorer: https://explorer.solana.com/tx/${success.signature}?cluster=devnet`,
+              cls: "info",
+            },
+            {
+              text: `IPFS: https://ipfs.io/ipfs/${success.manifestCid}`,
               cls: "info",
             },
           ]}
@@ -182,6 +191,8 @@ export function Step3RegisterOnChain({
               <li>Initialize fund account (signed by operator wallet)</li>
               <li>Lock capability template on-chain (immutable)</li>
               <li>Set initial reputation score to 0</li>
+              <li>Pin capability manifest to IPFS</li>
+              <li>Write IPFS CID on-chain</li>
             </ul>
           </div>
         </div>
@@ -197,7 +208,13 @@ export function Step3RegisterOnChain({
             ← Back
           </Button>
           <Button type="submit" className="flex-1" disabled={loading}>
-            {loading ? "Registering on-chain..." : "Register Agent →"}
+            {registrationPhase === "registering"
+              ? "Registering on-chain…"
+              : registrationPhase === "uploading"
+                ? "Uploading manifest…"
+                : registrationPhase === "writing_cid"
+                  ? "Writing CID on-chain…"
+                  : "Register Agent →"}
           </Button>
         </div>
       </form>
