@@ -38,23 +38,25 @@ export function CapabilitySelector({
             key={cap.id}
             onClick={() => toggle(cap.id)}
             disabled={disabled}
-            className="text-left p-3.5 rounded-sm transition-all border disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-left p-3.5 rounded-[--radius-sm] transition-all border disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               borderColor: isSelected
-                ? "rgba(74,86,64,0.5)"
-                : "rgba(174,184,160,0.3)",
+                ? "var(--accent)"
+                : "var(--border-subtle)",
               background: isSelected
-                ? "rgba(174,184,160,0.18)"
-                : "rgba(244,242,237,0.7)",
+                ? "var(--primary-subtle)"
+                : "var(--surface-raised)",
             }}
           >
             <div
-              className="font-mono text-[12px] font-medium mb-1"
-              style={{ color: isSelected ? "#4A5640" : "#6B7A5C" }}
+              className="font-mono text-[--fs-12] font-medium mb-1"
+              style={{
+                color: isSelected ? "var(--accent)" : "var(--fg-muted)",
+              }}
             >
               {cap.name}
             </div>
-            <div className="text-[11px] text-muted leading-relaxed">
+            <div className="text-[--fs-12] text-[--fg-muted] leading-relaxed">
               {cap.desc}
             </div>
           </button>

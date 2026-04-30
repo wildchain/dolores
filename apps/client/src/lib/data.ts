@@ -7,9 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function repColor(score: number) {
-  if (score >= 70) return "#4A7A58";
-  if (score >= 45) return "#8B6A2C";
-  return "#8B4A3C";
+  if (score >= 70) return "var(--ok)";
+  if (score >= 45) return "var(--warn)";
+  return "var(--danger)";
 }
 
 export function formatUsdc(n: number) {
@@ -17,49 +17,81 @@ export function formatUsdc(n: number) {
 }
 
 export function capBadgeClass(_cap: string) {
-  return "bg-jade/20 text-jadeDark border-jade/30";
+  return "";
 }
 
-export function statusCfg(s: string) {
-  const m: Record<string, { label: string; cls: string }> = {
+type StatusStyle = {
+  label: string;
+  color: string;
+  bg: string;
+  borderColor: string;
+};
+
+export function statusCfg(s: string): StatusStyle {
+  const m: Record<string, StatusStyle> = {
     completed: {
       label: "Completed",
-      cls: "bg-success/10 text-success border-success/25",
+      color: "var(--ok)",
+      bg: "rgba(22,163,74,.08)",
+      borderColor: "rgba(22,163,74,.25)",
     },
     executing: {
       label: "Executing",
-      cls: "bg-jadeDark/15 text-jadeDark border-jadeDark/30",
+      color: "var(--accent)",
+      bg: "rgba(91,175,214,.08)",
+      borderColor: "rgba(91,175,214,.3)",
     },
     pending: {
       label: "Pending",
-      cls: "bg-amber/10 text-amber border-amber/25",
+      color: "var(--warn)",
+      bg: "rgba(217,119,6,.08)",
+      borderColor: "rgba(217,119,6,.25)",
     },
     challenged: {
       label: "Challenged",
-      cls: "bg-danger/10 text-danger border-danger/25",
+      color: "var(--danger)",
+      bg: "rgba(220,38,38,.08)",
+      borderColor: "rgba(220,38,38,.25)",
     },
     slashed: {
       label: "Slashed",
-      cls: "bg-danger/15 text-danger border-danger/30",
+      color: "var(--danger)",
+      bg: "rgba(220,38,38,.1)",
+      borderColor: "rgba(220,38,38,.3)",
     },
     failed: {
       label: "Failed",
-      cls: "bg-danger/10 text-danger border-danger/25",
+      color: "var(--danger)",
+      bg: "rgba(220,38,38,.08)",
+      borderColor: "rgba(220,38,38,.25)",
     },
     disputed: {
       label: "Disputed",
-      cls: "bg-amber/10 text-amber border-amber/25",
+      color: "var(--warn)",
+      bg: "rgba(217,119,6,.08)",
+      borderColor: "rgba(217,119,6,.25)",
     },
     healthy: {
       label: "Healthy",
-      cls: "bg-success/10 text-success border-success/25",
+      color: "var(--ok)",
+      bg: "rgba(22,163,74,.08)",
+      borderColor: "rgba(22,163,74,.25)",
     },
     at_risk: {
       label: "At Risk",
-      cls: "bg-amber/10 text-amber border-amber/25",
+      color: "var(--warn)",
+      bg: "rgba(217,119,6,.08)",
+      borderColor: "rgba(217,119,6,.25)",
     },
   };
-  return m[s] ?? { label: s, cls: "bg-stone text-muted border-border" };
+  return (
+    m[s] ?? {
+      label: s,
+      color: "var(--fg-muted)",
+      bg: "var(--surface-raised)",
+      borderColor: "var(--border-subtle)",
+    }
+  );
 }
 
 export const MOCK_AGENTS: Agent[] = [
