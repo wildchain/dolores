@@ -42,6 +42,14 @@ export function statusCfg(s: string) {
       label: "Slashed",
       cls: "bg-danger/15 text-danger border-danger/30",
     },
+    failed: {
+      label: "Failed",
+      cls: "bg-danger/10 text-danger border-danger/25",
+    },
+    disputed: {
+      label: "Disputed",
+      cls: "bg-amber/10 text-amber border-amber/25",
+    },
     healthy: {
       label: "Healthy",
       cls: "bg-success/10 text-success border-success/25",
