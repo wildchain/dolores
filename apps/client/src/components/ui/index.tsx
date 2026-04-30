@@ -13,10 +13,33 @@ export function Card({
   return (
     <div
       className={cn(
-        "stone-card p-5 transition-all duration-200",
-        hover && "cursor-pointer hover:shadow-cardHover",
+        "transition-all duration-200",
+        hover && "cursor-pointer",
         className,
       )}
+      style={{
+        background: "var(--bg)",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "var(--radius-lg)",
+        boxShadow: "var(--shadow-sm)",
+        padding: 20,
+      }}
+      onMouseEnter={
+        hover
+          ? e => {
+              (e.currentTarget as HTMLDivElement).style.boxShadow =
+                "var(--shadow-md)";
+            }
+          : undefined
+      }
+      onMouseLeave={
+        hover
+          ? e => {
+              (e.currentTarget as HTMLDivElement).style.boxShadow =
+                "var(--shadow-sm)";
+            }
+          : undefined
+      }
     >
       {children}
     </div>
@@ -32,10 +55,15 @@ export function CardLabel({
 }) {
   return (
     <div
-      className={cn(
-        "font-mono text-[10px] text-jadeMid uppercase tracking-[0.14em] mb-3",
-        className,
-      )}
+      className={cn(className)}
+      style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "var(--fs-12)",
+        color: "var(--fg-subtle)",
+        textTransform: "uppercase",
+        letterSpacing: ".14em",
+        marginBottom: 12,
+      }}
     >
       {children}
     </div>
@@ -44,7 +72,20 @@ export function CardLabel({
 
 export function Badge({ cap }: { cap: string }) {
   return (
-    <span className="inline-flex px-2 py-0.5 rounded-sm text-[10px] font-mono font-medium border bg-jade/15 text-jadeDark border-jade/30">
+    <span
+      style={{
+        display: "inline-flex",
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "var(--fs-12)",
+        fontWeight: 600,
+        letterSpacing: ".06em",
+        padding: "3px 10px",
+        borderRadius: "999px",
+        background: "var(--primary-subtle)",
+        color: "var(--accent)",
+        border: "1px solid var(--primary)",
+      }}
+    >
       {cap}
     </span>
   );
@@ -54,10 +95,17 @@ export function StatusBadge({ status }: { status: string }) {
   const c = statusCfg(status);
   return (
     <span
-      className={cn(
-        "inline-flex px-2 py-0.5 rounded-sm text-[11px] font-mono font-semibold border",
-        c.cls,
-      )}
+      style={{
+        display: "inline-flex",
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "var(--fs-12)",
+        fontWeight: 600,
+        padding: "3px 8px",
+        borderRadius: "var(--radius-sm)",
+        border: `1px solid ${c.borderColor}`,
+        background: c.bg,
+        color: c.color,
+      }}
     >
       {c.label}
     </span>
@@ -92,7 +140,7 @@ export function RepRing({
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="rgba(174,184,160,0.3)"
+          stroke="var(--border-strong)"
           strokeWidth="4"
         />
         <circle
@@ -107,8 +155,12 @@ export function RepRing({
         />
       </svg>
       <div
-        className="absolute inset-0 flex items-center justify-center font-mono font-semibold text-[12px]"
-        style={{ color: col }}
+        className="absolute inset-0 flex items-center justify-center font-semibold"
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "var(--fs-12)",
+          color: col,
+        }}
       >
         {pct.toFixed(0)}
       </div>
@@ -131,28 +183,55 @@ export function Button({
   className?: string;
   disabled?: boolean;
 }) {
-  const v: Record<string, string> = {
-    primary: "bg-jadeDeep text-stone hover:bg-moss border-transparent",
-    secondary: "bg-jade/15 text-jadeDark border-jade/35 hover:bg-jade/25",
-    danger: "bg-danger/8 text-danger border-danger/25 hover:bg-danger/15",
-    ghost:
-      "bg-transparent text-muted border-transparent hover:text-jadeDeep hover:bg-jade/15",
+  type StyleMap = Record<string, React.CSSProperties>;
+  const v: StyleMap = {
+    primary: {
+      background: "var(--accent)",
+      color: "var(--fg-inverse)",
+      border: "1px solid var(--accent)",
+    },
+    secondary: {
+      background: "var(--primary-subtle)",
+      color: "var(--accent)",
+      border: "1px solid var(--primary)",
+    },
+    danger: {
+      background: "transparent",
+      color: "var(--danger)",
+      border: "1px solid var(--danger)",
+    },
+    ghost: {
+      background: "transparent",
+      color: "var(--fg-muted)",
+      border: "1px solid transparent",
+    },
   };
-  const s: Record<string, string> = {
-    sm: "px-3 py-1.5 text-[12px] rounded-sm",
-    md: "px-4 py-2 text-[13px] rounded-sm",
-    lg: "px-5 py-2.5 text-[14px] rounded-sm",
+  const s: StyleMap = {
+    sm: {
+      padding: "6px 12px",
+      fontSize: "var(--fs-12)",
+      borderRadius: "var(--radius-sm)",
+    },
+    md: {
+      padding: "8px 16px",
+      fontSize: "var(--fs-14)",
+      borderRadius: "var(--radius-sm)",
+    },
+    lg: {
+      padding: "10px 20px",
+      fontSize: "var(--fs-16)",
+      borderRadius: "var(--radius)",
+    },
   };
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "font-semibold transition-all duration-150 border disabled:opacity-40 disabled:cursor-not-allowed",
-        v[variant],
-        s[size],
+        "font-semibold transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed",
         className,
       )}
+      style={{ ...v[variant], ...s[size] }}
     >
       {children}
     </button>
@@ -165,19 +244,31 @@ export function Input({
   ...props
 }: { label?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <div className="mb-3">
+    <div style={{ marginBottom: 12 }}>
       {label && (
-        <label className="block font-mono text-[11px] text-jadeMid mb-1.5">
+        <label
+          style={{
+            display: "block",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "var(--fs-12)",
+            color: "var(--fg-subtle)",
+            marginBottom: 6,
+          }}
+        >
           {label}
         </label>
       )}
       <input
-        className={cn(
-          "w-full bg-stone border border-jade/25 rounded-sm px-3.5 py-2.5",
-          "text-ink font-mono text-[13px] placeholder:text-jade/60 outline-none",
-          "focus:border-jadeDark focus:bg-white transition-all",
-          className,
-        )}
+        className={cn("w-full outline-none transition-colors", className)}
+        style={{
+          background: "var(--bg)",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "var(--radius-sm)",
+          padding: "9px 14px",
+          color: "var(--fg)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "var(--fs-14)",
+        }}
         {...props}
       />
     </div>
@@ -196,19 +287,47 @@ export function StatTile({
   valueClass?: string;
 }) {
   return (
-    <div className="bg-jade/10 border border-jade/20 rounded-sm p-3">
-      <div className="font-mono text-[10px] text-jadeMid uppercase tracking-wider mb-1">
+    <div
+      style={{
+        background: "var(--surface-raised)",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "var(--radius-sm)",
+        padding: 12,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "var(--fs-12)",
+          color: "var(--fg-subtle)",
+          textTransform: "uppercase",
+          letterSpacing: ".08em",
+          marginBottom: 4,
+        }}
+      >
         {label}
       </div>
       <div
-        className={cn(
-          "font-display text-[15px] font-semibold text-moss",
-          valueClass,
-        )}
+        className={cn(valueClass)}
+        style={{
+          fontSize: "var(--fs-16)",
+          fontWeight: 600,
+          color: "var(--fg)",
+        }}
       >
         {value}
       </div>
-      {sub && <div className="text-[11px] text-muted mt-0.5">{sub}</div>}
+      {sub && (
+        <div
+          style={{
+            fontSize: "var(--fs-12)",
+            color: "var(--fg-muted)",
+            marginTop: 2,
+          }}
+        >
+          {sub}
+        </div>
+      )}
     </div>
   );
 }

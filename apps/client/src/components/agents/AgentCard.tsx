@@ -25,15 +25,26 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
   const featured = "featured" in agent ? (agent.featured ?? false) : false;
 
   return (
-    <Card hover className={featured ? "border-l-2 border-l-jadeDark" : ""}>
+    <Card hover className={featured ? "accent-left" : ""}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 min-w-0 pr-3">
-          <div className="font-mono text-[10px] text-jade mb-1 truncate">
+          <div
+            className="truncate mb-1"
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "var(--fs-12)",
+              color: "var(--fg-subtle)",
+            }}
+          >
             {address}
           </div>
           <div
-            className="font-display text-[18px] font-medium text-moss"
-            style={{ letterSpacing: "-0.01em" }}
+            className="font-semibold"
+            style={{
+              fontSize: "var(--fs-18)",
+              letterSpacing: "-0.01em",
+              color: "var(--fg)",
+            }}
           >
             {agent.name}
           </div>
@@ -46,24 +57,51 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
           {
             label: "Staked",
             val: `$${formatUsdc(staked)}`,
-            cls: "text-jadeDeep font-semibold",
+            color: "var(--accent)",
           },
           {
             label: "Tasks",
             val: totalTasks.toLocaleString(),
-            cls: "text-moss",
+            color: "var(--fg)",
           },
-          { label: "Success", val: `${successRate}%`, cls: "text-success" },
-          { label: "Rep", val: reputationScore.toString(), cls: "text-jade" },
+          { label: "Success", val: `${successRate}%`, color: "var(--ok)" },
+          {
+            label: "Rep",
+            val: reputationScore.toString(),
+            color: "var(--accent)",
+          },
         ].map(s => (
           <div
             key={s.label}
-            className="bg-jade/10 border border-jade/20 rounded-sm p-2.5"
+            style={{
+              background: "var(--surface-raised)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "var(--radius-sm)",
+              padding: "10px",
+            }}
           >
-            <div className="font-mono text-[10px] text-jade mb-1">
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                color: "var(--fg-subtle)",
+                textTransform: "uppercase",
+                letterSpacing: ".08em",
+                marginBottom: 4,
+              }}
+            >
               {s.label}
             </div>
-            <div className={`font-display text-[14px] ${s.cls}`}>{s.val}</div>
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-14)",
+                fontWeight: 600,
+                color: s.color,
+              }}
+            >
+              {s.val}
+            </div>
           </div>
         ))}
       </div>
@@ -75,9 +113,18 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-[12px] text-muted">
+        <div
+          className="flex items-center gap-1.5"
+          style={{ fontSize: "var(--fs-12)", color: "var(--fg-muted)" }}
+        >
           <div
-            className={`w-1.5 h-1.5 rounded-full ${slashCount === 0 ? "bg-success" : "bg-danger"}`}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: slashCount === 0 ? "var(--ok)" : "var(--danger)",
+              flexShrink: 0,
+            }}
           />
           {slashCount === 0
             ? "No slashes"

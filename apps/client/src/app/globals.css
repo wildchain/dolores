@@ -57,6 +57,11 @@ body::before {
   box-shadow: var(--shadow-md);
 }
 
+/* Accent-left emphasis variant */
+.accent-left {
+  border-left: 3px solid var(--accent) !important;
+}
+
 /* Nav */
 .nav {
   background: var(--surface-raised);
