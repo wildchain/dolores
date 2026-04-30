@@ -1,7 +1,9 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
+  Body,
   Query,
   ParseIntPipe,
   DefaultValuePipe,
@@ -15,7 +17,7 @@ import {
 
 @Controller('agents')
 export class AgentsController {
-  constructor(private agentsService: AgentsService) {}
+  constructor(private agentsService: AgentsService) { }
 
   /**
    * GET /agents - List all agents with pagination
@@ -28,6 +30,14 @@ export class AgentsController {
     // Enforce max limit
     const safeLimit = Math.min(limit, 100);
     return this.agentsService.getAgents(safeLimit, offset);
+  }
+
+  @Get('marketplace')
+  async getMarketplace(
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+  ): Promise<AgentListItemDto[]> {
+    return this.agentsService.getMarketplace(Math.min(limit, 100), offset);
   }
 
   /**
@@ -51,5 +61,24 @@ export class AgentsController {
   ): Promise<AgentTaskDto[]> {
     const safeLimit = Math.min(limit, 100);
     return this.agentsService.getAgentTasks(agentId, safeLimit, offset);
+  }
+
+
+
+  @Post(':id/list-for-hire')
+  async listForHire(
+    @Param('id') agentId: string,
+    @Body() body: { hireFeeSOL: number; available: boolean },
+  ): Promise<{ ok: boolean }> {
+    await this.agentsService.setAvailableForHire(agentId, body.available, body.hireFeeSOL ?? 0.01);
+    return { ok: true };
+  }
+
+  @Post(':id/build-hire-tx')
+  async buildHireTx(
+    @Param('id') agentId: string,
+    @Body() body: { payerWallet: string; operatorId: string },
+  ): Promise<{ transaction: string; message: string }> {
+    return this.agentsService.buildHireTx(agentId, body.payerWallet, body.operatorId);
   }
 }

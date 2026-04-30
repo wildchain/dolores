@@ -21,6 +21,10 @@ export interface AgentCacheData extends BaseRocksDBEntity {
   arweaveCid: string;
   declaredStake: number;
   lastAttestedAt: number;
+  availableForHire: boolean;
+  hireFeeSOL: number;       // SOL per task
+  totalEarnedSOL: number;   // lifetime rewards deposited
+  communityStake: number;   // lamports staked by community
   // Trust metrics
   totalTasks: number;
   completedTasks: number;
@@ -30,7 +34,7 @@ export interface AgentCacheData extends BaseRocksDBEntity {
 }
 
 export class AgentCacheEntity {
-  constructor(public readonly data: AgentCacheData) {}
+  constructor(public readonly data: AgentCacheData) { }
 
   static createKey(agentId: string): string {
     return `agent:${agentId}`;

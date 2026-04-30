@@ -1,5 +1,4 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PublicKey } from '@solana/web3.js';
 import { SolanaService } from '../solana/solana.service';
 import { RocksDBService } from '@dolores/database';
 import {
@@ -9,6 +8,9 @@ import {
   AgentTaskDto,
 } from '@dolores/shared';
 import { AgentCacheEntity, AgentCacheData } from './agent-cache.entity';
+import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { BN } from '@coral-xyz/anchor';
+
 import axios from 'axios';
 
 @Injectable()
@@ -18,7 +20,7 @@ export class AgentsService {
   constructor(
     private solanaService: SolanaService,
     private rocksdb: RocksDBService,
-  ) {}
+  ) { }
 
   /**
    * Get paginated list of agents
@@ -216,6 +218,10 @@ export class AgentsService {
         totalResponseTime: 0,
         createdAt: Date.now(),
         updatedAt: Date.now(),
+        availableForHire: false,
+        hireFeeSOL: 0.01,
+        totalEarnedSOL: 0,
+        communityStake: 0,
       };
       return agentData;
     } catch (error) {
@@ -314,6 +320,85 @@ export class AgentsService {
       arweaveCid: data.arweaveCid,
       declaredStake: data.declaredStake,
       lastAttestedAt: data.lastAttestedAt,
+    };
+  }
+
+  async getMarketplace(limit = 20, offset = 0): Promise<AgentListItemDto[]> {
+    const keys = await this.rocksdb.keys('agent:');
+    const agents: AgentCacheData[] = [];
+    for (const key of keys) {
+      const data = await this.rocksdb.get(key);
+      if (data) {
+        const agent = JSON.parse(data) as AgentCacheData;
+        if (agent.availableForHire) agents.push(agent);
+      }
+    }
+    agents.sort((a, b) => b.reputationScore - a.reputationScore);
+    return agents.slice(offset, offset + limit).map((a) => this.mapToListDto(a));
+  }
+
+
+  async setAvailableForHire(agentId: string, available: boolean, hireFeeSOL: number): Promise<void> {
+    const key = AgentCacheEntity.createKey(agentId);
+    const cached = await this.rocksdb.get(key);
+    if (!cached) throw new NotFoundException(`Agent ${agentId} not found`);
+    const data: AgentCacheData = JSON.parse(cached);
+    data.availableForHire = available;
+    data.hireFeeSOL = hireFeeSOL;
+    data.updatedAt = Date.now();
+    await this.rocksdb.put(key, JSON.stringify(data));
+    this.logger.log(`Agent ${agentId} available_for_hire=${available} fee=${hireFeeSOL} SOL`);
+  }
+
+  async buildHireTx(agentId: string, payerWallet: string, operatorId: string): Promise<{ transaction: string; message: string }> {
+    const key = AgentCacheEntity.createKey(agentId);
+    const cached = await this.rocksdb.get(key);
+    if (!cached) throw new NotFoundException(`Agent ${agentId} not found`);
+    const data: AgentCacheData = JSON.parse(cached);
+    if (!data.availableForHire) throw new Error('Agent not available for hire');
+
+    const connection = this.solanaService.getConnection();
+    const agentPubkey = new PublicKey(agentId);
+    const operatorPubkey = new PublicKey(operatorId);
+    const payerPubkey = new PublicKey(payerWallet);
+    const amountLamports = Math.floor((data.hireFeeSOL ?? 0.01) * LAMPORTS_PER_SOL);
+
+    // Create a temporary provider with payer as wallet — needed for Anchor account resolution
+    const { Keypair: SolanaKeypair } = await import('@solana/web3.js');
+    const { AnchorProvider, Wallet, Program } = await import('@coral-xyz/anchor');
+    const dummyKeypair = SolanaKeypair.generate();
+    const dummyWallet = new Wallet(dummyKeypair);
+    const tempProvider = new AnchorProvider(connection, dummyWallet, { commitment: 'confirmed' });
+
+    const idlFund = this.solanaService.getFundProgram().idl;
+    const fundProgId = this.solanaService.getFundProgram().programId;
+    const tempFundProgram = new Program(idlFund as any, tempProvider) as any;
+
+    const [fundPda] = this.solanaService.deriveFundPda(operatorPubkey, agentPubkey);
+    const [vaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('vault'), operatorPubkey.toBuffer(), agentPubkey.toBuffer()],
+      fundProgId,
+    );
+
+    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+
+    const tx = await tempFundProgram.methods
+      .depositRewards(new BN(amountLamports))
+      .accounts({
+        depositor: payerPubkey,
+        fund: fundPda,
+        vault: vaultPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .transaction();
+
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = payerPubkey;
+
+    const serialized = tx.serialize({ requireAllSignatures: false });
+    return {
+      transaction: serialized.toString('base64'),
+      message: `Hire agent ${agentId.slice(0, 8)}... for ${data.hireFeeSOL} SOL`,
     };
   }
 }
