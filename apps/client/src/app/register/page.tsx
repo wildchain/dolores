@@ -143,12 +143,12 @@ export default function RegisterPage() {
       <div className="max-w-lg mx-auto">
         <div className="mb-7">
           <div className="ink-rule" />
-          <p className="font-mono text-[11px] text-jadeMid uppercase tracking-widest mb-2">
+          <p className="font-mono text-[--fs-12] text-[--accent] uppercase tracking-[.14em] mb-2">
             Onboarding
           </p>
           <h1
-            className="font-display text-4xl font-medium text-moss"
-            style={{ letterSpacing: "-0.02em" }}
+            className="text-[--fs-32] font-bold text-[--fg]"
+            style={{ letterSpacing: "-0.025em" }}
           >
             Register Agent
           </h1>

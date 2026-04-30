@@ -61,10 +61,10 @@ export function Step3RegisterOnChain({
   if (success) {
     return (
       <div className="animate-fade-up">
-        <h2 className="font-display text-2xl font-medium text-moss mb-2">
+        <h2 className="text-[--fs-20] font-semibold text-[--fg] mb-2">
           Agent Registered Successfully! 🎉
         </h2>
-        <p className="text-[14px] text-muted mb-6">
+        <p className="text-[--fs-14] text-[--fg-muted] mb-6">
           Your agent is now live on devnet. Reputation builds with every
           verified task.
         </p>
@@ -112,31 +112,31 @@ export function Step3RegisterOnChain({
 
   return (
     <div className="animate-fade-up">
-      <h2 className="font-display text-2xl font-medium text-moss mb-2">
+      <h2 className="text-[--fs-20] font-semibold text-[--fg] mb-2">
         Register On-Chain
       </h2>
-      <p className="text-[14px] text-muted mb-6">
+      <p className="text-[--fs-14] text-[--fg-muted] mb-6">
         Submit the registration transaction to Solana. Both your operator wallet
         and the agent keypair will sign this transaction.
       </p>
 
       {error && (
-        <div className="bg-danger/10 border border-danger/30 rounded-sm p-4 mb-5 text-danger text-[13px]">
+        <div className="bg-[--surface-raised] border border-[--danger] rounded-[--radius-sm] p-4 mb-5 text-[--danger] text-[--fs-14]">
           <strong>Registration Failed:</strong> {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="bg-jade/8 border border-jade/20 rounded-sm p-3.5 mb-5 font-mono text-[11px]">
+        <div className="bg-[--primary-subtle] border border-[--border-subtle] rounded-[--radius-sm] p-3.5 mb-5 font-mono text-[--fs-12]">
           <div className="mb-2">
-            <span className="text-jadeMid">Agent: </span>
-            <span className="text-jadeDark break-all">
+            <span className="text-[--fg-muted]">Agent: </span>
+            <span className="text-[--accent] break-all">
               {agentKeypair.publicKey.toBase58()}
             </span>
           </div>
           <div>
-            <span className="text-jadeMid">Capabilities: </span>
-            <span className="text-jadeDark">{capabilities.join(", ")}</span>
+            <span className="text-[--fg-muted]">Capabilities: </span>
+            <span className="text-[--accent]">{capabilities.join(", ")}</span>
           </div>
         </div>
 
@@ -155,34 +155,34 @@ export function Step3RegisterOnChain({
               {
                 label: "Templates",
                 value: capabilities.join(", "),
-                valueClass: "text-jadeDark",
+                valueClass: "text-[--accent]",
               },
               {
                 label: "Initial stake",
                 value: stakeAmount ? `${stakeAmount} SOL` : "— SOL",
-                valueClass: "text-jadeDeep",
+                valueClass: "text-[--accent]",
               },
               {
                 label: "Slash exposure (60%)",
                 value: slashExposure,
-                valueClass: "text-danger",
+                valueClass: "text-[--danger]",
               },
               {
                 label: "Dual signature",
                 value: "Operator + Agent",
-                valueClass: "text-amber",
+                valueClass: "text-[--warn]",
               },
               {
                 label: "Network",
                 value: "Solana Devnet",
-                valueClass: "text-jadeMid",
+                valueClass: "text-[--fg-muted]",
               },
             ]}
           />
         </div>
 
-        <div className="bg-amber/10 border border-amber/30 rounded-sm p-4 mb-5">
-          <div className="text-[12px] text-muted space-y-1">
+        <div className="bg-[--surface-raised] border border-[--border-subtle] rounded-[--radius-sm] p-4 mb-5">
+          <div className="text-[--fs-14] text-[--fg-muted] space-y-1">
             <p>
               <strong>Transaction will:</strong>
             </p>

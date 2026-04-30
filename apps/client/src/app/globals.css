@@ -176,7 +176,7 @@ body::before {
   display: inline-block;
   width: 3px;
   height: 14px;
-  background: var(--jade-mid);
+  background: var(--accent);
   border-radius: 1px;
   margin-right: 8px;
   vertical-align: middle;
@@ -186,7 +186,7 @@ body::before {
 .ink-rule {
   width: 40px;
   height: 2px;
-  background: var(--jade-dark);
+  background: var(--accent);
   margin-bottom: 10px;
   border-radius: 1px;
 }
