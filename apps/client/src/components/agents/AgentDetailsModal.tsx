@@ -59,21 +59,45 @@ export function AgentDetailsModal({
       title="Agent Details"
       size="xl"
       centered
-      classNames={{
-        header: "bg-stone border-b border-jade/20",
-        title: "font-display text-[20px] font-semibold text-moss",
-        body: "bg-stone",
-        content: "stone-card",
+      styles={{
+        header: {
+          background: "var(--bg)",
+          borderBottom: "1px solid var(--border-subtle)",
+        },
+        title: {
+          fontFamily: "Inter, sans-serif",
+          fontSize: "var(--fs-20)",
+          fontWeight: 600,
+          color: "var(--fg)",
+        },
+        body: { background: "var(--bg)" },
+        content: {
+          background: "var(--bg)",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-lg)",
+        },
       }}
     >
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <div className="text-muted">Loading...</div>
+          <div style={{ color: "var(--fg-muted)", fontSize: "var(--fs-14)" }}>
+            Loading...
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="bg-danger/10 border border-danger/30 rounded-sm p-4 text-danger">
+        <div
+          style={{
+            background: "rgba(220,38,38,0.06)",
+            border: "1px solid rgba(220,38,38,0.2)",
+            borderRadius: "var(--radius-sm)",
+            padding: "12px 16px",
+            color: "var(--danger)",
+            fontSize: "var(--fs-14)",
+          }}
+        >
           {error}
         </div>
       )}
@@ -84,14 +108,32 @@ export function AgentDetailsModal({
           <div className="flex items-start gap-6">
             <RepRing score={agent.trustBadge.successRate} size={80} />
             <div className="flex-1">
-              <h3 className="font-display text-[24px] font-semibold text-moss mb-2">
+              <h3
+                style={{
+                  fontSize: "var(--fs-24)",
+                  fontWeight: 600,
+                  color: "var(--fg)",
+                  marginBottom: 6,
+                }}
+              >
                 {agent.name}
               </h3>
-              <div className="font-mono text-[11px] text-jade mb-3">
+              <div
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "var(--fs-12)",
+                  color: "var(--fg-subtle)",
+                  marginBottom: 10,
+                }}
+              >
                 {agent.agentId}
               </div>
               {agent.description && (
-                <p className="text-[14px] text-muted">{agent.description}</p>
+                <p
+                  style={{ fontSize: "var(--fs-14)", color: "var(--fg-muted)" }}
+                >
+                  {agent.description}
+                </p>
               )}
             </div>
           </div>
@@ -101,24 +143,23 @@ export function AgentDetailsModal({
             <StatTile
               label="Reputation Score"
               value={agent.reputationScore.toString()}
-              valueClass="text-jade"
+              valueStyle={{ color: "var(--accent)" }}
             />
             <StatTile
               label="Total Tasks"
               value={agent.trustBadge.totalTasks.toLocaleString()}
-              valueClass="text-moss"
             />
             <StatTile
               label="Success Rate"
               value={`${agent.trustBadge.successRate}%`}
-              valueClass="text-success"
+              valueStyle={{ color: "var(--ok)" }}
             />
             <StatTile
               label="Slash Count"
               value={agent.slashCount.toString()}
-              valueClass={
-                agent.slashCount === 0 ? "text-success" : "text-danger"
-              }
+              valueStyle={{
+                color: agent.slashCount === 0 ? "var(--ok)" : "var(--danger)",
+              }}
             />
           </div>
 
@@ -128,26 +169,37 @@ export function AgentDetailsModal({
               label="Staked Amount"
               value={`$${formatUsdc(agent.stakeAmount)}`}
               sub={`${agent.stakeAmount.toLocaleString()} lamports`}
-              valueClass="text-jadeDeep"
+              valueStyle={{ color: "var(--accent)" }}
             />
             <StatTile
               label="Declared Stake"
               value={`$${formatUsdc(agent.declaredStake)}`}
               sub={`${agent.declaredStake.toLocaleString()} lamports`}
-              valueClass="text-jadeDeep"
+              valueStyle={{ color: "var(--accent)" }}
             />
           </div>
 
           {/* Capabilities */}
           <div>
-            <div className="font-mono text-[11px] text-jadeMid uppercase tracking-wider mb-3">
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                color: "var(--fg-subtle)",
+                textTransform: "uppercase",
+                letterSpacing: ".14em",
+                marginBottom: 10,
+              }}
+            >
               Capabilities
             </div>
             <div className="flex gap-2 flex-wrap">
               {agent.capabilities.length > 0 ? (
                 agent.capabilities.map(cap => <Badge key={cap} cap={cap} />)
               ) : (
-                <span className="text-muted text-[13px]">
+                <span
+                  style={{ fontSize: "var(--fs-14)", color: "var(--fg-muted)" }}
+                >
                   No capabilities listed
                 </span>
               )}
@@ -156,38 +208,61 @@ export function AgentDetailsModal({
 
           {/* Blockchain Info */}
           <div className="space-y-3">
-            <div className="font-mono text-[11px] text-jadeMid uppercase tracking-wider">
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                color: "var(--fg-subtle)",
+                textTransform: "uppercase",
+                letterSpacing: ".14em",
+              }}
+            >
               Blockchain Details
             </div>
-            <div className="bg-jade/5 border border-jade/15 rounded-sm p-4 space-y-2 font-mono text-[12px]">
+            <div
+              style={{
+                background: "var(--surface-raised)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-sm)",
+                padding: 16,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+              }}
+            >
+              {(
+                [
+                  ["Operator", agent.operator],
+                  ["Registry PDA", agent.registryPda],
+                  ["Fund PDA", agent.fundPda],
+                  ["Arweave CID", agent.arweaveCid || "Not set"],
+                ] as [string, string][]
+              ).map(([key, val]) => (
+                <div key={key} className="flex justify-between">
+                  <span style={{ color: "var(--fg-muted)" }}>{key}:</span>
+                  <span
+                    style={{
+                      color: "var(--fg)",
+                      fontWeight: 600,
+                      maxWidth: 300,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {val}
+                  </span>
+                </div>
+              ))}
               <div className="flex justify-between">
-                <span className="text-muted">Operator:</span>
-                <span className="text-moss font-semibold">
-                  {agent.operator}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Registry PDA:</span>
-                <span className="text-moss font-semibold truncate max-w-[300px]">
-                  {agent.registryPda}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Fund PDA:</span>
-                <span className="text-moss font-semibold truncate max-w-[300px]">
-                  {agent.fundPda}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Arweave CID:</span>
-                <span className="text-moss font-semibold">
-                  {agent.arweaveCid || "Not set"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Status:</span>
+                <span style={{ color: "var(--fg-muted)" }}>Status:</span>
                 <span
-                  className={agent.isActive ? "text-success" : "text-danger"}
+                  style={{
+                    color: agent.isActive ? "var(--ok)" : "var(--danger)",
+                    fontWeight: 600,
+                  }}
                 >
                   {agent.isActive ? "Active" : "Inactive"}
                 </span>
@@ -197,43 +272,73 @@ export function AgentDetailsModal({
 
           {/* Timestamps */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="bg-jade/5 border border-jade/15 rounded-sm p-3">
-              <div className="font-mono text-[10px] text-jadeMid uppercase tracking-wider mb-1">
-                Registered At
+            {(
+              [
+                [
+                  "Registered At",
+                  agent.registeredAt
+                    ? formatDate(agent.registeredAt)
+                    : "Unknown",
+                ],
+                [
+                  "Last Attested",
+                  agent.lastAttestedAt
+                    ? formatDate(agent.lastAttestedAt)
+                    : "Never",
+                ],
+              ] as [string, string][]
+            ).map(([label, val]) => (
+              <div
+                key={label}
+                style={{
+                  background: "var(--surface-raised)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: 12,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "var(--fs-12)",
+                    color: "var(--fg-subtle)",
+                    textTransform: "uppercase",
+                    letterSpacing: ".14em",
+                    marginBottom: 4,
+                  }}
+                >
+                  {label}
+                </div>
+                <div style={{ fontSize: "var(--fs-14)", color: "var(--fg)" }}>
+                  {val}
+                </div>
               </div>
-              <div className="text-[13px] text-moss">
-                {agent.registeredAt
-                  ? formatDate(agent.registeredAt)
-                  : "Unknown"}
-              </div>
-            </div>
-            <div className="bg-jade/5 border border-jade/15 rounded-sm p-3">
-              <div className="font-mono text-[10px] text-jadeMid uppercase tracking-wider mb-1">
-                Last Attested
-              </div>
-              <div className="text-[13px] text-moss">
-                {agent.lastAttestedAt
-                  ? formatDate(agent.lastAttestedAt)
-                  : "Never"}
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Performance Metrics */}
           <div>
-            <div className="font-mono text-[11px] text-jadeMid uppercase tracking-wider mb-3">
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                color: "var(--fg-subtle)",
+                textTransform: "uppercase",
+                letterSpacing: ".14em",
+                marginBottom: 10,
+              }}
+            >
               Performance
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <StatTile
                 label="Completed"
                 value={agent.trustBadge.completedTasks.toLocaleString()}
-                valueClass="text-success"
+                valueStyle={{ color: "var(--ok)" }}
               />
               <StatTile
                 label="Avg Response Time"
                 value={`${agent.trustBadge.avgResponseTime.toFixed(2)}s`}
-                valueClass="text-moss"
               />
               <StatTile
                 label="Age"
@@ -242,7 +347,7 @@ export function AgentDetailsModal({
                     ? new Date(agent.trustBadge.ageSince).toLocaleDateString()
                     : "Unknown"
                 }
-                valueClass="text-muted"
+                valueStyle={{ color: "var(--fg-muted)" }}
               />
             </div>
           </div>
@@ -254,7 +359,22 @@ export function AgentDetailsModal({
                 href={agent.manifestUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-[13px] text-jade hover:text-jadeDark transition-colors"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: "var(--fs-14)",
+                  color: "var(--accent)",
+                  textDecoration: "none",
+                }}
+                onMouseEnter={e =>
+                  ((e.currentTarget as HTMLAnchorElement).style.color =
+                    "var(--fg)")
+                }
+                onMouseLeave={e =>
+                  ((e.currentTarget as HTMLAnchorElement).style.color =
+                    "var(--accent)")
+                }
               >
                 <span>View Manifest on Arweave</span>
                 <svg

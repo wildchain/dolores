@@ -1,0 +1,96 @@
+/* ==========================================================================
+   Dolores Brand System — Design Tokens
+   Source of truth: dolores_style_guide.html (v1.0, 2026-04-15)
+   ========================================================================== */
+
+:root {
+  /* --- Primary & Accent --- */
+  --primary: #d7efff; /* Light sky blue — dark-slide text, on-dark elements */
+  --primary-hover: #b8e3ff; /* Hover state for chips and primary surfaces */
+  --primary-subtle: #ebf7ff; /* Pullquote bg, chip bg, flywheel fill */
+  --accent: #5bafd6; /* Primary accent — kickers, stats, links, focus rings */
+  --navy: #0d1b2a; /* Dark-slide background. Never use as text color. */
+
+  /* --- Surfaces --- */
+  --bg: #ffffff; /* Page and card background */
+  --surface-raised: #f8f9fa; /* Table headers, epoch tiles, side-note panels */
+  --surface-sunken: #f1f3f5; /* Deep surfaces — use sparingly */
+
+  /* --- Borders --- */
+  --border-subtle: #e8eaed; /* Default card / divider border */
+  --border-strong: #dadce0; /* Table header underline */
+
+  /* --- Foregrounds --- */
+  --fg: #0a0a0b; /* Body text, headlines */
+  --fg-muted: #5f6368; /* Secondary text, descriptions */
+  --fg-subtle: #9aa0a6; /* Labels, metadata. Decorative only — fails WCAG AA for body copy */
+  --fg-inverse: #ffffff; /* Text on --accent or --navy backgrounds */
+
+  /* --- Semantic --- */
+  --ok: #16a34a; /* Success, positive signal */
+  --warn: #d97706; /* Warning / caution */
+  --danger: #dc2626; /* Error, destructive action */
+  --info: #2563eb; /* Informational (reserved — rarely used) */
+
+  /* --- Shadows --- */
+  --shadow-sm:
+    0 1px 2px rgba(10, 10, 11, 0.04), 0 1px 1px rgba(10, 10, 11, 0.03);
+  --shadow-md:
+    0 4px 16px rgba(10, 10, 11, 0.06), 0 2px 4px rgba(10, 10, 11, 0.04);
+  --shadow-lg:
+    0 20px 48px rgba(10, 10, 11, 0.08), 0 8px 16px rgba(10, 10, 11, 0.05);
+
+  /* --- Radius --- */
+  --radius-sm: 6px; /* Small elements, badges */
+  --radius: 10px; /* Cards, chips, default */
+  --radius-lg: 16px; /* Large cards, panels, modals */
+  /* Note: pill chips use border-radius: 999px directly */
+
+  /* --- Fluid type scale (clamp) --- */
+  --fs-12: clamp(11px, 0.75vw, 12px); /* Metadata, kickers */
+  --fs-14: clamp(13px, 0.9vw, 14px); /* Small body, captions */
+  --fs-16: clamp(15px, 1.05vw, 16px); /* Card body, checklist items */
+  --fs-18: clamp(16px, 1.2vw, 18px); /* Default body size */
+  --fs-20: clamp(17px, 1.35vw, 20px); /* Step titles, phase headings */
+  --fs-24: clamp(20px, 1.7vw, 24px); /* Sub-headlines */
+  --fs-32: clamp(26px, 2.3vw, 34px); /* Section H2 */
+  --fs-44: clamp(32px, 3.2vw, 48px); /* Market row figures */
+  --fs-60: clamp(40px, 4.6vw, 64px); /* Claim headline */
+  --fs-88: clamp(52px, 6.8vw, 96px); /* Cover / brand mark */
+
+  /* --- Ambient gradient (apply on ::before pseudo-element, not as flat fill) --- */
+  --ambient-light:
+    radial-gradient(
+      circle 700px at 12% 18%,
+      rgba(215, 239, 255, 0.55) 0%,
+      transparent 65%
+    ),
+    radial-gradient(
+      circle 500px at 92% 88%,
+      rgba(91, 175, 214, 0.12) 0%,
+      transparent 70%
+    );
+  --ambient-dark:
+    radial-gradient(
+      circle 700px at 85% 30%,
+      rgba(215, 239, 255, 0.18) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      circle 500px at 10% 90%,
+      rgba(91, 175, 214, 0.22) 0%,
+      transparent 70%
+    );
+
+  /* --- Spacing scale (8pt base — do not hand-tune outside these values) --- */
+  --space-1: 8px;
+  --space-2: 10px;
+  --space-3: 14px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 48px;
+}

@@ -65,17 +65,17 @@ export function Step2SelectCapabilities({
 
   return (
     <div className="animate-fade-up">
-      <h2 className="font-display text-2xl font-medium text-moss mb-2">
+      <h2 className="text-[--fs-20] font-semibold text-[--fg] mb-2">
         Select Capability Template
       </h2>
-      <p className="text-[14px] text-muted mb-6">
+      <p className="text-[--fs-14] text-[--fg-muted] mb-6">
         Choose the capability template for your agent. This defines what actions
         the agent is authorized to perform.
       </p>
 
-      <div className="bg-jade/8 border border-jade/20 rounded-sm p-3.5 mb-5 font-mono text-[11px]">
-        <span className="text-jadeMid">Agent public key: </span>
-        <span className="text-jadeDark break-all">
+      <div className="bg-[--primary-subtle] border border-[--border-subtle] rounded-[--radius-sm] p-3.5 mb-5 font-mono text-[--fs-12]">
+        <span className="text-[--fg-muted]">Agent public key: </span>
+        <span className="text-[--accent] break-all">
           {agentKeypair.publicKey.toBase58()}
         </span>
       </div>
@@ -89,18 +89,18 @@ export function Step2SelectCapabilities({
         />
 
         <div className="mb-3">
-          <label className="font-mono text-[11px] text-jadeMid mb-1.5 block">
+          <label className="font-mono text-[--fs-12] text-[--fg-muted] mb-1.5 block">
             Description{" "}
-            <span className="text-jade/50 font-normal">(optional)</span>
+            <span className="text-[--fg-subtle] font-normal">(optional)</span>
           </label>
           <textarea
             {...register("description")}
             placeholder="Briefly describe what this agent does..."
             rows={3}
-            className="w-full bg-stone border border-jade/25 rounded-sm px-3.5 py-2.5 text-ink font-mono text-[13px] placeholder:text-jade/60 focus:border-jadeDark focus:bg-white transition-all outline-none resize-none"
+            className="w-full bg-[--bg] border border-[--border-subtle] rounded-[--radius-sm] px-3.5 py-2.5 text-[--fg] font-mono text-[--fs-14] placeholder:text-[--fg-subtle] focus:border-[--accent] transition-all outline-none resize-none"
           />
           {errors.description && (
-            <p className="text-[11px] text-danger mt-1">
+            <p className="text-[--fs-12] text-[--danger] mt-1">
               {errors.description.message}
             </p>
           )}
@@ -126,31 +126,31 @@ export function Step2SelectCapabilities({
                 {
                   label: "Selected templates",
                   value: capabilities.join(", "),
-                  valueClass: "text-jadeDark",
+                  valueClass: "text-[--accent]",
                 },
                 {
                   label: "Agent pubkey",
                   value: `${agentKeypair.publicKey.toBase58().slice(0, 16)}...`,
-                  valueClass: "text-jadeMid",
+                  valueClass: "text-[--fg-muted]",
                 },
                 {
                   label: "Network",
                   value: "Solana Devnet",
-                  valueClass: "text-jadeMid",
+                  valueClass: "text-[--fg-muted]",
                 },
               ]}
             />
           </div>
         )}
 
-        <div className="bg-amber/10 border border-amber/30 rounded-sm p-4 mb-5">
-          <div className="font-mono text-[11px] font-semibold text-amber mb-3">
+        <div className="bg-[--surface-raised] border border-[--warn] rounded-[--radius-sm] p-4 mb-5">
+          <div className="font-mono text-[--fs-12] font-semibold text-[--warn] mb-3">
             📥 Download Agent Keypair
           </div>
           <button
             type="button"
             onClick={onDownloadKeypair}
-            className="w-full mb-3 font-semibold transition-all duration-150 border px-4 py-2 text-[13px] rounded-sm bg-jade/15 text-jadeDark border-jade/35 hover:bg-jade/25"
+            className="w-full mb-3 font-semibold transition-all duration-150 border px-4 py-2 text-[--fs-14] rounded-[--radius-sm] bg-[--primary-subtle] text-[--accent] border-[--border-subtle] hover:bg-[--primary-hover] hover:border-[--accent]"
           >
             Download agent-{agentKeypair.publicKey.toBase58().slice(0, 8)}.json
           </button>
@@ -159,14 +159,14 @@ export function Step2SelectCapabilities({
               type="checkbox"
               checked={confirmDownload}
               onChange={e => setValue("confirmDownload", e.target.checked)}
-              className="w-4 h-4 rounded border-jade/30 text-jadeDeep focus:ring-jadeDeep"
+              className="w-4 h-4 rounded border-[--border-strong] text-[--accent] focus:ring-[--accent]"
             />
-            <span className="text-[12px] text-muted">
+            <span className="text-[--fs-14] text-[--fg-muted]">
               I have downloaded and saved the keypair securely
             </span>
           </label>
           {errors.confirmDownload && (
-            <p className="text-[11px] text-danger mt-2">
+            <p className="text-[--fs-12] text-[--danger] mt-2">
               {errors.confirmDownload.message}
             </p>
           )}
@@ -176,14 +176,14 @@ export function Step2SelectCapabilities({
           <button
             type="button"
             onClick={onBack}
-            className="flex-1 font-semibold transition-all duration-150 border px-4 py-2 text-[13px] rounded-sm bg-jade/15 text-jadeDark border-jade/35 hover:bg-jade/25"
+            className="flex-1 font-semibold transition-all duration-150 border px-4 py-2 text-[--fs-14] rounded-[--radius-sm] bg-[--bg] text-[--fg] border-[--border-subtle] hover:bg-[--surface-raised]"
           >
             ← Back
           </button>
           <button
             type="submit"
             disabled={!confirmDownload || capabilities.length === 0}
-            className="flex-1 font-semibold transition-all duration-150 border px-4 py-2 text-[13px] rounded-sm bg-jadeDeep text-stone hover:bg-moss border-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 font-semibold transition-all duration-150 border px-4 py-2 text-[--fs-14] rounded-[--radius-sm] bg-[--accent] text-[--fg-inverse] border-transparent hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Continue to Registration →
           </button>
