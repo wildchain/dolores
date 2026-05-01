@@ -142,7 +142,7 @@ export function Step3RegisterOnChain({
 
         <FormInput
           name="stakeAmount"
-          control={control}
+          control={control as any}
           label="Initial Stake Amount (SOL)"
           type="number"
           step="0.1"
