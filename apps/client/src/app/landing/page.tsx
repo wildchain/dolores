@@ -2,6 +2,9 @@
 import Link from "next/link";
 import { ProtocolGlance } from "@/components/landing/ProtocolGlance";
 import { HowItWorks } from "@/components/landing/HowItWorks";
+import { Audiences } from "@/components/landing/Audiences";
+import { ClosingCTA } from "@/components/landing/ClosingCTA";
+import { Footer } from "@/components/landing/Footer";
 
 const NAV_LINKS = [
   { href: "#protocol", label: "Protocol" },
@@ -346,6 +349,9 @@ export default function Landing() {
 
       <ProtocolGlance />
       <HowItWorks />
+      <Audiences />
+      <ClosingCTA />
+      <Footer />
     </div>
   );
 }

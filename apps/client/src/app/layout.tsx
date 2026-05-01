@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "@mantine/core/styles.css";
-import { Navbar } from "@/components/layout/Navbar";
+import { ConditionalNavbar } from "@/components/layout/ConditionalNavbar";
 import { ToastProvider } from "@/components/ui/Toast";
 import { WalletContextProvider } from "@/context/WalletContextProvider";
 import { AuthProvider } from "@/context/AuthContext";
@@ -28,7 +28,7 @@ export default function RootLayout({
               <AuthProvider>
                 <ToastProvider>
                   <div className="relative z-10">
-                    <Navbar />
+                    <ConditionalNavbar />
                     <main className="min-h-screen">{children}</main>
                   </div>
                 </ToastProvider>
