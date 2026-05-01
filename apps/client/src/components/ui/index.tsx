@@ -182,6 +182,7 @@ export function Button({
   size?: "sm" | "md" | "lg";
   className?: string;
   disabled?: boolean;
+  type?: "button" | "submit" | "reset";
 }) {
   type StyleMap = Record<string, React.CSSProperties>;
   const v: StyleMap = {

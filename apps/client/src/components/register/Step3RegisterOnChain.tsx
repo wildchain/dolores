@@ -199,7 +199,7 @@ export function Step3RegisterOnChain({
 
         <div className="flex gap-3">
           <Button
-            type="button"
+            type={"button"}
             variant="secondary"
             className="flex-1"
             onClick={onBack}
