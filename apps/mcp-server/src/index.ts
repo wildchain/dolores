@@ -16,7 +16,7 @@ import { Program, AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
 
 //  Config 
 
-const API_URL = process.env.DOLORES_API_URL || "http://localhost:3001";
+const API_URL = process.env.DOLORES_API_URL || "https://abc123.ngrok-free.app";
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 const OPERATOR_KEY_PATH = process.env.DOLORES_OPERATOR_KEY ||
   path.join(os.homedir(), ".config", "solana", "id.json");
