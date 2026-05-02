@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BN } from '@coral-xyz/anchor';
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { SolanaService } from '../solana/solana.service';
 import { RocksDBService } from '@dolores/database';
@@ -101,11 +102,18 @@ export class TasksService {
         throw new Error('Task ID must be 32 bytes');
       }
 
-      // Derive challenge PDA
-      const [challengePda] = this.solanaService.deriveChallengePda(
+      // Derive task record PDA
+      const [taskRecordPda] = this.solanaService.deriveTaskPda(
         agentPubkey,
         taskIdBuffer,
       );
+
+      // Compute deadline as Unix timestamp (i64)
+      const timeoutSeconds = dto.timeoutSeconds ?? 600;
+      const deadline = new BN(Math.floor(Date.now() / 1000) + timeoutSeconds);
+
+      // output_hash: 32 zero bytes (placeholder, agent fills on completion)
+      const outputHash = Array.from(Buffer.alloc(32));
 
       // Get recent blockhash
       const { blockhash } = await connection.getLatestBlockhash('confirmed');
@@ -115,13 +123,13 @@ export class TasksService {
       const tx = await program.methods
         .registerTask(
           Array.from(taskIdBuffer),
-          dto.capabilityName,
-          dto.parametersJson,
+          deadline,
+          outputHash,
         )
         .accounts({
-          challenge: challengePda,
+          user: requesterPubkey,
           agent: agentPubkey,
-          requester: requesterPubkey,
+          taskRecord: taskRecordPda,
           systemProgram: SystemProgram.programId,
         })
         .transaction();
