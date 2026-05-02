@@ -1,6 +1,6 @@
 {
     "name": "dolores-mcp",
-    "version": "0.1.3",
+    "version": "0.1.7",
     "description": "Dolores Protocol MCP server — accountable AI agents on Solana",
     "main": "dist/index.js",
     "bin": {

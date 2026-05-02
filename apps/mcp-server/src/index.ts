@@ -16,8 +16,11 @@ import { Program, AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
 
 //  Config 
 
-const API_URL = process.env.DOLORES_API_URL || "https://abc123.ngrok-free.app";
+const API_URL = process.env.DOLORES_API_URL || "https://lively-dream-production-bf53.up.railway.app";
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
+
+
+
 const OPERATOR_KEY_PATH = process.env.DOLORES_OPERATOR_KEY ||
   path.join(os.homedir(), ".config", "solana", "id.json");
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
@@ -67,6 +70,8 @@ const server = new Server(
   { name: "dolores-mcp", version: "0.1.0" },
   { capabilities: { tools: {} } }
 );
+
+
 
 //  Tool Definitions 
 
@@ -164,6 +169,49 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             type: "number",
             description: "Max number of tokens to return (default 10)",
           },
+        },
+      },
+    },
+
+    {
+      name: "dolores_register_agent",
+      description: "Create and register a new Dolores AI agent on Solana. Generates a keypair, registers on-chain, and initializes the staking fund. The agent will be ready to accept tasks.",
+      inputSchema: {
+        type: "object",
+        required: ["template"],
+        properties: {
+          template: {
+            type: "string",
+            description: "Agent capability template: SOL_TRANSFER, JUPITER_TRADER, RAYDIUM_LP, METEORA_POOLS, KAMINO_LENDING, PYTH_ORACLE_READER, PUMPFUN_TRADER",
+          },
+          name: {
+            type: "string",
+            description: "Human-readable name for the agent (optional)",
+          },
+        },
+      },
+    },
+    {
+      name: "dolores_stake_agent",
+      description: "Stake SOL on your Dolores agent to increase its reputation and accountability. Higher stake = more trust from the community.",
+      inputSchema: {
+        type: "object",
+        required: ["agentId", "amountSol"],
+        properties: {
+          agentId: { type: "string", description: "Agent public key" },
+          amountSol: { type: "number", description: "Amount of SOL to stake (minimum 0.01)" },
+        },
+      },
+    },
+    {
+      name: "dolores_list_agent_for_hire",
+      description: "List your Dolores agent on the marketplace so others can hire it. Set a hire fee in SOL.",
+      inputSchema: {
+        type: "object",
+        required: ["agentId"],
+        properties: {
+          agentId: { type: "string", description: "Agent public key" },
+          hireFeeSOL: { type: "number", description: "Fee in SOL to hire this agent (default 0.01)" },
         },
       },
     },
@@ -489,6 +537,215 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             text: results.length
               ? `**Live Solana Memecoins from DexScreener** (${tokens.length} found)\n\n${results}`
               : "No new Solana tokens found on DexScreener right now.",
+          }],
+        };
+      }
+
+      case "dolores_register_agent": {
+        const { template, name } = args as { template: string; name?: string };
+        const operatorKeypair = getOrCreateWallet();
+        const connection = new Connection(RPC_URL, "confirmed");
+
+        const VALID_TEMPLATES = ["SOL_TRANSFER", "JUPITER_TRADER", "RAYDIUM_LP", "METEORA_POOLS", "KAMINO_LENDING", "PYTH_ORACLE_READER", "PUMPFUN_TRADER"];
+        if (!VALID_TEMPLATES.includes(template)) {
+          throw new Error(`Invalid template. Choose from: ${VALID_TEMPLATES.join(", ")}`);
+        }
+
+        // Check operator balance
+        const balance = await connection.getBalance(operatorKeypair.publicKey);
+        if (balance < 50_000_000) {
+          return {
+            content: [{
+              type: "text",
+              text: `⚠️ Insufficient SOL to register agent.\n\nYour wallet: \`${operatorKeypair.publicKey.toBase58()}\`\nBalance: ${(balance / 1e9).toFixed(4)} SOL\nRequired: ~0.05 SOL\n\nFund your wallet first:\n- Devnet: \`solana airdrop 1 ${operatorKeypair.publicKey.toBase58()} --url devnet\`\n- Mainnet: send SOL to \`${operatorKeypair.publicKey.toBase58()}\``,
+            }],
+          };
+        }
+
+        // Generate agent keypair
+        const { Keypair: SolanaKeypair } = await import("@solana/web3.js");
+        const agentKeypair = SolanaKeypair.generate();
+        const agentId = agentKeypair.publicKey.toBase58();
+
+        // Save agent keypair to ~/.dolores/agents/
+        const agentDir = path.join(os.homedir(), ".dolores", "agents");
+        fs.mkdirSync(agentDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(agentDir, `${agentId}.json`),
+          JSON.stringify(Array.from(agentKeypair.secretKey))
+        );
+
+        const metadataPath = path.join(agentDir, `${agentId}.meta.json`);
+        fs.writeFileSync(metadataPath, JSON.stringify({
+          name: name || `${template} Agent`,
+          template,
+          registeredAt: Date.now(),
+          operator: operatorKeypair.publicKey.toBase58(),
+        }, null, 2));
+
+
+        // Build capability hash from template
+        const crypto = require("crypto");
+        const manifest = {
+          name: name || `${template} Agent`,
+          description: `Dolores agent with ${template} capability`,
+          capabilities: [{ name: template, version: "1.0" }],
+        };
+        const capabilityHash = Array.from(
+          crypto.createHash("sha256").update(JSON.stringify(manifest.capabilities)).digest()
+        );
+
+        // Setup Anchor programs
+        const { AnchorProvider, Wallet, Program, BN } = await import("@coral-xyz/anchor");
+        const idlRegistry = require(path.join(__dirname, "idl/dolores_registry.json"));
+        const idlFund = require(path.join(__dirname, "idl/dolores_fund.json"));
+
+        const wallet = new Wallet(operatorKeypair);
+        const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
+
+        const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
+        const FUND_PROGRAM_ID = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
+
+        const registryProgram = new Program(idlRegistry as any, provider) as any;
+        const fundProgram = new Program(idlFund as any, provider) as any;
+
+        const [registryPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("registry"), agentKeypair.publicKey.toBuffer()],
+          new PublicKey(REGISTRY_PROGRAM_ID)
+        );
+        const [fundPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("fund"), operatorKeypair.publicKey.toBuffer(), agentKeypair.publicKey.toBuffer()],
+          new PublicKey(FUND_PROGRAM_ID)
+        );
+        const [vaultPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), operatorKeypair.publicKey.toBuffer(), agentKeypair.publicKey.toBuffer()],
+          new PublicKey(FUND_PROGRAM_ID)
+        );
+
+        // Step 1 — register_agent
+        const tx1 = await registryProgram.methods
+          .registerAgent(capabilityHash)
+          .accounts({
+            operator: operatorKeypair.publicKey,
+            agent: agentKeypair.publicKey,
+            registry: registryPda,
+            systemProgram: "11111111111111111111111111111111",
+          })
+          .signers([agentKeypair])
+          .rpc();
+
+        // Step 2 — initialize_fund
+        const tx2 = await fundProgram.methods
+          .initializeFund()
+          .accounts({
+            operator: operatorKeypair.publicKey,
+            agent: agentKeypair.publicKey,
+            fund: fundPda,
+            vault: vaultPda,
+            systemProgram: "11111111111111111111111111111111",
+          })
+          .signers([agentKeypair])
+          .rpc();
+
+        await apiFetch(`/agents/${agentId}/seed`, "POST", {
+          operator: operatorKeypair.publicKey.toBase58(),
+          name: name || `${template} Agent`,
+          template,
+          description: `Dolores agent with ${template} capability`,
+        });
+
+        // Seed in API cache
+        await apiFetch(`/agents/${agentId}`, "GET").catch(() => { });
+
+        return {
+          content: [{
+            type: "text",
+            text: `🤖 **Agent registered successfully!**\n\nAgent ID: \`${agentId}\`\nTemplate: ${template}\nOperator: \`${operatorKeypair.publicKey.toBase58()}\`\n\nTransactions:\n- Register: \`${tx1}\`\n- Fund init: \`${tx2}\`\n\nKeypair saved to: \`${path.join(agentDir, agentId + ".json")}\`\n\n**Next steps:**\n1. Stake SOL: use \`dolores_stake_agent\`\n2. List for hire: use \`dolores_list_agent_for_hire\`\n3. Start agent runtime: run \`pnpm dev:agent\` with AGENT_ID=${agentId}`,
+          }],
+        };
+      }
+
+      case "dolores_stake_agent": {
+        const { agentId, amountSol } = args as { agentId: string; amountSol: number };
+        const operatorKeypair = getOrCreateWallet();
+        const connection = new Connection(RPC_URL, "confirmed");
+
+        const { AnchorProvider, Wallet, Program, BN } = await import("@coral-xyz/anchor");
+        const idlRegistry = require(path.join(__dirname, "idl/dolores_registry.json"));
+        const idlFund = require(path.join(__dirname, "idl/dolores_fund.json"));
+        const wallet = new Wallet(operatorKeypair);
+        const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
+
+        const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
+        const FUND_PROGRAM_ID = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
+
+        const agentPubkey = new PublicKey(agentId);
+        const amountLamports = Math.floor(amountSol * 1e9);
+
+        const registryProgram = new Program(idlRegistry as any, provider) as any;
+        const fundProgram = new Program(idlFund as any, provider) as any;
+
+        const [registryPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("registry"), agentPubkey.toBuffer()],
+          new PublicKey(REGISTRY_PROGRAM_ID)
+        );
+        const [fundPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("fund"), operatorKeypair.publicKey.toBuffer(), agentPubkey.toBuffer()],
+          new PublicKey(FUND_PROGRAM_ID)
+        );
+        const [vaultPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), operatorKeypair.publicKey.toBuffer(), agentPubkey.toBuffer()],
+          new PublicKey(FUND_PROGRAM_ID)
+        );
+        const [stakerPositionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("staker"), fundPda.toBuffer(), operatorKeypair.publicKey.toBuffer()],
+          new PublicKey(FUND_PROGRAM_ID)
+        );
+
+        const tx1 = await fundProgram.methods
+          .stake(new BN(amountLamports))
+          .accounts({
+            operator: operatorKeypair.publicKey,
+            fund: fundPda,
+            vault: vaultPda,
+            stakerPosition: stakerPositionPda,
+            systemProgram: "11111111111111111111111111111111",
+          })
+          .rpc();
+
+        const tx2 = await registryProgram.methods
+          .updateDeclaredStake(new BN(amountLamports))
+          .accounts({
+            operator: operatorKeypair.publicKey,
+            registry: registryPda,
+          })
+          .rpc();
+
+        return {
+          content: [{
+            type: "text",
+            text: `✅ **Staked ${amountSol} SOL on agent!**\n\nAgent: \`${agentId.slice(0, 8)}...\`\nAmount: ${amountSol} SOL\nStake TX: \`${tx1}\`\nRegistry TX: \`${tx2}\`\n\nYour agent now has skin in the game. Ready to list for hire with \`dolores_list_agent_for_hire\`.`,
+          }],
+        };
+      }
+
+      case "dolores_list_agent_for_hire": {
+        const { agentId, hireFeeSOL } = args as { agentId: string; hireFeeSOL?: number };
+
+        // Cache agent first
+        await apiFetch(`/agents/${agentId}`, "GET").catch(() => { });
+
+        const result = await apiFetch(`/agents/${agentId}/list-for-hire`, "POST", {
+          available: true,
+          hireFeeSOL: hireFeeSOL ?? 0.01,
+        }) as any;
+
+        if (!result.ok) throw new Error("Failed to list agent for hire");
+
+        return {
+          content: [{
+            type: "text",
+            text: `✅ **Agent listed for hire!**\n\nAgent: \`${agentId.slice(0, 8)}...\`\nHire fee: ${hireFeeSOL ?? 0.01} SOL\n\nAnyone can now find and hire your agent from the Dolores marketplace.`,
           }],
         };
       }

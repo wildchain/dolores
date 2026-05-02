@@ -81,4 +81,13 @@ export class AgentsController {
   ): Promise<{ transaction: string; message: string }> {
     return this.agentsService.buildHireTx(agentId, body.payerWallet, body.operatorId);
   }
+
+  @Post(':id/seed')
+  async seedAgent(
+    @Param('id') agentId: string,
+    @Body() body: { operator: string; name: string; template: string; description?: string },
+  ): Promise<{ ok: boolean }> {
+    await this.agentsService.seedAgent(agentId, body);
+    return { ok: true };
+  }
 }

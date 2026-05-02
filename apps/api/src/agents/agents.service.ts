@@ -401,4 +401,60 @@ export class AgentsService {
       message: `Hire agent ${agentId.slice(0, 8)}... for ${data.hireFeeSOL} SOL`,
     };
   }
+
+  async seedAgent(agentId: string, data: { operator: string; name: string; template: string; description?: string }): Promise<void> {
+    const key = AgentCacheEntity.createKey(agentId);
+
+    // Check if already cached
+    const existing = await this.rocksdb.get(key);
+    if (existing) {
+      // Update name/description only
+      const parsed: AgentCacheData = JSON.parse(existing);
+      parsed.name = data.name;
+      parsed.description = data.description || '';
+      parsed.capabilities = [data.template];
+      parsed.updatedAt = Date.now();
+      await this.rocksdb.put(key, JSON.stringify(parsed));
+      return;
+    }
+
+    // Create minimal cache entry
+    const agentData: AgentCacheData = {
+      id: agentId,
+      agentId,
+      operator: data.operator,
+      name: data.name,
+      description: data.description || `${data.template} agent`,
+      capabilities: [data.template],
+      manifestUrl: '',
+      manifest: null,
+      registryPda: '',
+      fundPda: '',
+      registeredAt: Math.floor(Date.now() / 1000),
+      fundCreatedAt: 0,
+      isActive: true,
+      stakeAmount: 0,
+      capabilityHash: [],
+      reputationScore: 0,
+      slashCount: 0,
+      arweaveCid: '',
+      declaredStake: 0,
+      lastAttestedAt: 0,
+      availableForHire: false,
+      hireFeeSOL: 0.01,
+      totalEarnedSOL: 0,
+      communityStake: 0,
+      totalTasks: 0,
+      completedTasks: 0,
+      failedTasks: 0,
+      disputedTasks: 0,
+      totalResponseTime: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const entity = new AgentCacheEntity(agentData);
+    await this.rocksdb.put(entity.getKey(), entity.toJSON());
+    this.logger.log(`Seeded agent ${agentId} with name: ${data.name}`);
+  }
 }
