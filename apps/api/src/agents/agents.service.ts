@@ -60,25 +60,43 @@ export class AgentsService {
     }
   }
 
+  private async populateAgentCidDetails(
+    agent: AgentCacheData,
+  ): Promise<AgentCacheData> {
+    if (!!agent?.name && !!agent?.description) {
+      return agent;
+    }
+    if (agent.arweaveCid) {
+      const manifestUrl = `${process.env.IPFS_GATEWAY_URL}/${agent.arweaveCid}`;
+      const response = await axios.get(manifestUrl, { timeout: 5000 });
+      agent.name = response?.data?.name || agent.name;
+      agent.description = response?.data?.description || agent.description;
+      await this.cacheAgent(agent);
+    }
+    return agent;
+  }
+
   /**
    * Get detailed agent info
    */
   async getAgentDetails(agentId: string): Promise<AgentDetailsDto> {
     try {
+      console.log(`Fetching details for agent ${agentId}`);
       const agentPubkey = new PublicKey(agentId);
 
       // Try cache first
-      const cached = await this.getCachedAgent(agentId);
+      let cached = await this.getCachedAgent(agentId);
       if (cached) {
+        cached = await this.populateAgentCidDetails(cached);
         return this.mapToDetailsDto(cached);
       }
 
       // Fetch from Solana
-      const agent = await this.fetchAgentFromSolana(agentPubkey);
+      let agent = await this.fetchAgentFromSolana(agentPubkey);
       if (!agent) {
         throw new NotFoundException(`Agent ${agentId} not found`);
       }
-
+      agent = await this.populateAgentCidDetails(agent as any);
       // Cache and return
       await this.cacheAgent(agent);
       return this.mapToDetailsDto(agent);
