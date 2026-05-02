@@ -16,6 +16,12 @@ export const VERIFIED_TOKENS: Record<string, string> = {
   ORCA: "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
 };
 
+// Token decimals — SOL/BONK/WIF/JTO/PYTH/JUP/RAY/ORCA use 9, stables use 6
+const TOKEN_DECIMALS: Record<string, number> = {
+  SOL: 9, BONK: 5, WIF: 6, JTO: 9, PYTH: 6, JUP: 6, RAY: 9, ORCA: 6,
+  USDC: 6, USDT: 6,
+};
+
 
 export interface SwapAction {
   action: "swap";
@@ -50,11 +56,12 @@ export async function executeJupiterTask(
 ): Promise<JupiterDecision> {
   const tokenList = Object.keys(VERIFIED_TOKENS).join(", ");
 
-  // Fetch current SOL price to give Claude real context
-  const solPrice = await fetchPrice(VERIFIED_TOKENS["SOL"]);
-  const solPriceStr = solPrice
-    ? `Current SOL price: $${solPrice.priceUsd.toFixed(2)} USD`
-    : "SOL price unavailable";
+  // Fetch current SOL price to give Claude real context (best-effort)
+  let solPriceStr = "SOL price unavailable";
+  try {
+    const solPrice = await fetchPrice(VERIFIED_TOKENS["SOL"]);
+    if (solPrice) solPriceStr = `Current SOL price: $${solPrice.priceUsd.toFixed(2)} USD`;
+  } catch { /* rate-limited or unavailable — Claude proceeds without it */ }
 
   const system = `You are a DeFi agent parser for Jupiter swaps on Solana.
 
@@ -63,11 +70,12 @@ Supported tokens: ${tokenList}
 
 Parse the instruction and return ONLY a JSON object. No explanation. No markdown. Start with { end with }.
 
-For a simple swap:
-{"action":"swap","inputSymbol":"SOL","outputSymbol":"USDC","amountSol":0.001,"slippageBps":50}
+For a simple swap (any direction, e.g. SOL→USDC or USDC→SOL):
+{"action":"swap","inputSymbol":"SOL","outputSymbol":"USDC","inputAmount":0.001,"slippageBps":50}
+{"action":"swap","inputSymbol":"USDC","outputSymbol":"SOL","inputAmount":0.08,"slippageBps":50}
 
 For a conditional swap (e.g. "swap if price above $150"):
-{"action":"swap","inputSymbol":"SOL","outputSymbol":"USDC","amountSol":0.001,"slippageBps":50,"priceCondition":{"operator":"above","thresholdUsd":150}}
+{"action":"swap","inputSymbol":"SOL","outputSymbol":"USDC","inputAmount":0.001,"slippageBps":50,"priceCondition":{"operator":"above","thresholdUsd":150}}
 
 For a swap that should wait (condition not met):
 {"action":"wait","reason":"SOL price $X is not above $Y yet","currentPrice":X,"targetPrice":Y,"condition":"above"}
@@ -77,7 +85,8 @@ For invalid/out-of-scope:
 
 Rules:
 - Only supported tokens, only Jupiter program
-- Max 1 SOL per swap
+- inputAmount is always in the input token's human-readable units (e.g. 0.08 USDC, 0.001 SOL)
+- Max 1 SOL equivalent per swap
 - Default slippage 50 bps
 - If price condition given, check against current SOL price and return wait if not met`;
 
@@ -120,8 +129,9 @@ Rules:
     return { action: "reject", reason: `${outputSymbol} not supported. Use: ${tokenList}` };
   }
 
-  const amountSol = parseFloat(parsed.amountSol) || 0.001;
-  const amountLamports = Math.floor(amountSol * 1_000_000_000);
+  const inputAmount = parseFloat(parsed.inputAmount ?? parsed.amountSol) || 0.001;
+  const decimals = TOKEN_DECIMALS[inputSymbol] ?? 9;
+  const amountLamports = Math.floor(inputAmount * Math.pow(10, decimals));
 
   return {
     action: "swap",
@@ -129,7 +139,7 @@ Rules:
     outputMint: VERIFIED_TOKENS[outputSymbol],
     inputSymbol,
     outputSymbol,
-    amountSol,
+    amountSol: inputAmount,
     amountLamports,
     slippageBps: parsed.slippageBps || 50,
     priceCondition: parsed.priceCondition,

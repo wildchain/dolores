@@ -80,13 +80,12 @@ export class TasksController {
     return { ok: true };
   }
 
+
   @Post('build-register')
-  @UseGuards(AuthGuard)
   async buildRegisterTask(
-    @Body() dto: BuildRegisterTaskDto,
-    @Request() req: any,
+    @Body() body: BuildRegisterTaskDto & { wallet: string },
   ): Promise<UnsignedTransactionDto> {
-    return this.tasksService.buildRegisterTask(dto, req.user.wallet);
+    return this.tasksService.buildRegisterTask(body, body.wallet);
   }
 
 

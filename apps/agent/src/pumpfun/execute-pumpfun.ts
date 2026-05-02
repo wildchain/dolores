@@ -109,11 +109,11 @@ export async function executePumpFunAction(
         // sell
         const tokenAmount = new BN(decision.tokenAmount ?? 0);
 
-        const [global, feeConfig, sellState, tokenProgram] = await Promise.all([
+        const tokenProgram = await detectTokenProgram(connection, mint);
+        const [global, feeConfig, sellState] = await Promise.all([
             onlineSdk.fetchGlobal(),
             onlineSdk.fetchFeeConfig(),
-            onlineSdk.fetchSellState(mint, user),
-            detectTokenProgram(connection, mint),
+            onlineSdk.fetchSellState(mint, user, tokenProgram),
         ]);
         const { bondingCurveAccountInfo, bondingCurve } = sellState;
 
@@ -183,7 +183,7 @@ For out-of-scope:
 Rules:
 - mint must be a valid Solana public key provided by the user
 - solAmount is in SOL (e.g. 0.01 = 0.01 SOL)
-- tokenAmount is in raw units (already multiplied by decimals)
+- tokenAmount MUST be in raw units (multiply human amount by 10^decimals). PumpFun tokens have 6 decimals. Example: 39949.13326 tokens = 39949133260 raw units. NEVER drop digits — raw units are always larger than the human amount.
 - Default slippage is 500 bps (5%) for meme tokens
 - Do NOT reject based on amount size
 - If no mint address provided, reject with reason asking for mint address`;

@@ -22,9 +22,10 @@ export interface AgentCacheData extends BaseRocksDBEntity {
   declaredStake: number;
   lastAttestedAt: number;
   availableForHire: boolean;
-  hireFeeSOL: number;       // SOL per task
-  totalEarnedSOL: number;   // lifetime rewards deposited
-  communityStake: number;   // lamports staked by community
+  hireFeeSOL: number;
+  totalEarnedSOL: number;
+  communityStake: number;
+  // lamports staked by community
   // Trust metrics
   totalTasks: number;
   completedTasks: number;

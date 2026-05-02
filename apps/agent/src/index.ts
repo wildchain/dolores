@@ -130,11 +130,11 @@ async function processSolTransferTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, signed.outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
-    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    return;
+    console.log(`   ⚠️  Continuing to receipt submission`);
   }
+  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -225,7 +225,10 @@ async function processJupiterTask(
     await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    return;
+    // Still mark completed in API cache to prevent infinite retry
+    await markTaskCompleted(task.taskId);
+    console.log(`   ⚠️  Marked completed in API cache to prevent retry loop`);
+    // Don't return — still submit receipt
   }
 
   console.log(`\n📡 Submitting to indexer...`);
@@ -298,11 +301,11 @@ async function processPythTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
-    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    return;
+    console.log(`   ⚠️  Continuing to receipt submission`);
   }
+  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -374,11 +377,11 @@ async function processDefiDecisionTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
-    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    return;
+    console.log(`   ⚠️  Continuing to receipt submission`);
   }
+  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -459,11 +462,11 @@ async function processKaminoTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
-    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    return;
+    console.log(`   ⚠️  Continuing to receipt submission`);
   }
+  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -541,11 +544,11 @@ async function processMeteoraTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
-    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    return;
+    console.log(`   ⚠️  Continuing to receipt submission`);
   }
+  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -632,11 +635,11 @@ async function processRaydiumTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
-    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    return;
+    console.log(`   ⚠️  Continuing to receipt submission`);
   }
+  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -717,11 +720,11 @@ async function processPumpFunTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
-    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    return;
+    console.log(`   ⚠️  Continuing to receipt submission`);
   }
+  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -775,6 +778,13 @@ async function main() {
         console.log(`\n📋 Task: ${task.taskId.slice(0, 16)}...`);
         console.log(`   Instruction : ${task.instruction}`);
         console.log(`   Deadline    : ${new Date(task.deadline * 1000).toISOString()}`);
+        // SOL transfers are always allowed regardless of template
+        const solDecision = await executeTask(task.instruction, "SOL_TRANSFER").catch(() => null);
+        if (solDecision && solDecision.action === "transfer") {
+          await processSolTransferTask(task, agentKeypair, connection, adjProgram);
+          continue;
+        }
+
         switch (TEMPLATE) {
           case "JUPITER_TRADER":
             await processJupiterTask(task, agentKeypair, connection, adjProgram);

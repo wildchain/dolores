@@ -206,25 +206,25 @@ export async function executeKaminoAction(
         case "deposit":
             kaminoTx = await KaminoAction.buildDepositTxns(
                 market, amount, mintPubkey, owner, obligationType,
-                1_000_000, true
+                1_400_000, true
             );
             break;
         case "withdraw":
             kaminoTx = await KaminoAction.buildWithdrawTxns(
                 market, amount, mintPubkey, owner, obligationType,
-                1_000_000, true
+                1_400_000, true
             );
             break;
         case "borrow":
             kaminoTx = await KaminoAction.buildBorrowTxns(
                 market, amount, mintPubkey, owner, obligationType,
-                1_000_000, true
+                1_400_000, true
             );
             break;
         case "repay":
             kaminoTx = await KaminoAction.buildRepayTxns(
                 market, amount, mintPubkey, owner, obligationType,
-                currentSlot, undefined, 1_000_000, true
+                currentSlot, undefined, 1_400_000, true
             );
             break;
         default:
