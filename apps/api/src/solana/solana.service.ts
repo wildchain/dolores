@@ -145,4 +145,23 @@ export class SolanaService implements OnModuleInit {
       PROGRAM_IDS.ADJUDICATION,
     );
   }
+
+  getAdjudicationProgramForRequester(
+    requesterPubkey: PublicKey,
+  ): Program<DoloresAdjudicationIdl> {
+    const readonlyWallet = {
+      publicKey: requesterPubkey,
+      signTransaction: async (tx: any) => tx,
+      signAllTransactions: async (txs: any[]) => txs,
+    };
+    const provider = new AnchorProvider(
+      this.connection,
+      readonlyWallet as any,
+      AnchorProvider.defaultOptions(),
+    );
+    return new Program(
+      doloresAdjudicationIdl as any,
+      provider,
+    ) as Program<DoloresAdjudicationIdl>;
+  }
 }

@@ -20,7 +20,7 @@ export class TasksService {
   constructor(
     private solanaService: SolanaService,
     private rocksdb: RocksDBService,
-  ) {}
+  ) { }
 
   /**
    * Get filtered tasks with pagination
@@ -93,7 +93,7 @@ export class TasksService {
       const agentPubkey = new PublicKey(dto.agentId);
       const requesterPubkey = new PublicKey(requesterWallet);
       const connection = this.solanaService.getConnection();
-      const adjudicationProgram = this.solanaService.getAdjudicationProgram();
+      const adjudicationProgram = this.solanaService.getAdjudicationProgramForRequester(requesterPubkey);
 
       // Convert task ID hex to Buffer
       const taskIdBuffer = Buffer.from(dto.taskId, 'hex');
