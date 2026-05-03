@@ -7,7 +7,7 @@ import { SolanaModule } from './solana/solana.module';
 import { AuthModule } from './auth/auth.module';
 import { AgentsModule } from './agents/agents.module';
 import { TasksModule } from './tasks/tasks.module';
-import { ChallengesModule } from './attestation/challenges/challenges.module';
+import { ChallengesModule } from './attestation/attestation.module';
 import { SyncModule } from './sync/sync.module';
 import { IpfsModule } from './ipfs/ipfs.module';
 
