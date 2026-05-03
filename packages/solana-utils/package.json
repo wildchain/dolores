@@ -16,6 +16,8 @@
   "author": "Wildchain",
   "license": "UNLICENSED",
   "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@dolores/contracts": "workspace:*",
     "@solana/web3.js": "^1.98.4",
     "tweetnacl": "^1.0.3"
   },
