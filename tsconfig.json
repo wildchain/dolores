@@ -24,6 +24,9 @@
     },
     {
       "path": "./apps/ipfs"
+    },
+    {
+      "path": "./apps/agents"
     }
   ]
 }
