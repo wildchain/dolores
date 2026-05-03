@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PublicKey, SystemProgram } from '@solana/web3.js';
-import { SolanaService } from '../solana/solana.service';
+import { SolanaService } from '../../solana/solana.service';
 import { RocksDBService } from '@dolores/database';
 import {
   BuildFileChallengeDto,

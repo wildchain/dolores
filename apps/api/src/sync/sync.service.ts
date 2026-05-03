@@ -8,17 +8,41 @@ import { PublicKey } from '@solana/web3.js';
 import { SolanaService } from '../solana/solana.service';
 import { AgentsService } from '../agents/agents.service';
 import { TasksService } from '../tasks/tasks.service';
-import { ChallengesService } from '../challenges/challenges.service';
+import { ChallengesService } from '../attestation/challenges/challenges.service';
 import { TaskStatus } from '@dolores/shared';
-import { AgentCacheData } from '../agents/agent-cache.entity';
 import { TaskCacheData } from '../tasks/task-cache.entity';
-import { ChallengeCacheData } from '../challenges/challenge-cache.entity';
+
+// Anchor's coder.events.decode() returns event names in camelCase.
+const REGISTRY_EVENTS = {
+  AGENT_REGISTERED: 'agentRegistered',
+  AGENT_SLASHED: 'agentSlashed',
+  AGENT_VERIFIED: 'agentVerified',
+  ARWEAVE_CID_UPDATED: 'arweaveCidUpdated',
+  ATTESTATION_SUBMITTED: 'attestationSubmitted',
+} as const;
+
+const FUND_EVENTS = {
+  FUND_INITIALIZED: 'fundInitialized',
+  STAKED: 'staked',
+  UNSTAKED: 'unstaked',
+  SLASH_EXECUTED: 'slashExecuted',
+  REWARDS_CLAIMED: 'rewardsClaimed',
+} as const;
+
+const ADJUDICATION_EVENTS = {
+  TASK_REGISTERED: 'taskRegistered',
+  TASK_COMPLETED: 'taskCompleted',
+  CHALLENGE_FILED: 'challengeFiledEvent',
+  CHALLENGE_DISMISSED: 'challengeDismissedEvent',
+  AGENT_SLASHED: 'agentSlashedEvent',
+} as const;
 
 @Injectable()
 export class SyncService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SyncService.name);
-  private listenerIds: number[] = [];
   private registryLogSubscriptionId: number | null = null;
+  private fundLogSubscriptionId: number | null = null;
+  private adjudicationLogSubscriptionId: number | null = null;
 
   constructor(
     private solanaService: SolanaService,
@@ -45,147 +69,144 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
       const adjudicationProgram = this.solanaService.getAdjudicationProgram();
       const connection = this.solanaService.getConnection();
 
-      // Listen to Registry events using connection.onLogs
+      // Helper: extract and decode Anchor events from a log array
+      const decodeEvents = (program: any, logs: string[]) => {
+        const events: Array<{ name: string; data: any }> = [];
+        for (const log of logs) {
+          if (!log.startsWith('Program data: ')) continue;
+          const base64 = log.slice('Program data: '.length);
+          try {
+            const event = program.coder.events.decode(base64);
+            if (event) events.push(event);
+          } catch {
+            // not an event log line
+          }
+        }
+        return events;
+      };
+
+      // Registry
       this.logger.log(
         `Starting Registry log listener for program: ${registryProgram.programId.toBase58()}`,
       );
       this.registryLogSubscriptionId = connection.onLogs(
         registryProgram.programId,
         (logInfo) => {
-          this.logger.log('New Registry Transaction Detected');
-          this.logger.log(
-            `Signature: ${logInfo.signature}, Logs: ${logInfo.logs.length} entries`,
-          );
-
-          // Skip invalid signatures
-          if (logInfo.signature.includes('111111')) return;
-
-          // Check for AgentRegistered event
-          const isAgentRegistered = logInfo?.logs?.some((log: string) =>
-            log.includes('AgentRegistered'),
-          );
-          if (isAgentRegistered) {
+          if (logInfo.err) return;
+          const events = decodeEvents(registryProgram, logInfo.logs);
+          for (const event of events) {
             this.logger.log(
-              `AgentRegistered event detected: ${logInfo.signature}`,
+              `Registry event: ${event.name} (tx: ${logInfo.signature})`,
             );
-            this.handleRegistryTransactionLog(logInfo, 'AgentRegistered');
-            return;
+            switch (event.name) {
+              case REGISTRY_EVENTS.AGENT_REGISTERED:
+                this.handleAgentRegistered(event.data);
+                break;
+              case REGISTRY_EVENTS.AGENT_SLASHED:
+                this.handleRegistryAgentSlashed(event.data);
+                break;
+              case REGISTRY_EVENTS.AGENT_VERIFIED:
+                this.logger.log(
+                  `AgentVerified: ${event.data.agent?.toBase58()}`,
+                );
+                break;
+              case REGISTRY_EVENTS.ARWEAVE_CID_UPDATED:
+                this.logger.log(
+                  `ArweaveCidUpdated: ${event.data.agent?.toBase58()}`,
+                );
+                break;
+              case REGISTRY_EVENTS.ATTESTATION_SUBMITTED:
+                this.logger.log(
+                  `AttestationSubmitted: ${event.data.agent?.toBase58()}`,
+                );
+                break;
+              default:
+                this.logger.log(`Unknown registry event: ${event.name}`);
+            }
           }
+        },
+        'confirmed',
+      );
 
-          // Check for AgentDeactivated event
-          const isAgentDeactivated = logInfo?.logs?.some((log: string) =>
-            log.includes('AgentDeactivated'),
-          );
-          if (isAgentDeactivated) {
+      // Fund
+      this.logger.log(
+        `Starting Fund log listener for program: ${fundProgram.programId.toBase58()}`,
+      );
+      this.fundLogSubscriptionId = connection.onLogs(
+        fundProgram.programId,
+        (logInfo) => {
+          if (logInfo.err) return;
+          const events = decodeEvents(fundProgram, logInfo.logs);
+          for (const event of events) {
             this.logger.log(
-              `AgentDeactivated event detected: ${logInfo.signature}`,
+              `Fund event: ${event.name} (tx: ${logInfo.signature})`,
             );
-            this.handleRegistryTransactionLog(logInfo, 'AgentDeactivated');
-            return;
+            switch (event.name) {
+              case FUND_EVENTS.FUND_INITIALIZED:
+                this.handleFundInitialized(event.data);
+                break;
+              case FUND_EVENTS.STAKED:
+                this.handleStaked(event.data);
+                break;
+              case FUND_EVENTS.UNSTAKED:
+                this.handleUnstaked(event.data);
+                break;
+              case FUND_EVENTS.SLASH_EXECUTED:
+                this.handleSlashExecuted(event.data);
+                break;
+              case FUND_EVENTS.REWARDS_CLAIMED:
+                this.logger.log(
+                  `RewardsClaimed: staker=${event.data.staker?.toBase58()} amount=${event.data.amount}`,
+                );
+                break;
+              default:
+                this.logger.log(`Unknown fund event: ${event.name}`);
+            }
           }
+        },
+        'confirmed',
+      );
 
-          // Check for AgentReactivated event
-          const isAgentReactivated = logInfo?.logs?.some((log: string) =>
-            log.includes('AgentReactivated'),
-          );
-          if (isAgentReactivated) {
+      // Adjudication
+      this.logger.log(
+        `Starting Adjudication log listener for program: ${adjudicationProgram.programId.toBase58()}`,
+      );
+      this.adjudicationLogSubscriptionId = connection.onLogs(
+        adjudicationProgram.programId,
+        (logInfo) => {
+          if (logInfo.err) return;
+          const events = decodeEvents(adjudicationProgram, logInfo.logs);
+          for (const event of events) {
             this.logger.log(
-              `AgentReactivated event detected: ${logInfo.signature}`,
+              `Adjudication event: ${event.name} (tx: ${logInfo.signature})`,
             );
-            this.handleRegistryTransactionLog(logInfo, 'AgentReactivated');
-            return;
+            switch (event.name) {
+              case ADJUDICATION_EVENTS.TASK_REGISTERED:
+                this.handleTaskRegistered(event.data);
+                break;
+              case ADJUDICATION_EVENTS.TASK_COMPLETED:
+                this.handleTaskCompleted(event.data);
+                break;
+              case ADJUDICATION_EVENTS.CHALLENGE_FILED:
+                this.handleChallengeFiled(event.data);
+                break;
+              case ADJUDICATION_EVENTS.CHALLENGE_DISMISSED:
+                this.handleChallengeDismissed(event.data);
+                break;
+              case ADJUDICATION_EVENTS.AGENT_SLASHED:
+                this.handleAdjudicationAgentSlashed(event.data);
+                break;
+              default:
+                this.logger.log(`Unknown adjudication event: ${event.name}`);
+            }
           }
-
-          // Log any other registry program transactions
-          this.logger.log(
-            `Other Registry transaction detected: ${logInfo.signature}`,
-          );
         },
+        'confirmed',
       );
 
-      // Listen to Fund events
-      const fundCreatedListenerId = fundProgram.addEventListener(
-        'FundCreated',
-        async (event: any) => {
-          await this.handleFundCreated(event);
-        },
+      this.logger.log(
+        'Started 3 onLogs listeners (registry, fund, adjudication)',
       );
-      this.listenerIds.push(fundCreatedListenerId);
-
-      const stakeAddedListenerId = fundProgram.addEventListener(
-        'StakeAdded',
-        async (event: any) => {
-          await this.handleStakeAdded(event);
-        },
-      );
-      this.listenerIds.push(stakeAddedListenerId);
-
-      const stakeWithdrawnListenerId = fundProgram.addEventListener(
-        'StakeWithdrawn',
-        async (event: any) => {
-          await this.handleStakeWithdrawn(event);
-        },
-      );
-      this.listenerIds.push(stakeWithdrawnListenerId);
-
-      // Listen to Adjudication events
-      const taskRegisteredListenerId = adjudicationProgram.addEventListener(
-        'TaskRegistered',
-        async (event: any) => {
-          await this.handleTaskRegistered(event);
-        },
-      );
-      this.listenerIds.push(taskRegisteredListenerId);
-
-      const challengeFiledListenerId = adjudicationProgram.addEventListener(
-        'ChallengeFiled',
-        async (event: any) => {
-          await this.handleChallengeFiled(event);
-        },
-      );
-      this.listenerIds.push(challengeFiledListenerId);
-
-      const autoApprovedListenerId = adjudicationProgram.addEventListener(
-        'AutoApproved',
-        async (event: any) => {
-          await this.handleAutoApproved(event);
-        },
-      );
-      this.listenerIds.push(autoApprovedListenerId);
-
-      const autoRejectedListenerId = adjudicationProgram.addEventListener(
-        'AutoRejected',
-        async (event: any) => {
-          await this.handleAutoRejected(event);
-        },
-      );
-      this.listenerIds.push(autoRejectedListenerId);
-
-      const disputeInitiatedListenerId = adjudicationProgram.addEventListener(
-        'DisputeInitiated',
-        async (event: any) => {
-          await this.handleDisputeInitiated(event);
-        },
-      );
-      this.listenerIds.push(disputeInitiatedListenerId);
-
-      const disputeResolvedListenerId = adjudicationProgram.addEventListener(
-        'DisputeResolved',
-        async (event: any) => {
-          await this.handleDisputeResolved(event);
-        },
-      );
-      this.listenerIds.push(disputeResolvedListenerId);
-
-      const stakeSlashedListenerId = adjudicationProgram.addEventListener(
-        'StakeSlashed',
-        async (event: any) => {
-          await this.handleStakeSlashed(event);
-        },
-      );
-      this.listenerIds.push(stakeSlashedListenerId);
-
-      this.logger.log(`Started ${this.listenerIds.length} event listeners`);
     } catch (error) {
       this.logger.error('Failed to start event listeners', error);
     }
@@ -197,22 +218,20 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
   private async stopEventListeners() {
     try {
       const connection = this.solanaService.getConnection();
-      const fundProgram = this.solanaService.getFundProgram();
-      const adjudicationProgram = this.solanaService.getAdjudicationProgram();
 
-      // Remove registry log listener
       if (this.registryLogSubscriptionId !== null) {
         await connection.removeOnLogsListener(this.registryLogSubscriptionId);
-        this.logger.log(
-          `Removed registry log listener: ${this.registryLogSubscriptionId}`,
-        );
+        this.registryLogSubscriptionId = null;
       }
-
-      // Remove other event listeners
-      for (const id of this.listenerIds) {
-        // Remove from fund and adjudication programs
-        await fundProgram.removeEventListener(id);
-        await adjudicationProgram.removeEventListener(id);
+      if (this.fundLogSubscriptionId !== null) {
+        await connection.removeOnLogsListener(this.fundLogSubscriptionId);
+        this.fundLogSubscriptionId = null;
+      }
+      if (this.adjudicationLogSubscriptionId !== null) {
+        await connection.removeOnLogsListener(
+          this.adjudicationLogSubscriptionId,
+        );
+        this.adjudicationLogSubscriptionId = null;
       }
 
       this.logger.log('Stopped all event listeners');
@@ -221,36 +240,10 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // Event handlers
-
-  /**
-   * Handle registry transaction logs
-   */
-  private async handleRegistryTransactionLog(
-    logInfo: any,
-    eventType: 'AgentRegistered' | 'AgentDeactivated' | 'AgentReactivated',
-  ) {
-    try {
-      this.logger.log(`Processing ${eventType} from transaction log`);
-      // Log the full transaction details
-      this.logger.log(`Transaction Signature: ${logInfo.signature}`);
-      this.logger.log(`Logs: ${JSON.stringify(logInfo.logs, null, 2)}`);
-
-      // You can fetch full transaction details if needed for parsing event data
-      // const connection = this.solanaService.getConnection();
-      // const tx = await connection.getTransaction(logInfo.signature);
-      // Parse transaction accounts and data to extract event information
-
-      // For now, just log the event detection
-      this.logger.log(`${eventType} event logged successfully`);
-    } catch (error) {
-      this.logger.error(`Failed to handle ${eventType} transaction log`, error);
-    }
-  }
+  // ─── Registry handlers ──────────────────────────────────────────────────────
 
   private async handleAgentRegistered(event: any) {
     this.logger.log(`AgentRegistered: ${event.agent.toBase58()}`);
-    // Fetch and cache agent data
     try {
       const agentDetails = await this.agentsService.getAgentDetails(
         event.agent.toBase58(),
@@ -261,21 +254,19 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleAgentDeactivated(event: any) {
-    this.logger.log(`AgentDeactivated: ${event.agent.toBase58()}`);
-    // Update agent cache
-    // TODO: Update agent.isActive = false in cache
+  private async handleRegistryAgentSlashed(event: any) {
+    this.logger.log(
+      `AgentSlashed (registry): agent=${event.agent.toBase58()} slashCount=${event.slashCount} newReputation=${event.newReputation}`,
+    );
+    // TODO: update agent reputation in cache
   }
 
-  private async handleAgentReactivated(event: any) {
-    this.logger.log(`AgentReactivated: ${event.agent.toBase58()}`);
-    // Update agent cache
-    // TODO: Update agent.isActive = true in cache
-  }
+  // ─── Fund handlers ───────────────────────────────────────────────────────────
 
-  private async handleFundCreated(event: any) {
-    this.logger.log(`FundCreated: ${event.agent.toBase58()}`);
-    // Refresh agent cache to get fund details
+  private async handleFundInitialized(event: any) {
+    this.logger.log(
+      `FundInitialized: agent=${event.agent.toBase58()} operator=${event.operator.toBase58()}`,
+    );
     try {
       await this.agentsService.getAgentDetails(event.agent.toBase58());
     } catch (error) {
@@ -283,48 +274,53 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleStakeAdded(event: any) {
-    this.logger.log(`StakeAdded: ${event.agent.toBase58()} - ${event.amount}`);
-    // Update agent stake amount in cache
-    // TODO: Increment agent.stakeAmount in cache
+  private async handleStaked(event: any) {
+    this.logger.log(
+      `Staked: agent=${event.agent.toBase58()} staker=${event.staker.toBase58()} amount=${event.amount}`,
+    );
+    // TODO: increment agent.stakeAmount in cache
   }
 
-  private async handleStakeWithdrawn(event: any) {
+  private async handleUnstaked(event: any) {
     this.logger.log(
-      `StakeWithdrawn: ${event.agent.toBase58()} - ${event.amount}`,
+      `Unstaked: agent=${event.agent.toBase58()} staker=${event.staker.toBase58()} amount=${event.amount}`,
     );
-    // Update agent stake amount in cache
-    // TODO: Decrement agent.stakeAmount in cache
+    // TODO: decrement agent.stakeAmount in cache
   }
+
+  private async handleSlashExecuted(event: any) {
+    this.logger.log(
+      `SlashExecuted: agent=${event.agent.toBase58()} slashAmount=${event.slashAmount} remainingStake=${event.remainingStake}`,
+    );
+    // TODO: update agent.stakeAmount in cache
+  }
+
+  // ─── Adjudication handlers ───────────────────────────────────────────────────
 
   private async handleTaskRegistered(event: any) {
-    this.logger.log(
-      `TaskRegistered: Agent ${event.agent.toBase58()}, Task ${Buffer.from(event.taskId).toString('hex')}`,
-    );
+    const taskId = Buffer.from(event.taskId).toString('hex');
+    const agentId = event.agent.toBase58();
+    const assignedBy = event.assignedBy.toBase58();
 
-    // Cache new task
+    this.logger.log(`TaskRegistered: agent=${agentId} task=${taskId}`);
+
     try {
-      const taskId = Buffer.from(event.taskId).toString('hex');
-      const agentId = event.agent.toBase58();
-      const requester = event.requester.toBase58();
-
-      // Derive challenge PDA
       const [challengePda] = this.solanaService.deriveChallengePda(
         new PublicKey(agentId),
         Buffer.from(event.taskId),
       );
 
       const taskData: TaskCacheData = {
-        id: taskId, // Use task ID as entity ID
+        id: taskId,
         taskId,
         challengePda: challengePda.toBase58(),
         agentId,
-        agentName: 'Loading...', // TODO: Fetch from agent cache
-        requester,
+        agentName: 'Loading...',
+        requester: assignedBy,
         status: 'pending',
-        capabilityName: event.capabilityName || 'unknown',
-        parametersJson: event.parametersJson || '{}',
-        stakeAmount: event.stakeAmount?.toNumber() || 0,
+        capabilityName: 'unknown',
+        parametersJson: '{}',
+        stakeAmount: 0,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
@@ -336,135 +332,79 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleChallengeFiled(event: any) {
-    this.logger.log(
-      `ChallengeFiled: ${Buffer.from(event.taskId).toString('hex')}`,
-    );
+  private async handleTaskCompleted(event: any) {
+    const taskId = Buffer.from(event.taskId).toString('hex');
+    const agentId = event.agent.toBase58();
 
-    // Update task with receipt
+    this.logger.log(`TaskCompleted: agent=${agentId} task=${taskId}`);
+
     try {
-      const taskId = Buffer.from(event.taskId).toString('hex');
-      const agentId = event.agent.toBase58();
-      const receiptUrl = `https://arweave.net/${event.receiptCid}`;
-
-      await this.tasksService.updateTaskStatus(
-        agentId,
-        taskId,
-        TaskStatus.PENDING,
-        {
-          receiptUrl,
-        },
-      );
-
-      this.logger.log(`Updated task with receipt: ${taskId}`);
-    } catch (error) {
-      this.logger.error('Failed to update task with receipt', error);
-    }
-  }
-
-  private async handleAutoApproved(event: any) {
-    this.logger.log(
-      `AutoApproved: ${Buffer.from(event.taskId).toString('hex')}`,
-    );
-
-    // Update task status to completed
-    try {
-      const taskId = Buffer.from(event.taskId).toString('hex');
-      const agentId = event.agent.toBase58();
-
       await this.tasksService.updateTaskStatus(
         agentId,
         taskId,
         TaskStatus.COMPLETED,
-        {
-          completedAt: Date.now(),
-        },
+        { completedAt: Date.now() },
       );
-
-      this.logger.log(`Task auto-approved: ${taskId}`);
     } catch (error) {
-      this.logger.error('Failed to update auto-approved task', error);
+      this.logger.error('Failed to update completed task', error);
     }
   }
 
-  private async handleAutoRejected(event: any) {
+  private async handleChallengeFiled(event: any) {
+    const taskId = Buffer.from(event.taskId).toString('hex');
+    const agentId = event.agent.toBase58();
+
     this.logger.log(
-      `AutoRejected: ${Buffer.from(event.taskId).toString('hex')}`,
+      `ChallengeFiledEvent: agent=${agentId} task=${taskId} challenger=${event.challenger.toBase58()}`,
     );
 
-    // Update task status to failed
     try {
-      const taskId = Buffer.from(event.taskId).toString('hex');
-      const agentId = event.agent.toBase58();
-
-      await this.tasksService.updateTaskStatus(
-        agentId,
-        taskId,
-        TaskStatus.FAILED,
-        {
-          completedAt: Date.now(),
-        },
-      );
-
-      this.logger.log(`Task auto-rejected: ${taskId}`);
-    } catch (error) {
-      this.logger.error('Failed to update auto-rejected task', error);
-    }
-  }
-
-  private async handleDisputeInitiated(event: any) {
-    this.logger.log(
-      `DisputeInitiated: ${Buffer.from(event.taskId).toString('hex')}`,
-    );
-
-    // Update task status to disputed
-    try {
-      const taskId = Buffer.from(event.taskId).toString('hex');
-      const agentId = event.agent.toBase58();
-
       await this.tasksService.updateTaskStatus(
         agentId,
         taskId,
         TaskStatus.DISPUTED,
-        {
-          disputeReason: event.reason || 'Dispute initiated',
-        },
+        { disputeReason: `Challenge filed: ${event.failureType ?? 'unknown'}` },
       );
-
-      this.logger.log(`Task disputed: ${taskId}`);
     } catch (error) {
-      this.logger.error('Failed to update disputed task', error);
+      this.logger.error('Failed to update challenged task', error);
     }
   }
 
-  private async handleDisputeResolved(event: any) {
-    this.logger.log(
-      `DisputeResolved: ${Buffer.from(event.taskId).toString('hex')}`,
-    );
+  private async handleChallengeDismissed(event: any) {
+    const taskId = Buffer.from(event.taskId).toString('hex');
+    const agentId = event.agent.toBase58();
 
-    // Update task with adjudication result
+    this.logger.log(`ChallengeDismissedEvent: agent=${agentId} task=${taskId}`);
+
     try {
-      const taskId = Buffer.from(event.taskId).toString('hex');
-      const agentId = event.agent.toBase58();
-      const status = event.approved ? TaskStatus.COMPLETED : TaskStatus.FAILED;
-
-      await this.tasksService.updateTaskStatus(agentId, taskId, status, {
-        adjudicatedBy: event.adjudicator?.toBase58(),
-        adjudicatedAt: Date.now(),
-        completedAt: Date.now(),
-      });
-
-      this.logger.log(`Dispute resolved: ${taskId} - ${status}`);
+      await this.tasksService.updateTaskStatus(
+        agentId,
+        taskId,
+        TaskStatus.COMPLETED,
+        { completedAt: Date.now() },
+      );
     } catch (error) {
-      this.logger.error('Failed to update resolved dispute', error);
+      this.logger.error('Failed to update dismissed-challenge task', error);
     }
   }
 
-  private async handleStakeSlashed(event: any) {
+  private async handleAdjudicationAgentSlashed(event: any) {
+    const taskId = Buffer.from(event.taskId).toString('hex');
+    const agentId = event.agent.toBase58();
+
     this.logger.log(
-      `StakeSlashed: ${event.agent.toBase58()} - ${event.amount}`,
+      `AgentSlashedEvent: agent=${agentId} task=${taskId} challenger=${event.challenger.toBase58()}`,
     );
-    // Update agent stake amount
-    // TODO: Decrement agent.stakeAmount in cache
+
+    try {
+      await this.tasksService.updateTaskStatus(
+        agentId,
+        taskId,
+        TaskStatus.FAILED,
+        { completedAt: Date.now() },
+      );
+    } catch (error) {
+      this.logger.error('Failed to update slashed task', error);
+    }
   }
 }
