@@ -12,7 +12,8 @@
     "test:meteora": "ts-node src/test-meteora.ts",
     "test:raydium": "ts-node src/test-raydium.ts",
     "test:pumpfun": "ts-node src/test-pumpfun.ts",
-    "test:pyth": "ts-node src/test-pyth.ts"
+    "test:pyth": "ts-node src/test-pyth.ts",
+    "test:sol-transfer": "ts-node src/test-sol-transfer.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
