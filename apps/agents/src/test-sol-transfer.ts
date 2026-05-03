@@ -6,7 +6,7 @@ import { Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { executeTask } from "./execute";
 import { buildReceipt, signReceipt } from "./receipt";
-import { executeSolTransfer } from "./submit";
+import { executeSolTransfer, submitAttestation } from "./submit";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -122,10 +122,31 @@ async function main() {
 
   console.log(`\nOutput hash  : ${outputHash}`);
   console.log(`Agent sig    : ${agentSignature.slice(0, 16)}...`);
+
+  // ── Submit attestation on-chain ───────────────────────────────────────────
+  console.log("\nSubmitting attestation on-chain...");
+  let attestationTx: string;
+  try {
+    attestationTx = await submitAttestation(
+      connection,
+      agentKeypair, // attester = agent (pays fees)
+      agentKeypair, // agent whose registry PDA is updated
+      outputHash,
+    );
+    console.log(`Attestation TX : ${attestationTx}`);
+    console.log(
+      `Explorer       : https://solscan.io/tx/${attestationTx}?cluster=devnet`,
+    );
+  } catch (err: any) {
+    console.error(`❌ Attestation failed: ${err?.message}`);
+    return;
+  }
+
   console.log(`\nFull loop complete!`);
   console.log(`  Claude parsed instruction    ✓`);
   console.log(`  SOL transfer executed        ✓`);
   console.log(`  output_hash signed by agent  ✓`);
+  console.log(`  Attestation submitted        ✓`);
 }
 
 main().catch(err => {

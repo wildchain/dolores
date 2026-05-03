@@ -8,7 +8,11 @@ import { Keypair, VersionedTransaction } from "@solana/web3.js";
 import fetch from "node-fetch";
 import { executeJupiterTask, VERIFIED_TOKENS } from "./jupiter/execute-jupiter";
 import { fetchPrice, fetchPrices } from "./jupiter/price";
-import { getJupiterJwt, createLimitOrder, getOrderHistory } from "./jupiter/limit-order";
+import {
+  getJupiterJwt,
+  createLimitOrder,
+  getOrderHistory,
+} from "./jupiter/limit-order";
 import { getPortfolio } from "./jupiter/portfolio";
 import { createDCAOrder, getDCAOrders } from "./jupiter/dca";
 
@@ -17,10 +21,16 @@ const AGENT_ID = process.env.AGENT_ID!;
 const API_KEY = process.env.JUPITER_API_KEY!;
 const BASE = "https://api.jup.ag";
 
-if (!AGENT_ID) { console.error("❌ AGENT_ID required"); process.exit(1); }
-if (!API_KEY) { console.error("❌ JUPITER_API_KEY required"); process.exit(1); }
+if (!AGENT_ID) {
+  console.error("❌ AGENT_ID required");
+  process.exit(1);
+}
+if (!API_KEY) {
+  console.error("❌ JUPITER_API_KEY required");
+  process.exit(1);
+}
 
-//  Helpers 
+//  Helpers
 
 function loadKeypair(agentId: string): Keypair {
   const keyPath = path.join(DOLORES_DIR, `${agentId}.json`);
@@ -29,7 +39,7 @@ function loadKeypair(agentId: string): Keypair {
     process.exit(1);
   }
   return Keypair.fromSecretKey(
-    Uint8Array.from(JSON.parse(fs.readFileSync(keyPath, "utf-8")))
+    Uint8Array.from(JSON.parse(fs.readFileSync(keyPath, "utf-8"))),
   );
 }
 
@@ -54,7 +64,7 @@ async function executeSwap(
   inputMint: string,
   outputMint: string,
   amountLamports: number,
-  slippageBps: number
+  slippageBps: number,
 ) {
   const params = new URLSearchParams({
     inputMint,
@@ -74,7 +84,7 @@ async function executeSwap(
   }
 
   const tx = VersionedTransaction.deserialize(
-    Buffer.from(order.transaction, "base64")
+    Buffer.from(order.transaction, "base64"),
   );
   tx.sign([agentKeypair]);
   const signedTx = Buffer.from(tx.serialize()).toString("base64");
@@ -110,24 +120,27 @@ function buildAndSignReceipt(params: {
     instruction: params.instruction,
     timestamp_unix: Math.floor(Date.now() / 1000),
     execution: {
-      tx_signatures: [params.txSignature],
-      programs_called: ["JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"],
-      instructions_executed: [params.type],
-      token_transfers: params.transfers,
+      tx_signature: params.txSignature,
     },
     result: { status: "success", summary: params.summary },
   };
 
   const canonical = JSON.stringify(receipt, Object.keys(receipt).sort());
-  const outputHashBytes = crypto.createHash("sha256").update(canonical).digest();
+  const outputHashBytes = crypto
+    .createHash("sha256")
+    .update(canonical)
+    .digest();
   const outputHash = outputHashBytes.toString("hex");
-  const signature = nacl.sign.detached(outputHashBytes, params.agentKeypair.secretKey);
+  const signature = nacl.sign.detached(
+    outputHashBytes,
+    params.agentKeypair.secretKey,
+  );
   const agentSignature = Buffer.from(signature).toString("hex");
 
   return { receipt, outputHash, agentSignature };
 }
 
-//  Main 
+//  Main
 
 async function main() {
   const args = process.argv.slice(2);
@@ -141,20 +154,28 @@ async function main() {
 
   const agentKeypair = loadKeypair(AGENT_ID);
 
-  //  Help 
+  //  Help
   if (command === "help") {
     console.log("Commands:");
-    console.log("  price                                    — show token prices");
-    console.log("  portfolio                                — show wallet positions");
+    console.log(
+      "  price                                    — show token prices",
+    );
+    console.log(
+      "  portfolio                                — show wallet positions",
+    );
     console.log("  swap 0.001 SOL to USDC                  — immediate swap");
     console.log("  'swap 0.001 SOL to USDC if above $80'   — conditional swap");
     console.log("  'swap 0.15 SOL to USDC when hits $200'  — limit order");
-    console.log("  dca hourly                               — DCA buy USDC hourly");
-    console.log("  dca daily                                — DCA buy USDC daily");
+    console.log(
+      "  dca hourly                               — DCA buy USDC hourly",
+    );
+    console.log(
+      "  dca daily                                — DCA buy USDC daily",
+    );
     return;
   }
 
-  //  Price 
+  //  Price
   if (command === "price") {
     console.log("📊 Fetching prices...\n");
     const mints = [
@@ -167,13 +188,15 @@ async function main() {
     const prices = await fetchPrices(mints);
     for (const [, price] of Object.entries(prices)) {
       if (price) {
-        console.log(`${price.symbol.padEnd(6)} : $${price.priceUsd.toFixed(6)} (${price.confidenceLevel})`);
+        console.log(
+          `${price.symbol.padEnd(6)} : $${price.priceUsd.toFixed(6)} (${price.confidenceLevel})`,
+        );
       }
     }
     return;
   }
 
-  //  Portfolio 
+  //  Portfolio
   if (command === "portfolio") {
     console.log("💼 Fetching portfolio...\n");
     const portfolio = await getPortfolio(agentKeypair.publicKey.toBase58());
@@ -184,13 +207,13 @@ async function main() {
     portfolio.positions.forEach(p => {
       console.log(`\n${p.platform} (${p.type}) — $${p.valueUsd.toFixed(2)}`);
       p.tokens.forEach(t =>
-        console.log(`  ${t.symbol}: ${t.amount} ($${t.valueUsd.toFixed(2)})`)
+        console.log(`  ${t.symbol}: ${t.amount} ($${t.valueUsd.toFixed(2)})`),
       );
     });
     return;
   }
 
-  //  DCA 
+  //  DCA
   if (
     command === "dca" ||
     instructionLower.includes("every") ||
@@ -205,7 +228,7 @@ async function main() {
     if (activeOrders.length > 0) {
       console.log(`Active DCA orders: ${activeOrders.length}`);
       activeOrders.forEach(o =>
-        console.log(`  ${o.publicKey.slice(0, 8)}... — ${o.status}`)
+        console.log(`  ${o.publicKey.slice(0, 8)}... — ${o.status}`),
       );
       console.log();
     }
@@ -223,7 +246,9 @@ async function main() {
     const perOrder = Math.floor(totalLamports / 2);
 
     console.log(`SOL price    : $${priceUsd.toFixed(2)}`);
-    console.log(`Total        : ${(totalLamports / 1e9).toFixed(4)} SOL (~$100)`);
+    console.log(
+      `Total        : ${(totalLamports / 1e9).toFixed(4)} SOL (~$100)`,
+    );
     console.log(`Per order    : ${(perOrder / 1e9).toFixed(4)} SOL (~$50)`);
     console.log(`Interval     : ${intervalSeconds}s`);
     console.log(`Orders       : 2\n`);
@@ -259,7 +284,7 @@ async function main() {
     return;
   }
 
-  //  Limit order 
+  //  Limit order
   if (
     instructionLower.includes("when") ||
     instructionLower.includes("hits") ||
@@ -277,13 +302,21 @@ async function main() {
 
     if (decision.action === "wait") {
       console.log(`⏳ ${decision.reason}`);
-      console.log(`   Placing limit order on Jupiter — will execute when condition is met\n`);
+      console.log(
+        `   Placing limit order on Jupiter — will execute when condition is met\n`,
+      );
 
       const jwt = await getJupiterJwt(agentKeypair);
       console.log("🔐 JWT obtained");
 
-      const minLamports = Math.floor((10 / (await fetchPrice(VERIFIED_TOKENS.SOL))!.priceUsd) * 1_000_000_000);
-      const orderLamports = Math.max(decision.targetPrice ? Math.floor(0.15 * 1_000_000_000) : minLamports, minLamports);
+      const minLamports = Math.floor(
+        (10 / (await fetchPrice(VERIFIED_TOKENS.SOL))!.priceUsd) *
+          1_000_000_000,
+      );
+      const orderLamports = Math.max(
+        decision.targetPrice ? Math.floor(0.15 * 1_000_000_000) : minLamports,
+        minLamports,
+      );
 
       const result = await createLimitOrder({
         agentKeypair,
@@ -302,9 +335,13 @@ async function main() {
 
       const { orders } = await getOrderHistory(jwt);
       console.log(`\nActive orders: ${orders.length}`);
-      orders.slice(0, 3).forEach(o =>
-        console.log(`  ${o.id.slice(0, 8)}... — ${o.orderState} @ $${o.triggerPriceUsd}`)
-      );
+      orders
+        .slice(0, 3)
+        .forEach(o =>
+          console.log(
+            `  ${o.id.slice(0, 8)}... — ${o.orderState} @ $${o.triggerPriceUsd}`,
+          ),
+        );
       return;
     }
 
@@ -315,7 +352,9 @@ async function main() {
     }
 
     const jwt = await getJupiterJwt(agentKeypair);
-    const minLamports = Math.floor((10 / (await fetchPrice(VERIFIED_TOKENS.SOL))!.priceUsd) * 1_000_000_000);
+    const minLamports = Math.floor(
+      (10 / (await fetchPrice(VERIFIED_TOKENS.SOL))!.priceUsd) * 1_000_000_000,
+    );
 
     const result = await createLimitOrder({
       agentKeypair,
@@ -334,7 +373,7 @@ async function main() {
     return;
   }
 
-  //  Immediate swap 
+  //  Immediate swap
 
   const solPrice = await fetchPrice(VERIFIED_TOKENS.SOL);
   if (solPrice) console.log(`💰 SOL price: $${solPrice.priceUsd.toFixed(2)}\n`);
@@ -353,13 +392,15 @@ async function main() {
     return;
   }
 
-  console.log(`⚡ Executing: ${decision.amountSol} ${decision.inputSymbol} → ${decision.outputSymbol}`);
+  console.log(
+    `⚡ Executing: ${decision.amountSol} ${decision.inputSymbol} → ${decision.outputSymbol}`,
+  );
   const result = await executeSwap(
     agentKeypair,
     decision.inputMint,
     decision.outputMint,
     decision.amountLamports,
-    decision.slippageBps
+    decision.slippageBps,
   );
 
   if (result.status !== "Success") {
