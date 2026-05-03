@@ -9,6 +9,8 @@ import { SolanaService } from '../solana/solana.service';
 import { AgentsService } from '../agents/agents.service';
 import { TasksService } from '../tasks/tasks.service';
 import { ChallengesService } from '../attestation/challenges/challenges.service';
+import { AttestationService } from '../attestation/services/attestation.service';
+import { ChallengeCacheData } from '../attestation/challenges/challenge-cache.entity';
 import { TaskStatus } from '@dolores/shared';
 import { TaskCacheData } from '../tasks/task-cache.entity';
 
@@ -49,6 +51,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     private agentsService: AgentsService,
     private tasksService: TasksService,
     private challengesService: ChallengesService,
+    private attestationService: AttestationService,
   ) {}
 
   async onModuleInit() {
@@ -106,19 +109,13 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
                 this.handleRegistryAgentSlashed(event.data);
                 break;
               case REGISTRY_EVENTS.AGENT_VERIFIED:
-                this.logger.log(
-                  `AgentVerified: ${event.data.agent?.toBase58()}`,
-                );
+                this.attestationService.handleAgentVerified(event.data);
                 break;
               case REGISTRY_EVENTS.ARWEAVE_CID_UPDATED:
-                this.logger.log(
-                  `ArweaveCidUpdated: ${event.data.agent?.toBase58()}`,
-                );
+                this.attestationService.handleArweaveCidUpdated(event.data);
                 break;
               case REGISTRY_EVENTS.ATTESTATION_SUBMITTED:
-                this.logger.log(
-                  `AttestationSubmitted: ${event.data.agent?.toBase58()}`,
-                );
+                this.attestationService.handleAttestationSubmitted(event.data);
                 break;
               default:
                 this.logger.log(`Unknown registry event: ${event.name}`);
@@ -353,20 +350,41 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
   private async handleChallengeFiled(event: any) {
     const taskId = Buffer.from(event.taskId).toString('hex');
     const agentId = event.agent.toBase58();
+    const challenger = event.challenger.toBase58();
 
     this.logger.log(
-      `ChallengeFiledEvent: agent=${agentId} task=${taskId} challenger=${event.challenger.toBase58()}`,
+      `ChallengeFiledEvent: agent=${agentId} task=${taskId} challenger=${challenger}`,
     );
 
     try {
+      const [challengePda] = this.solanaService.deriveChallengePda(
+        new PublicKey(agentId),
+        Buffer.from(event.taskId),
+      );
+
+      const challengeData: ChallengeCacheData = {
+        id: challengePda.toBase58(),
+        challengePda: challengePda.toBase58(),
+        taskId,
+        agentId,
+        requester: challenger,
+        status: 'disputed',
+        capabilityName: 'unknown',
+        parametersJson: '{}',
+        disputeReason: `Challenge filed: ${event.failureType ?? 'unknown'}`,
+        createdAt: event.filedAt ? Number(event.filedAt) * 1000 : Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      await this.challengesService.cacheChallenge(challengeData);
       await this.tasksService.updateTaskStatus(
         agentId,
         taskId,
         TaskStatus.DISPUTED,
-        { disputeReason: `Challenge filed: ${event.failureType ?? 'unknown'}` },
+        { disputeReason: challengeData.disputeReason },
       );
     } catch (error) {
-      this.logger.error('Failed to update challenged task', error);
+      this.logger.error('Failed to handle ChallengeFiledEvent', error);
     }
   }
 
@@ -377,6 +395,15 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(`ChallengeDismissedEvent: agent=${agentId} task=${taskId}`);
 
     try {
+      const [challengePda] = this.solanaService.deriveChallengePda(
+        new PublicKey(agentId),
+        Buffer.from(event.taskId),
+      );
+
+      await this.challengesService.updateChallenge(challengePda.toBase58(), {
+        status: 'completed',
+        completedAt: Date.now(),
+      });
       await this.tasksService.updateTaskStatus(
         agentId,
         taskId,
@@ -384,7 +411,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
         { completedAt: Date.now() },
       );
     } catch (error) {
-      this.logger.error('Failed to update dismissed-challenge task', error);
+      this.logger.error('Failed to handle ChallengeDismissedEvent', error);
     }
   }
 
@@ -397,6 +424,15 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     );
 
     try {
+      const [challengePda] = this.solanaService.deriveChallengePda(
+        new PublicKey(agentId),
+        Buffer.from(event.taskId),
+      );
+
+      await this.challengesService.updateChallenge(challengePda.toBase58(), {
+        status: 'failed',
+        completedAt: Date.now(),
+      });
       await this.tasksService.updateTaskStatus(
         agentId,
         taskId,
@@ -404,7 +440,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
         { completedAt: Date.now() },
       );
     } catch (error) {
-      this.logger.error('Failed to update slashed task', error);
+      this.logger.error('Failed to handle AgentSlashedEvent', error);
     }
   }
 }
