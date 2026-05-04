@@ -57,6 +57,9 @@ COPY --chown=node:node --from=builder /app/packages/contracts/dist    ./packages
 COPY --chown=node:node --from=builder /app/packages/solana-utils/dist ./packages/solana-utils/dist
 COPY --chown=node:node --from=builder /app/apps/api/dist              ./apps/api/dist
 
+# Optional: bake in .env for local Docker usage (exclude via .dockerignore in prod)
+COPY --chown=node:node apps/api/.env ./.env
+
 EXPOSE 3001
 
 CMD ["node", "apps/api/dist/main.js"]
