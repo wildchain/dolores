@@ -63,6 +63,7 @@ export class AgentsService {
   private async populateAgentCidDetails(
     agent: AgentCacheData,
   ): Promise<AgentCacheData> {
+    console.log(process.env.IPFS_GATEWAY_URL);
     if (!!agent?.name && !!agent?.description) {
       return agent;
     }
