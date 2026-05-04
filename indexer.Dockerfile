@@ -11,6 +11,9 @@ COPY packages/database/package.json      ./packages/database/
 COPY packages/contracts/package.json     ./packages/contracts/
 COPY packages/solana-utils/package.json  ./packages/solana-utils/
 COPY apps/api/package.json               ./apps/api/
+COPY apps/agents/package.json            ./apps/agents/
+COPY apps/client/package.json            ./apps/client/
+COPY apps/ipfs/package.json              ./apps/ipfs/
 
 RUN pnpm install --frozen-lockfile
 
@@ -39,6 +42,9 @@ COPY packages/database/package.json      ./packages/database/
 COPY packages/contracts/package.json     ./packages/contracts/
 COPY packages/solana-utils/package.json  ./packages/solana-utils/
 COPY apps/api/package.json               ./apps/api/
+COPY apps/agents/package.json            ./apps/agents/
+COPY apps/client/package.json            ./apps/client/
+COPY apps/ipfs/package.json              ./apps/ipfs/
 
 RUN pnpm install --frozen-lockfile --prod
 
