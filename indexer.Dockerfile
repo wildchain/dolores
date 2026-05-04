@@ -35,28 +35,27 @@ FROM node:20-alpine
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
+RUN chown node:node /app
+USER node
 
-COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY packages/shared/package.json        ./packages/shared/
-COPY packages/database/package.json      ./packages/database/
-COPY packages/contracts/package.json     ./packages/contracts/
-COPY packages/solana-utils/package.json  ./packages/solana-utils/
-COPY apps/api/package.json               ./apps/api/
-COPY apps/agents/package.json            ./apps/agents/
-COPY apps/client/package.json            ./apps/client/
-COPY apps/ipfs/package.json              ./apps/ipfs/
+COPY --chown=node:node .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY --chown=node:node packages/shared/package.json        ./packages/shared/
+COPY --chown=node:node packages/database/package.json      ./packages/database/
+COPY --chown=node:node packages/contracts/package.json     ./packages/contracts/
+COPY --chown=node:node packages/solana-utils/package.json  ./packages/solana-utils/
+COPY --chown=node:node apps/api/package.json               ./apps/api/
+COPY --chown=node:node apps/agents/package.json            ./apps/agents/
+COPY --chown=node:node apps/client/package.json            ./apps/client/
+COPY --chown=node:node apps/ipfs/package.json              ./apps/ipfs/
 
 RUN pnpm install --frozen-lockfile --prod
 
 # Copy built artefacts from builder
-COPY --from=builder /app/packages/shared/dist       ./packages/shared/dist
-COPY --from=builder /app/packages/database/dist     ./packages/database/dist
-COPY --from=builder /app/packages/contracts/dist    ./packages/contracts/dist
-COPY --from=builder /app/packages/solana-utils/dist ./packages/solana-utils/dist
-COPY --from=builder /app/apps/api/dist              ./apps/api/dist
-
-RUN chown -R node:node /app
-USER node
+COPY --chown=node:node --from=builder /app/packages/shared/dist       ./packages/shared/dist
+COPY --chown=node:node --from=builder /app/packages/database/dist     ./packages/database/dist
+COPY --chown=node:node --from=builder /app/packages/contracts/dist    ./packages/contracts/dist
+COPY --chown=node:node --from=builder /app/packages/solana-utils/dist ./packages/solana-utils/dist
+COPY --chown=node:node --from=builder /app/apps/api/dist              ./apps/api/dist
 
 EXPOSE 3001
 

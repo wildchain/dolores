@@ -7,9 +7,9 @@ import { WalletButton } from "@/components/ui/WalletButton";
 const LINKS = [
   { href: "/explorer", label: "Explorer" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/tasks", label: "Tasks" },
+  // { href: "/tasks", label: "Tasks" },
   { href: "/attestations", label: "Attestations" },
-  { href: "/staker", label: "Staker" },
+  // { href: "/staker", label: "Staker" },
   { href: "/register", label: "Register" },
 ];
 
