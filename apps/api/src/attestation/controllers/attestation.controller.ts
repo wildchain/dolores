@@ -7,6 +7,21 @@ export class AttestationController {
   constructor(private attestationService: AttestationService) {}
 
   /**
+   * GET /attestations
+   * Returns all attestations across all agents, newest first.
+   */
+  @Get()
+  async getAllAttestations(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<AttestationCacheData[]> {
+    return this.attestationService.getAllAttestations(
+      limit ? parseInt(limit, 10) : 20,
+      offset ? parseInt(offset, 10) : 0,
+    );
+  }
+
+  /**
    * GET /attestations/agent/:agentId
    * Returns attestation history for an agent, newest first.
    */

@@ -15,6 +15,20 @@ export class AttestationService {
     private rocksdb: RocksDBService,
   ) {}
 
+  async getAllAttestations(
+    limit = 20,
+    offset = 0,
+  ): Promise<AttestationCacheData[]> {
+    const keys = await this.rocksdb.keys('attestation:');
+    const paged = keys.reverse().slice(offset, offset + limit);
+    const results: AttestationCacheData[] = [];
+    for (const key of paged) {
+      const raw = await this.rocksdb.get(key);
+      if (raw) results.push(JSON.parse(raw));
+    }
+    return results;
+  }
+
   async getAttestationsByAgent(
     agentId: string,
     limit = 20,
