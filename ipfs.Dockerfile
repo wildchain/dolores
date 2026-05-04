@@ -47,7 +47,7 @@ RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/apps/ipfs/dist ./apps/ipfs/dist
 
 # Create data directory
-RUN mkdir -p /app/data/ipfs && chown -R node:node /app
+RUN mkdir -p /app/data/ipfs && chown node:node /app/data/ipfs
 USER node
 
 EXPOSE 3002
