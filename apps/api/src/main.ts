@@ -7,7 +7,12 @@ async function bootstrap() {
 
   // Enable CORS for UI
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://dolores.wildchain.io',
+      'https://dolores.id',
+    ],
     credentials: true,
   });
 
