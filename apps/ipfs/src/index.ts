@@ -13,6 +13,10 @@ const j = json(helia);
 
 const app = Fastify({ logger: true });
 
+app.get("/", async (_request, _reply) => {
+  return { name: "dolores-ipfs" };
+});
+
 app.post("/pin", async (request, _reply) => {
   const { manifest } = request.body as { manifest: Record<string, unknown> };
   const cid = await j.add(manifest);
