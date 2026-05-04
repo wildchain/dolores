@@ -82,16 +82,20 @@ export default function AttestationsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-jade/15">
-                {["Agent", "Score", "New Reputation", "Output Hash", "Attested At"].map(
-                  h => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 font-mono text-[10px] text-jadeMid uppercase tracking-wider whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ),
-                )}
+                {[
+                  "Agent",
+                  "Score",
+                  "New Reputation",
+                  "Output Hash",
+                  "Attested At",
+                ].map(h => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 font-mono text-[10px] text-jadeMid uppercase tracking-wider whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
