@@ -24,6 +24,14 @@ export interface VerifyResponse {
   expiresAt: number;
 }
 
+export interface AttestationRecord {
+  agentId: string;
+  score: number;
+  outputHash: number[];
+  newReputation: number;
+  attestedAt: number; // Unix timestamp (seconds)
+}
+
 type TaskFilterParams = {
   agentId?: string;
   requester?: string;
@@ -157,6 +165,25 @@ export class ApiClient {
       );
     },
   };
+  // Attestations endpoints
+  attestations = {
+    getAll: (params?: {
+      limit?: number;
+      offset?: number;
+    }): Promise<AxiosResponse<AttestationRecord[]>> => {
+      return this.client.get<AttestationRecord[]>("/attestations", { params });
+    },
+
+    getByAgent: (
+      agentId: string,
+      params?: { limit?: number; offset?: number },
+    ): Promise<AxiosResponse<AttestationRecord[]>> => {
+      return this.client.get<AttestationRecord[]>(
+        `/attestations/agent/${agentId}`,
+        { params },
+      );
+    },
+  };
 }
 
 export const apiClient = new ApiClient();
@@ -166,3 +193,4 @@ export const authApi = apiClient.auth;
 export const agentsApi = apiClient.agents;
 export const tasksApi = apiClient.tasks;
 export const challengesApi = apiClient.challenges;
+export const attestationsApi = apiClient.attestations;

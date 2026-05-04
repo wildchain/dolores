@@ -278,6 +278,23 @@ export class AgentsService {
   }
 
   /**
+   * Update specific fields on a cached agent without a full re-fetch.
+   */
+  async updateAgentCacheFields(
+    agentId: string,
+    updates: Partial<AgentCacheData>,
+  ): Promise<void> {
+    const cached = await this.getCachedAgent(agentId);
+    if (!cached) {
+      this.logger.warn(`Agent ${agentId} not found in cache — skipping update`);
+      return;
+    }
+    Object.assign(cached, updates);
+    cached.updatedAt = Date.now();
+    await this.cacheAgent(cached);
+  }
+
+  /**
    * Get cached agent
    */
   private async getCachedAgent(

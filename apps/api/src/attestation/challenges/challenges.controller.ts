@@ -8,7 +8,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { ChallengesService } from './challenges.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../../auth/auth.guard';
 import {
   BuildFileChallengeDto,
   BuildAutoAdjudicateDto,

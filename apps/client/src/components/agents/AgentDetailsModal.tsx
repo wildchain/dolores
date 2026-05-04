@@ -256,17 +256,6 @@ export function AgentDetailsModal({
                   </span>
                 </div>
               ))}
-              <div className="flex justify-between">
-                <span style={{ color: "var(--fg-muted)" }}>Status:</span>
-                <span
-                  style={{
-                    color: agent.isActive ? "var(--ok)" : "var(--danger)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {agent.isActive ? "Active" : "Inactive"}
-                </span>
-              </div>
             </div>
           </div>
 
