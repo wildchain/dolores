@@ -32,6 +32,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@ipshipyard/node-datachannel"
-    ]
+    ],
+    "overrides": {
+      "@coral-xyz/anchor": "^0.32.1"
+    }
   }
 }
