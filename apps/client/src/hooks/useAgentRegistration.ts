@@ -8,9 +8,14 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
-import { doloresRegistryIdl, PROGRAM_IDS } from "@dolores/contracts";
+import {
+  doloresRegistryIdl,
+  doloresFundIdl,
+  PROGRAM_IDS,
+} from "@dolores/contracts";
 
 const REGISTRY_PROGRAM_ID = new PublicKey(PROGRAM_IDS.REGISTRY);
+const FUND_PROGRAM_ID = new PublicKey(PROGRAM_IDS.FUND);
 const REGISTRY_SEED = Buffer.from("registry");
 
 interface RegistrationParams {
@@ -86,8 +91,9 @@ export function useAgentRegistration() {
         commitment: "confirmed",
       });
 
-      // Load the registry program
+      // Load programs
       const registryProgram = new Program(doloresRegistryIdl as any, provider);
+      const fundProgram = new Program(doloresFundIdl as any, provider);
 
       // Derive the registry PDA
       const [registryPda] = PublicKey.findProgramAddressSync(
@@ -95,11 +101,30 @@ export function useAgentRegistration() {
         REGISTRY_PROGRAM_ID,
       );
 
+      // Derive fund PDAs — seeds: ["fund", operator, agent] and ["vault", operator, agent]
+      const [fundPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("fund"),
+          wallet.publicKey.toBuffer(),
+          agentKeypair.publicKey.toBuffer(),
+        ],
+        FUND_PROGRAM_ID,
+      );
+      const [vaultPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("vault"),
+          wallet.publicKey.toBuffer(),
+          agentKeypair.publicKey.toBuffer(),
+        ],
+        FUND_PROGRAM_ID,
+      );
+
       console.log("Registering agent:", agentKeypair.publicKey.toBase58());
       console.log("Registry PDA:", registryPda.toBase58());
+      console.log("Fund PDA:", fundPda.toBase58());
       console.log("Capability hash:", capabilityHash);
 
-      // Build the transaction
+      // Build register_agent instruction
       const tx = await registryProgram.methods
         .registerAgent(capabilityHash)
         .accounts({
@@ -109,6 +134,19 @@ export function useAgentRegistration() {
           systemProgram: SystemProgram.programId,
         })
         .transaction();
+
+      // Append initialize_fund to the same transaction
+      const initFundIx = await (fundProgram.methods as any)
+        .initializeFund()
+        .accounts({
+          operator: wallet.publicKey,
+          agent: agentKeypair.publicKey,
+          fund: fundPda,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .instruction();
+      tx.add(initFundIx);
 
       // Get recent blockhash
       const { blockhash, lastValidBlockHeight } =

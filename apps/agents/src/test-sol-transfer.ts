@@ -1,6 +1,6 @@
 import "dotenv/config";
+import * as crypto from "crypto";
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 import { Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
@@ -8,6 +8,7 @@ import { executeTask } from "./execute";
 import { buildReceipt, signReceipt } from "./receipt";
 import {
   executeSolTransfer,
+  registerTask,
   submitToIndexer,
   submitAttestation,
 } from "./submit";
@@ -37,8 +38,10 @@ function loadKeypair(agentId: string): Keypair {
   return keypair;
 }
 
-function generateTaskId(): string {
-  return `sol-transfer-${Math.floor(Date.now() / 1000)}`;
+/** Generates a random 32-byte task ID. Returns { hex, buffer }. */
+function generateTaskId(): { hex: string; buffer: Buffer } {
+  const buffer = crypto.randomBytes(32);
+  return { hex: buffer.toString("hex"), buffer };
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -110,9 +113,29 @@ async function main() {
   console.log(`TX       : ${txSignature}`);
   console.log(`Explorer : https://solscan.io/tx/${txSignature}?cluster=devnet`);
 
-  // ── Build & sign receipt ──────────────────────────────────────────────────
-  const taskId = generateTaskId();
+  // ── Register task on-chain ────────────────────────────────────────────────
+  const { hex: taskId, buffer: taskIdBuffer } = generateTaskId();
   const timestamp = Math.floor(Date.now() / 1000);
+  // Deadline = 1 hour from now
+  const deadline = timestamp + 3600;
+
+  console.log(`\nRegistering task on-chain...`);
+  console.log(`Task ID : ${taskId}`);
+  try {
+    const registerTx = await registerTask(
+      connection,
+      agentKeypair,
+      agentKeypair.publicKey,
+      taskIdBuffer,
+      deadline,
+    );
+    console.log(`Register TX : ${registerTx}`);
+  } catch (err: any) {
+    console.error(`❌ Task registration failed: ${err?.message}`);
+    return;
+  }
+
+  // ── Build & sign receipt ──────────────────────────────────────────────────
 
   const receipt = buildReceipt({
     taskId,

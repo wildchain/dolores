@@ -85,7 +85,7 @@ function AgentRow({ agent }: { agent: AgentListItemDto }) {
         </div>
       </td>
       <td className="px-5 py-4">
-        <StatusBadge status={agent.isActive ? "completed" : "failed"} />
+        <StatusBadge status={"active"} />
       </td>
       <td className="px-5 py-4">
         <span className="font-mono text-[11px] text-jadeMid">
