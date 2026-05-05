@@ -29,8 +29,8 @@ type StatusStyle = {
 
 export function statusCfg(s: string): StatusStyle {
   const m: Record<string, StatusStyle> = {
-    completed: {
-      label: "Completed",
+    active: {
+      label: "Active",
       color: "var(--ok)",
       bg: "rgba(22,163,74,.08)",
       borderColor: "rgba(22,163,74,.25)",

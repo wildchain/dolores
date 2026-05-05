@@ -8,7 +8,7 @@ import {
   SYSVAR_INSTRUCTIONS_PUBKEY,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
-import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
+import { Program, AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
 import * as nacl from "tweetnacl";
 import fetch from "node-fetch";
 import { SignedReceipt, outputHashToBytes } from "./receipt";
@@ -37,6 +37,43 @@ export async function executeSolTransfer(
     }),
   );
   return sendAndConfirmTransaction(connection, tx, [agentKeypair], {
+    commitment: "confirmed",
+  });
+}
+
+/**
+ * Register a task on the adjudication program so a task_record PDA exists.
+ * Must be called before the task is executed so challenges can be filed later.
+ *
+ * @param taskId     32-byte Buffer (the task ID)
+ * @param outputHash Placeholder 32-byte output hash (zeros); updated on-chain via completeTask
+ * @param deadline   Unix timestamp (seconds) — deadline for task completion
+ */
+export async function registerTask(
+  connection: Connection,
+  userKeypair: Keypair,
+  agentPubkey: PublicKey,
+  taskId: Buffer,
+  deadline: number,
+): Promise<string> {
+  const programs = await DoloresPrograms.getInstance(connection.rpcEndpoint);
+  const adjProgram = programs.getAdjudicationProgram();
+  const [taskPda] = programs.deriveTaskPda(agentPubkey, taskId);
+
+  // Placeholder output_hash — all zeros; will be written by completeTask
+  const placeholderHash = Array(32).fill(0);
+
+  const tx = await (adjProgram.methods as any)
+    .registerTask(Array.from(taskId), new BN(deadline), placeholderHash)
+    .accounts({
+      user: userKeypair.publicKey,
+      agent: agentPubkey,
+      taskRecord: taskPda,
+      systemProgram: SystemProgram.programId,
+    })
+    .transaction();
+
+  return sendAndConfirmTransaction(connection, tx, [userKeypair], {
     commitment: "confirmed",
   });
 }
