@@ -28,7 +28,7 @@ interface ExecutionReceipt {
 }
 
 const IPFS_GATEWAY =
-  process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ?? "http://localhost:3002/get";
+  process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ?? "https://ipfs.dolores.id/get";
 
 const SOLANA_EXPLORER_BASE = "https://explorer.solana.com/tx";
 const SOLANA_CLUSTER =
