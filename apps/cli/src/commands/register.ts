@@ -20,7 +20,7 @@ const FUND_SEED = Buffer.from("fund");
 const VAULT_SEED = Buffer.from("vault");
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
 
-const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
+const REGISTRY_PROGRAM_ID = "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey";
 const FUND_PROGRAM_ID = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
 
 

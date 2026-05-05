@@ -271,7 +271,7 @@ export async function runCommand(opts: {
         );
 
         if (reputation) {
-            console.log(`Reputation      : ${reputation.reputationScore} / 10000`);
+            console.log(`Trust score     : ${reputation.reputationScore} / 1000`);
             console.log(`Slash count     : ${reputation.slashCount}`);
         }
     } catch (err: any) {

@@ -17,7 +17,7 @@ import { claimRewardsCommand } from "./commands/claim-rewards";
 
 const DEFAULT_OPERATOR_KEY = path.join(os.homedir(), ".config", "solana", "id.json");
 const DEFAULT_RPC          = "https://api.devnet.solana.com";
-const DEFAULT_PROGRAM_ID   = "DMzRtZS76zs6ERgJdFKmjx3mVG66DzChLdEEtLzrVWvd";
+const DEFAULT_PROGRAM_ID   = "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey";
 const DEFAULT_INDEXER_URL  = "http://localhost:8080";
 
 const program = new Command();

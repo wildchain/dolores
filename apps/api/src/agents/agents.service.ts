@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { SolanaService } from '../solana/solana.service';
 import { RocksDBService } from '@dolores/database';
 import {
@@ -205,11 +206,17 @@ export class AgentsService {
         stakeAmount: fundAccount?.stakeAmount?.toNumber() || 0,
         // Registry account fields
         capabilityHash: Array.from(registryAccount.capabilityHash || []),
-        reputationScore: registryAccount.reputationScore || 0,
+        reputationScore: registryAccount.reputationScore || 0, // trust score 0–1000
         slashCount: registryAccount.slashCount || 0,
         arweaveCid: arweaveCid,
         declaredStake: registryAccount.declaredStake?.toNumber() || 0,
         lastAttestedAt: registryAccount.lastAttestedAt?.toNumber() || 0,
+        // Trust score components
+        weightedScoreSum: registryAccount.weightedScoreSum?.toNumber?.() ?? registryAccount.weightedScoreSum ?? 0,
+        weightedTaskSum: registryAccount.weightedTaskSum?.toNumber?.() ?? registryAccount.weightedTaskSum ?? 0,
+        totalTaskCount: registryAccount.totalTaskCount?.toNumber?.() ?? registryAccount.totalTaskCount ?? 0,
+        challengeSurvivalCount: registryAccount.challengeSurvivalCount || 0,
+        validatorAlignmentPoints: registryAccount.validatorAlignmentPoints || 0,
         // Trust metrics
         totalTasks: 0,
         completedTasks: 0,
@@ -402,6 +409,67 @@ export class AgentsService {
     };
   }
 
+  // AES-256-GCM helpers — encryption key lives only on the API server (KEYPAIR_ENCRYPTION_KEY env).
+  // Users and the runtime never see or set this key.
+  private getEncryptionKey(): Buffer {
+    const hexKey = process.env.KEYPAIR_ENCRYPTION_KEY;
+    if (!hexKey) {
+      this.logger.warn('KEYPAIR_ENCRYPTION_KEY not set — using zero key (set this in production)');
+    }
+    return hexKey ? Buffer.from(hexKey, 'hex') : Buffer.alloc(32, 0);
+  }
+
+  private encryptSecretKey(secretKeyBytes: number[]): string {
+    const keyBuf = this.getEncryptionKey();
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', keyBuf, iv);
+    const ct = Buffer.concat([cipher.update(Buffer.from(secretKeyBytes)), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return `${iv.toString('hex')}:${tag.toString('hex')}:${ct.toString('hex')}`;
+  }
+
+  private decryptSecretKey(encrypted: string): number[] {
+    const [ivHex, tagHex, ctHex] = encrypted.split(':');
+    const keyBuf = this.getEncryptionKey();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', keyBuf, Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+    const plain = Buffer.concat([decipher.update(Buffer.from(ctHex, 'hex')), decipher.final()]);
+    return Array.from(plain);
+  }
+
+  // Accepts raw secret key bytes from the MCP server. Encrypts server-side before storing.
+  async storeKeypair(agentId: string, secretKey: number[]): Promise<void> {
+    const key = AgentCacheEntity.createKey(agentId);
+    const cached = await this.rocksdb.get(key);
+    if (!cached) throw new NotFoundException(`Agent ${agentId} not found — run seed first`);
+    const data: AgentCacheData = JSON.parse(cached);
+    data.encryptedSecretKey = this.encryptSecretKey(secretKey);
+    data.updatedAt = Date.now();
+    await this.rocksdb.put(key, JSON.stringify(data));
+    this.logger.log(`Stored keypair for agent ${agentId.slice(0, 8)}...`);
+  }
+
+  // Returns ALL agents across all operators that have stored keypairs.
+  // Called only by the hosted runtime (protected by RUNTIME_SECRET check in the controller).
+  async getAllAgentsForRuntime(): Promise<{ agentId: string; template: string; name: string; operator: string; secretKey: number[] }[]> {
+    const keys = await this.rocksdb.keys('agent:');
+    const result: { agentId: string; template: string; name: string; operator: string; secretKey: number[] }[] = [];
+    for (const key of keys) {
+      const raw = await this.rocksdb.get(key);
+      if (!raw) continue;
+      const data: AgentCacheData = JSON.parse(raw);
+      if (!data.encryptedSecretKey) continue;
+      result.push({
+        agentId: data.agentId,
+        template: data.capabilities?.[0] ?? 'SOL_TRANSFER',
+        name: data.name,
+        operator: data.operator,
+        secretKey: this.decryptSecretKey(data.encryptedSecretKey),
+      });
+    }
+    return result;
+  }
+
   async seedAgent(agentId: string, data: { operator: string; name: string; template: string; description?: string }): Promise<void> {
     const key = AgentCacheEntity.createKey(agentId);
 
@@ -440,6 +508,11 @@ export class AgentsService {
       arweaveCid: '',
       declaredStake: 0,
       lastAttestedAt: 0,
+      weightedScoreSum: 0,
+      weightedTaskSum: 0,
+      totalTaskCount: 0,
+      challengeSurvivalCount: 0,
+      validatorAlignmentPoints: 0,
       availableForHire: false,
       hireFeeSOL: 0.01,
       totalEarnedSOL: 0,

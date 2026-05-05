@@ -1,5 +1,5 @@
 {
-  "address": "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt",
+  "address": "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey",
   "metadata": {
     "name": "dolores_registry",
     "version": "0.1.0",
@@ -7,6 +7,59 @@
     "description": "Created with Anchor"
   },
   "instructions": [
+    {
+      "name": "record_challenge_survival",
+      "docs": [
+        "Record that this agent survived a frivolous challenge (called by adjudication program).",
+        "Capped at 20 events; each adds +8 to the challenge survival bonus (max +60)."
+      ],
+      "discriminator": [
+        42,
+        89,
+        211,
+        149,
+        88,
+        187,
+        168,
+        219
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "docs": [
+            "TODO production: constrain to adjudication program PDA."
+          ],
+          "signer": true
+        },
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "registry.agent",
+                "account": "RegistryAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
     {
       "name": "record_slash",
       "discriminator": [
@@ -117,6 +170,64 @@
               32
             ]
           }
+        }
+      ]
+    },
+    {
+      "name": "set_validator_alignment",
+      "docs": [
+        "Set the validator alignment bonus (0–70) for this agent.",
+        "Called by the validation consensus program after each peer-review round."
+      ],
+      "discriminator": [
+        233,
+        238,
+        46,
+        20,
+        141,
+        252,
+        208,
+        172
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "docs": [
+            "TODO production: constrain to validation consensus program PDA."
+          ],
+          "signer": true
+        },
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "registry.agent",
+                "account": "RegistryAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "points",
+          "type": "u8"
         }
       ]
     },
@@ -327,7 +438,7 @@
       ],
       "args": [
         {
-          "name": "min_reputation",
+          "name": "min_score",
           "type": "u16"
         },
         {
@@ -482,6 +593,19 @@
         54,
         218
       ]
+    },
+    {
+      "name": "ChallengeSurvived",
+      "discriminator": [
+        133,
+        31,
+        219,
+        146,
+        170,
+        76,
+        87,
+        14
+      ]
     }
   ],
   "errors": [
@@ -514,6 +638,11 @@
       "code": 6005,
       "name": "MissingEd25519Instruction",
       "msg": "Missing Ed25519 instruction in transaction"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidValidatorPoints",
+      "msg": "Validator alignment points must be between 0 and 70"
     }
   ],
   "types": [
@@ -560,7 +689,7 @@
             "type": "u8"
           },
           {
-            "name": "new_reputation",
+            "name": "trust_score",
             "type": "u16"
           },
           {
@@ -586,6 +715,10 @@
           {
             "name": "trusted",
             "type": "bool"
+          },
+          {
+            "name": "trust_score",
+            "type": "u16"
           }
         ]
       }
@@ -633,12 +766,32 @@
             }
           },
           {
-            "name": "new_reputation",
+            "name": "trust_score",
             "type": "u16"
           },
           {
             "name": "attested_at",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChallengeSurvived",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "survival_count",
+            "type": "u8"
+          },
+          {
+            "name": "trust_score",
+            "type": "u16"
           }
         ]
       }
@@ -691,6 +844,26 @@
           },
           {
             "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "weighted_score_sum",
+            "type": "u32"
+          },
+          {
+            "name": "weighted_task_sum",
+            "type": "u32"
+          },
+          {
+            "name": "total_task_count",
+            "type": "u32"
+          },
+          {
+            "name": "challenge_survival_count",
+            "type": "u8"
+          },
+          {
+            "name": "validator_alignment_points",
             "type": "u8"
           }
         ]

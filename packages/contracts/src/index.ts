@@ -4,7 +4,7 @@
 export const PROGRAM_IDS = {
   ADJUDICATION: "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A",
   FUND: "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5",
-  REGISTRY: "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt",
+  REGISTRY: "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey",
 } as const;
 
 // Use require for JSON imports to work with composite builds

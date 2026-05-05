@@ -16,11 +16,17 @@ export interface AgentCacheData extends BaseRocksDBEntity {
   stakeAmount: number;
   // Registry account fields
   capabilityHash: number[]; // 32-byte hash
-  reputationScore: number;
+  reputationScore: number;  // trust score 0–1000
   slashCount: number;
   arweaveCid: string;
   declaredStake: number;
   lastAttestedAt: number;
+  // Trust score components (raw on-chain accumulators)
+  weightedScoreSum: number;
+  weightedTaskSum: number;
+  totalTaskCount: number;
+  challengeSurvivalCount: number;
+  validatorAlignmentPoints: number;
   availableForHire: boolean;
   hireFeeSOL: number;
   totalEarnedSOL: number;
@@ -32,6 +38,7 @@ export interface AgentCacheData extends BaseRocksDBEntity {
   failedTasks: number;
   disputedTasks: number;
   totalResponseTime: number; // Sum of all response times for avg calculation
+  encryptedSecretKey?: string; // AES-256-GCM encrypted agent secret key (iv:authTag:ciphertext hex)
 }
 
 export class AgentCacheEntity {

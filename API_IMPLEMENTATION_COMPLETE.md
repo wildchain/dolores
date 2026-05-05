@@ -297,7 +297,7 @@ pnpm start:dev
 [RocksDBService] RocksDB opened successfully at /path/to/data/dolores.db
 [SolanaService] Solana service initialized successfully
 [SolanaService] Connected to: https://api.devnet.solana.com
-[SolanaService] Registry Program: 8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt
+[SolanaService] Registry Program: 3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey
 [SolanaService] Fund Program: AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5
 [SolanaService] Adjudication Program: 4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz
 [SyncService] Started 13 event listeners

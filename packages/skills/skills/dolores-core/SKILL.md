@@ -28,7 +28,7 @@ Core accountability primitives for any AI agent on Solana.
 
 | Program | ID |
 |---|---|
-| `dolores_registry` | `8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt` |
+| `dolores_registry` | `3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey` |
 | `dolores_fund` | `AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5` |
 | `dolores_adjudication` | `4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz` |
 
@@ -56,7 +56,7 @@ import { Program, AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import * as crypto from 'crypto';
 import * as nacl from 'tweetnacl';
 
-const REGISTRY_PROGRAM_ID   = '8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt';
+const REGISTRY_PROGRAM_ID   = '3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey';
 const FUND_PROGRAM_ID       = 'AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5';
 const ADJ_PROGRAM_ID        = '8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A';
 

@@ -16,7 +16,7 @@ export interface AgentListItemDto {
   trustBadge: TrustBadge;
   isActive: boolean;
   stakeAmount: number; // in lamports
-  reputationScore: number;
+  reputationScore: number; // trust score 0–1000
   slashCount: number;
 }
 
@@ -29,7 +29,7 @@ export interface AgentDetailsDto extends AgentListItemDto {
   fundCreatedAt: number; // Unix timestamp
   // Registry account fields
   capabilityHash: number[]; // 32-byte hash
-  reputationScore: number;
+  reputationScore: number;  // trust score 0–1000
   slashCount: number;
   arweaveCid: string;
   declaredStake: number; // in lamports

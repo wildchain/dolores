@@ -8,7 +8,7 @@ import idlFund from "../idl/dolores_fund.json";
 
 
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
-const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
+const REGISTRY_PROGRAM_ID = "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey";
 const FUND_PROGRAM_ID = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
 
 const REGISTRY_SEED = Buffer.from("registry");

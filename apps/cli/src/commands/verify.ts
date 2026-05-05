@@ -3,15 +3,15 @@ import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import fetch from "node-fetch";
 import idlRegistry from "../idl/dolores_registry.json";
 
-const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
-const REGISTRY_SEED       = Buffer.from("registry");
+const REGISTRY_PROGRAM_ID = "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey";
+const REGISTRY_SEED = Buffer.from("registry");
 
 export async function verifyCommand(opts: {
-  agentId:       string;
+  agentId: string;
   minReputation: number;
-  minStakeSol:   number;
-  indexerUrl:    string;
-  rpcUrl:        string;
+  minStakeSol: number;
+  indexerUrl: string;
+  rpcUrl: string;
 }) {
   console.log("\n🔍 Dolores — Verify Agent\n");
   console.log(`Agent           : ${opts.agentId}`);
@@ -33,16 +33,16 @@ export async function verifyCommand(opts: {
     process.exit(1);
   }
 
-  const reputation   = onChain.reputationScore as number;
-  const slashCount   = onChain.slashCount as number;
+  const reputation = onChain.reputationScore as number;
+  const slashCount = onChain.slashCount as number;
   const declaredStake = Number(onChain.declaredStake);
   const minStakeLamports = Math.floor(opts.minStakeSol * LAMPORTS_PER_SOL);
 
   // 2. Evaluate each condition
-  const meetsReputation = reputation  >= opts.minReputation;
-  const meetsStake      = declaredStake >= minStakeLamports;
-  const notBanned       = slashCount   < 3;
-  const trusted         = meetsReputation && meetsStake && notBanned;
+  const meetsReputation = reputation >= opts.minReputation;
+  const meetsStake = declaredStake >= minStakeLamports;
+  const notBanned = slashCount < 3;
+  const trusted = meetsReputation && meetsStake && notBanned;
 
   // 3. Print result
   console.log(`─────────────────────────────────────────`);

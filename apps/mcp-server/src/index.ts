@@ -34,7 +34,7 @@ const DOLORES_WALLET_PATH = process.env.DOLORES_OPERATOR_KEY
 
 const AGENT_DIR = path.join(os.homedir(), ".dolores", "agents");
 
-const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
+const REGISTRY_PROGRAM_ID = "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey";
 const FUND_PROGRAM_ID = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
 
 const VALID_TEMPLATES = [
@@ -68,6 +68,20 @@ function loadAgentKeypair(agentId: string): Keypair | null {
   if (!fs.existsSync(agentPath)) return null;
   const raw = JSON.parse(fs.readFileSync(agentPath, "utf-8"));
   return Keypair.fromSecretKey(Uint8Array.from(raw));
+}
+
+
+function getTemplateSuggestion(template?: string): string {
+  const suggestions: Record<string, string> = {
+    JUPITER_TRADER: "Token swaps, including PumpSwap graduated tokens",
+    PUMPFUN_TRADER: "Buying new tokens on PumpFun bonding curves only",
+    RAYDIUM_LP: "Liquidity provision on Raydium pools",
+    METEORA_POOLS: "Meteora DLMM pool interactions",
+    KAMINO_LENDING: "Lending and borrowing on Kamino",
+    PYTH_ORACLE_READER: "Reading live price feeds",
+    SOL_TRANSFER: "Simple SOL transfers between wallets",
+  };
+  return suggestions[template || ""] || "General purpose";
 }
 
 //  Anchor helpers 
@@ -297,6 +311,49 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: "dolores_check_balance",
+      description: "Check SOL and token balances for any wallet or agent. Use this to verify agent has enough funds before assigning tasks.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          address: {
+            type: "string",
+            description: "Wallet or agent public key to check. If not provided, checks your operator wallet.",
+          },
+          network: {
+            type: "string",
+            description: "Network to check: 'devnet' or 'mainnet'. Default: devnet for SOL balance, mainnet for token balances.",
+          },
+        },
+      },
+    },
+    {
+      name: "dolores_agent_history",
+      description: "Fetch verified on-chain task history for an agent. Only shows tasks that were actually completed and recorded on Solana — not just API cache. Useful for verifying agent reputation.",
+      inputSchema: {
+        type: "object",
+        required: ["agentId"],
+        properties: {
+          agentId: { type: "string", description: "Agent public key" },
+          limit: { type: "number", description: "Max tasks to show (default 10)" },
+        },
+      },
+    },
+
+    {
+      name: "dolores_withdraw_stake",
+      description: "Withdraw staked SOL from a Dolores agent back to your wallet. Only works if there's no active challenge on the agent.",
+      inputSchema: {
+        type: "object",
+        required: ["agentId", "operatorId", "amountSol"],
+        properties: {
+          agentId: { type: "string", description: "Agent public key" },
+          operatorId: { type: "string", description: "Operator public key (agent owner)" },
+          amountSol: { type: "number", description: "Amount of SOL to withdraw" },
+        },
+      },
+    },
   ],
 }));
 
@@ -317,7 +374,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         let balance = 0;
         try {
           balance = await connection.getBalance(keypair.publicKey);
-        } catch {}
+        } catch { }
 
         const balanceSOL = (balance / 1e9).toFixed(4);
         const needsFunding = balance < 10_000_000;
@@ -387,14 +444,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const successRate = a.trustBadge?.successRate ?? 0;
             const stake = (a.stakeAmount / LAMPORTS_PER_SOL).toFixed(3);
             const hireFee = a.hireFeeSOL ?? 0.01;
-            return `**Agent ${i + 1}: ${a.agentId.slice(0, 8)}...**
+            return `**Agent ${i + 1}: ${a.name || a.agentId.slice(0, 8) + "..."}**
+- Template: ${a.capabilities?.[0] || "Unknown"}
 - Reputation: ${a.reputationScore}/100
 - Success rate: ${successRate.toFixed(1)}%
 - Stake: ${stake} SOL
 - Hire fee: ${hireFee} SOL
-- Completed tasks: ${a.trustBadge?.completedTasks ?? 0}
 - Agent ID: \`${a.agentId}\`
-- Operator: \`${a.operator}\``;
+- Operator: \`${a.operator}\`
+- 💡 Best for: ${getTemplateSuggestion(a.capabilities?.[0])}`;
           })
           .join("\n\n");
 
@@ -469,6 +527,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           taskId,
           capabilityName: instruction,
           parametersJson: JSON.stringify({ instruction }),
+          timeoutSeconds: (deadlineMinutes ?? 10) * 60,
           wallet: keypair.publicKey.toBase58(),
         })) as any;
 
@@ -508,12 +567,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         if (task.statusCode === 404) {
           return {
-            content: [
-              {
-                type: "text",
-                text: `Task \`${taskId.slice(0, 16)}...\` not found.`,
-              },
-            ],
+            content: [{ type: "text", text: `Task \`${taskId.slice(0, 16)}...\` not found.` }],
           };
         }
 
@@ -526,13 +580,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const emoji = statusEmoji[task.status] ?? "❓";
 
+        // Smart suggestions based on task context
+        let suggestion = "";
+        const instruction = task.capabilityName || "";
+
+        if (task.status === "completed") {
+          suggestion = "\n\n✅ Task executed successfully on-chain.";
+        } else if (task.status === "pending") {
+          suggestion = "\n\n💡 The agent is still processing. Check again in a few seconds.";
+        } else if (task.status === "failed") {
+          // Give smart suggestions based on what failed
+          if (instruction.toLowerCase().includes("pumpfun") || instruction.toLowerCase().includes("pump")) {
+            suggestion = `\n\n💡 **PumpFun trade failed.** Common reasons:\n- Token graduated to PumpSwap AMM (use JUPITER_TRADER agent instead)\n- Token address is not a PumpFun bonding curve token\n- Insufficient SOL in agent wallet\n\nTry using a JUPITER_TRADER agent — it can swap any token via Jupiter aggregator which covers PumpSwap too.`;
+          } else if (instruction.toLowerCase().includes("swap") || instruction.toLowerCase().includes("jupiter")) {
+            suggestion = `\n\n💡 **Swap failed.** Common reasons:\n- Insufficient SOL in agent wallet\n- Token not supported by Jupiter\n- RPC rate limit hit\n\nCheck agent balance with \`dolores_agent_info\` and fund if needed.`;
+          } else {
+            suggestion = `\n\n💡 Task failed. Use \`dolores_agent_info\` to check agent balance and status.`;
+          }
+        }
+
         return {
-          content: [
-            {
-              type: "text",
-              text: `${emoji} Task Status: **${task.status.toUpperCase()}**\n\nTask ID: \`${taskId.slice(0, 16)}...\`\nAgent: \`${task.agentId?.slice(0, 8)}...\`\nInstruction: "${task.capabilityName}"\nCreated: ${new Date(task.createdAt * 1000).toISOString()}`,
-            },
-          ],
+          content: [{
+            type: "text",
+            text: `${emoji} Task Status: **${task.status.toUpperCase()}**\n\nTask ID: \`${taskId.slice(0, 16)}...\`\nAgent: \`${task.agentId?.slice(0, 8)}...\`\nInstruction: "${instruction}"\nCreated: ${new Date(task.createdAt * 1000).toISOString()}${suggestion}`,
+          }],
         };
       }
 
@@ -856,7 +927,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           template,
           description: `Dolores agent with ${template} capability`,
         });
-        await apiFetch(`/agents/${agentId}`, "GET").catch(() => {});
+        await apiFetch(`/agents/${agentId}`, "GET").catch(() => { });
+
+        // Send raw secret key to API — the API encrypts it server-side before storing.
+        // Users never need to manage an encryption key.
+        await apiFetch(`/agents/${agentId}/keypair`, "POST", {
+          secretKey: Array.from(agentKeypair.secretKey),
+        }).catch((err: any) => {
+          console.error(`⚠️  Failed to store keypair in API: ${err?.message} (local copy still saved)`);
+        });
 
         return {
           content: [
@@ -965,7 +1044,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           hireFeeSOL?: number;
         };
 
-        await apiFetch(`/agents/${agentId}`, "GET").catch(() => {});
+        await apiFetch(`/agents/${agentId}`, "GET").catch(() => { });
 
         const result = (await apiFetch(
           `/agents/${agentId}/list-for-hire`,
@@ -985,6 +1064,235 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: `✅ **Agent listed for hire!**\n\nAgent: \`${agentId.slice(0, 8)}...\`\nHire fee: ${hireFeeSOL ?? 0.01} SOL\n\nAnyone can now find and hire your agent from the Dolores marketplace.`,
             },
           ],
+        };
+      }
+
+      case "dolores_check_balance": {
+        const { address, network } = args as { address?: string; network?: string };
+
+        const keypair = getOrCreateWallet();
+        const pubkey = address ? new PublicKey(address) : keypair.publicKey;
+
+        // Check both devnet (for Dolores coordination) and mainnet (for DeFi)
+        const devnetConnection = new Connection("https://api.devnet.solana.com", "confirmed");
+        const mainnetConnection = new Connection(
+          process.env.MAINNET_RPC_URL || "https://api.mainnet-beta.solana.com",
+          "confirmed"
+        );
+
+        let devnetBalance = 0;
+        let mainnetBalance = 0;
+
+        try { devnetBalance = await devnetConnection.getBalance(pubkey); } catch { }
+        try { mainnetBalance = await mainnetConnection.getBalance(pubkey); } catch { }
+
+        // Check mainnet token balances (USDC, USDT)
+        const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+        const USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwVe";
+
+        let tokenBalances = "";
+        try {
+          const tokenAccounts = await mainnetConnection.getParsedTokenAccountsByOwner(
+            pubkey,
+            { programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") }
+          );
+
+          const relevantTokens = tokenAccounts.value
+            .map((a: any) => {
+              const info = a.account.data.parsed.info;
+              const mint = info.mint;
+              const amount = info.tokenAmount.uiAmount;
+              if (amount === 0) return null;
+              const symbol = mint === USDC_MINT ? "USDC" :
+                mint === USDT_MINT ? "USDT" : null;
+              if (!symbol) return null;
+              return `- ${symbol}: ${amount.toFixed(6)}`;
+            })
+            .filter(Boolean);
+
+          if (relevantTokens.length > 0) {
+            tokenBalances = "\n\n**Mainnet Token Balances:**\n" + relevantTokens.join("\n");
+          }
+        } catch { }
+
+        // Check if this is an agent
+        let agentInfo = "";
+        if (address) {
+          const metaPath = path.join(AGENT_DIR, `${address}.meta.json`);
+          if (fs.existsSync(metaPath)) {
+            const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+            agentInfo = `\n\n**Agent Info:**\n- Name: ${meta.name}\n- Template: ${meta.template}`;
+          }
+        }
+
+        const devnetSOL = (devnetBalance / 1e9).toFixed(4);
+        const mainnetSOL = (mainnetBalance / 1e9).toFixed(4);
+
+        const devnetStatus = devnetBalance < 10_000_000 ? "⚠️ Low" : "✅";
+        const mainnetStatus = mainnetBalance < 10_000_000 ? "⚠️ Low — fund for DeFi tasks" : "✅";
+
+        return {
+          content: [{
+            type: "text",
+            text: `💰 **Balance Check**\n\nAddress: \`${pubkey.toBase58()}\`${agentInfo}\n\n**Devnet SOL** (Dolores coordination): ${devnetStatus} ${devnetSOL} SOL\n**Mainnet SOL** (DeFi execution): ${mainnetStatus} ${mainnetSOL} SOL${tokenBalances}\n\n💡 Agents need devnet SOL for task registration and mainnet SOL for actual DeFi execution.`,
+          }],
+        };
+      }
+
+      case "dolores_agent_history": {
+        const { agentId, limit } = args as { agentId: string; limit?: number };
+        const maxTasks = limit ?? 10;
+
+        const connection = new Connection(RPC_URL, "confirmed");
+        const ADJ_PROGRAM_ID = "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A";
+
+        // Load IDL and fetch all task records for this agent
+        const idlAdj = require(path.join(__dirname, "idl/dolores_adjudication.json"));
+        const dummyKeypair = Keypair.generate();
+        const provider = buildProvider(connection, dummyKeypair);
+        const adjProgram = new Program(idlAdj as any, provider) as any;
+
+        // Fetch all task_record accounts filtered by agent pubkey
+        const agentPubkey = new PublicKey(agentId);
+
+        let taskRecords: any[] = [];
+        try {
+          const accounts = await adjProgram.account.taskRecord.all([
+            {
+              memcmp: {
+                offset: 8, // discriminator
+                bytes: agentPubkey.toBase58(),
+              },
+            },
+          ]);
+          taskRecords = accounts;
+        } catch (err: any) {
+          throw new Error(`Failed to fetch on-chain task records: ${err?.message}`);
+        }
+
+        if (taskRecords.length === 0) {
+          return {
+            content: [{
+              type: "text",
+              text: `No on-chain task records found for agent \`${agentId.slice(0, 8)}...\`\n\nThis agent hasn't completed any verified tasks yet.`,
+            }],
+          };
+        }
+
+        // Sort by created_at descending
+        taskRecords.sort((a, b) =>
+          (b.account.createdAt?.toNumber() ?? 0) - (a.account.createdAt?.toNumber() ?? 0)
+        );
+
+        const statusMap: Record<string, string> = {
+          pending: "⏳ Pending",
+          completed: "✅ Completed",
+          challenged: "⚠️ Challenged",
+          slashed: "❌ Slashed",
+        };
+
+        const completed = taskRecords.filter(t =>
+          Object.keys(t.account.status)[0] === "completed"
+        ).length;
+        const slashed = taskRecords.filter(t =>
+          Object.keys(t.account.status)[0] === "slashed"
+        ).length;
+
+        const summary = taskRecords.slice(0, maxTasks).map((t, i) => {
+          const acc = t.account;
+          const taskId = Buffer.from(acc.taskId).toString("hex").slice(0, 16);
+          const status = statusMap[Object.keys(acc.status)[0]] ?? "❓ Unknown";
+          const outputHash = Buffer.from(acc.outputHash).toString("hex").slice(0, 16);
+          const createdAt = acc.createdAt?.toNumber()
+            ? new Date(acc.createdAt.toNumber() * 1000).toISOString()
+            : "N/A";
+          const completedAt = acc.completedAt
+            ? new Date(acc.completedAt.toNumber() * 1000).toISOString()
+            : "Not completed";
+
+          return `**Task ${i + 1}:** \`${taskId}...\`
+- Status: ${status}
+- Output hash: \`${outputHash}...\`
+- Created: ${createdAt}
+- Completed: ${completedAt}`;
+        }).join("\n\n");
+
+        return {
+          content: [{
+            type: "text",
+            text: `📋 **On-chain Task History for Agent \`${agentId.slice(0, 8)}...\`**\n\nTotal: ${taskRecords.length} tasks | ✅ ${completed} completed | ❌ ${slashed} slashed\n\n${summary}\n\n*Data sourced directly from Solana devnet — cryptographically verified.*`,
+          }],
+        };
+      }
+
+      case "dolores_withdraw_stake": {
+        const { agentId, operatorId, amountSol } = args as {
+          agentId: string;
+          operatorId: string;
+          amountSol: number;
+        };
+
+        const stakerKeypair = getOrCreateWallet();
+        const connection = new Connection(RPC_URL, "confirmed");
+
+        const idlFund = require(path.join(__dirname, "idl/dolores_fund.json"));
+        const provider = buildProvider(connection, stakerKeypair);
+        const fundProgram = new Program(idlFund as any, provider) as any;
+
+        const agentPubkey = new PublicKey(agentId);
+        const operatorPubkey = new PublicKey(operatorId);
+        const amountLamports = Math.floor(amountSol * 1e9);
+
+        const [fundPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("fund"), operatorPubkey.toBuffer(), agentPubkey.toBuffer()],
+          new PublicKey(FUND_PROGRAM_ID)
+        );
+        const [vaultPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), operatorPubkey.toBuffer(), agentPubkey.toBuffer()],
+          new PublicKey(FUND_PROGRAM_ID)
+        );
+        const [stakerPositionPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("staker"), fundPda.toBuffer(), stakerKeypair.publicKey.toBuffer()],
+          new PublicKey(FUND_PROGRAM_ID)
+        );
+
+        const withdrawTx = await fundProgram.methods
+          .withdrawStake(new BN(amountLamports))
+          .accounts({
+            stakerWallet: stakerKeypair.publicKey,
+            fund: fundPda,
+            vault: vaultPda,
+            stakerPosition: stakerPositionPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .transaction();
+
+        const sig = await signAndSend(connection, withdrawTx, stakerKeypair);
+
+        // Update registry declared stake
+        const idlRegistry = require(path.join(__dirname, "idl/dolores_registry.json"));
+        const registryProgram = new Program(idlRegistry as any, provider) as any;
+        const [registryPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("registry"), agentPubkey.toBuffer()],
+          new PublicKey(REGISTRY_PROGRAM_ID)
+        );
+
+        try {
+          const updateTx = await registryProgram.methods
+            .updateDeclaredStake(new BN(-amountLamports))
+            .accounts({
+              operator: stakerKeypair.publicKey,
+              registry: registryPda,
+            })
+            .transaction();
+          await signAndSend(connection, updateTx, stakerKeypair);
+        } catch { /* best effort */ }
+
+        return {
+          content: [{
+            type: "text",
+            text: `✅ **Stake withdrawn!**\n\nAgent: \`${agentId.slice(0, 8)}...\`\nWithdrawn: ${amountSol} SOL → \`${stakerKeypair.publicKey.toBase58().slice(0, 8)}...\`\nTX: \`${sig}\``,
+          }],
         };
       }
 

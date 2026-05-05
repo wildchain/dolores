@@ -107,7 +107,7 @@ export async function executePumpFunAction(
 
     } else {
         // sell
-        const tokenAmount = new BN(decision.tokenAmount ?? 0);
+        let tokenAmount = new BN(decision.tokenAmount ?? 0);
 
         const tokenProgram = await detectTokenProgram(connection, mint);
         const [global, feeConfig, sellState] = await Promise.all([
@@ -121,6 +121,30 @@ export async function executePumpFunAction(
             throw new Error("Bonding curve graduated — use PumpSwap AMM");
         }
 
+        // Check actual token balance and cap sell amount
+        const tokenAccounts = await connection.getTokenAccountsByOwner(user, { mint });
+        if (tokenAccounts.value.length === 0) {
+            throw new Error(`Agent has no token account for ${mint.toBase58().slice(0, 8)}...`);
+        }
+        const { AccountLayout } = await import("@solana/spl-token");
+        const ataData = AccountLayout.decode(tokenAccounts.value[0].account.data);
+        const actualBalance = ataData.amount;
+        console.log(`  Actual balance : ${actualBalance.toString()} raw units`);
+        if (actualBalance === BigInt(0)) {
+            throw new Error(`Agent has no ${mint.toBase58().slice(0, 8)}... tokens to sell`);
+        }
+        const requestedAmount = BigInt(tokenAmount.toString());
+        if (requestedAmount > actualBalance) {
+            console.log(`  ⚠️  Requested ${requestedAmount} > balance ${actualBalance}, capping to actual balance`);
+            tokenAmount = new BN(actualBalance.toString());
+        }
+
+        // Log all fee recipients so we can identify the correct one
+        console.log(`  global.feeRecipient     : ${global.feeRecipient.toBase58()}`);
+        global.feeRecipients?.forEach((r: PublicKey, i: number) => {
+            console.log(`  global.feeRecipients[${i}] : ${r.toBase58()}`);
+        });
+
         const solAmount = getSellSolAmountFromTokenAmount({
             global,
             feeConfig,
@@ -128,6 +152,13 @@ export async function executePumpFunAction(
             bondingCurve,
             amount: tokenAmount,
         });
+
+        console.log(`  Token program  : ${tokenProgram.toBase58()}`);
+        console.log(`  Token amount   : ${tokenAmount.toString()}`);
+        console.log(`  Sol amount out : ${solAmount.toString()}`);
+        console.log(`  BC complete    : ${bondingCurve.complete}`);
+        console.log(`  BC cashback    : ${(bondingCurve as any).cashbackEnabled ?? false}`);
+
 
         instructions = await sdk.sellInstructions({
             global,
@@ -144,10 +175,19 @@ export async function executePumpFunAction(
     }
 
     const tx = new Transaction().add(...instructions);
-    const txId = await sendAndConfirmTransaction(connection, tx, [agentKeypair], {
-        commitment: "confirmed",
-        skipPreflight: true,
-    });
+    let txId: string;
+    try {
+        txId = await sendAndConfirmTransaction(connection, tx, [agentKeypair], {
+            commitment: "confirmed",
+            skipPreflight: true,
+        });
+    } catch (err: any) {
+        if (typeof err?.getLogs === "function") {
+            const logs: string[] = await err.getLogs(connection);
+            console.error(`   TX logs:\n${logs.join("\n")}`);
+        }
+        throw err;
+    }
 
     return { action: decision.action, txSignature: txId };
 }

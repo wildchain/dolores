@@ -5,6 +5,8 @@ import {
   Param,
   Body,
   Query,
+  Headers,
+  UnauthorizedException,
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
@@ -38,6 +40,20 @@ export class AgentsController {
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
   ): Promise<AgentListItemDto[]> {
     return this.agentsService.getMarketplace(Math.min(limit, 100), offset);
+  }
+
+  /**
+   * GET /agents/runtime/all - Returns all agents with decrypted keypairs for the hosted runtime.
+   * Protected by RUNTIME_SECRET header — only the deployed runtime should call this.
+   * Must be declared before GET :id to prevent NestJS routing conflict.
+   */
+  @Get('runtime/all')
+  async getAllAgentsForRuntime(
+    @Headers('x-runtime-secret') secret: string,
+  ): Promise<{ agentId: string; template: string; name: string; operator: string; secretKey: number[] }[]> {
+    const expected = process.env.RUNTIME_SECRET;
+    if (!expected || secret !== expected) throw new UnauthorizedException();
+    return this.agentsService.getAllAgentsForRuntime();
   }
 
   /**
@@ -80,6 +96,18 @@ export class AgentsController {
     @Body() body: { payerWallet: string; operatorId: string },
   ): Promise<{ transaction: string; message: string }> {
     return this.agentsService.buildHireTx(agentId, body.payerWallet, body.operatorId);
+  }
+
+  /**
+   * POST /agents/:id/keypair - Store AES-256-GCM encrypted agent secret key for hosted runtime retrieval
+   */
+  @Post(':id/keypair')
+  async storeKeypair(
+    @Param('id') agentId: string,
+    @Body() body: { secretKey: number[] },
+  ): Promise<{ ok: boolean }> {
+    await this.agentsService.storeKeypair(agentId, body.secretKey);
+    return { ok: true };
   }
 
   @Post(':id/seed')

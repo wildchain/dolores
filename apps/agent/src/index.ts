@@ -2,6 +2,7 @@ import "dotenv/config";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as crypto from "crypto";
 import { Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 
@@ -28,10 +29,42 @@ const RECEIPT_URL = process.env.RECEIPT_URL || "http://localhost:8080";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || "3000");
 const AGENT_ID = process.env.AGENT_ID;
 const TEMPLATE = process.env.AGENT_TEMPLATE || "SOL_TRANSFER";
+// Set HOSTED_RUNTIME=true to run as a shared hosted runtime for all operators.
+// The API handles all keypair encryption/decryption — no keys needed here.
+const HOSTED_RUNTIME = process.env.HOSTED_RUNTIME === "true";
+const RUNTIME_SECRET = process.env.RUNTIME_SECRET || "";
+const AGENT_SYNC_INTERVAL = parseInt(process.env.AGENT_SYNC_INTERVAL_MS || "60000");
 
-if (!AGENT_ID) {
-  console.error("❌ AGENT_ID env var required");
-  process.exit(1);
+
+interface AgentMeta {
+  template: string;
+  name?: string;
+  operator?: string;
+}
+
+function loadAgentMeta(agentId: string): AgentMeta {
+  const metaPath = path.join(DOLORES_DIR, `${agentId}.meta.json`);
+  if (fs.existsSync(metaPath)) {
+    return JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+  }
+  // fallback: use TEMPLATE env var (backwards compat)
+  return { template: TEMPLATE };
+}
+
+function discoverAgents(): { agentId: string; template: string; name?: string }[] {
+  if (!fs.existsSync(DOLORES_DIR)) return [];
+  return fs
+    .readdirSync(DOLORES_DIR)
+    .filter(f => f.endsWith(".meta.json"))  // ← only agents with metadata
+    .map(f => {
+      const agentId = f.replace(".meta.json", "");
+      const meta = loadAgentMeta(agentId);
+      // verify keypair exists
+      const keypairPath = path.join(DOLORES_DIR, `${agentId}.json`);
+      if (!fs.existsSync(keypairPath)) return null;
+      return { agentId, ...meta };
+    })
+    .filter(Boolean) as { agentId: string; template: string; name?: string }[];
 }
 
 
@@ -43,6 +76,32 @@ function loadAgentKeypair(agentId: string): Keypair {
   }
   const raw = JSON.parse(fs.readFileSync(keyPath, "utf-8"));
   return Keypair.fromSecretKey(Uint8Array.from(raw));
+}
+
+// Fetch all agents from the API for the hosted runtime.
+// The API decrypts keypairs server-side before returning them over HTTPS.
+async function fetchAllAgentsFromAPI(): Promise<{ agentId: string; template: string; name?: string; keypair: Keypair }[]> {
+  try {
+    const res = await fetch(`${INDEXER_URL}/agents/runtime/all`, {
+      headers: { "x-runtime-secret": RUNTIME_SECRET },
+    });
+    if (!res.ok) {
+      console.error(`Runtime agent sync returned ${res.status}`);
+      return [];
+    }
+    const agents = await res.json() as { agentId: string; template: string; name: string; operator: string; secretKey: number[] }[];
+    return agents.flatMap(a => {
+      try {
+        return [{ agentId: a.agentId, template: a.template, name: a.name, keypair: Keypair.fromSecretKey(Uint8Array.from(a.secretKey)) }];
+      } catch {
+        console.error(`Skipping agent ${a.agentId.slice(0, 8)}...: invalid keypair in API`);
+        return [];
+      }
+    });
+  } catch (err: any) {
+    console.error(`Failed to sync agents from API: ${err?.message}`);
+    return [];
+  }
 }
 
 /** Mark a task completed in the API cache — prevents retry loops */
@@ -743,41 +802,33 @@ async function processPumpFunTask(
   console.log(`\n✅ PumpFun task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-
-// Main 
-
-async function main() {
-  console.log("\n🤖 Dolores Agent Runtime\n");
-  console.log(`Agent ID     : ${AGENT_ID}`);
-  console.log(`Template     : ${TEMPLATE}`);
-  console.log(`RPC          : ${RPC_URL}`);
-  console.log(`Indexer      : ${INDEXER_URL}`);
-  console.log(`Receipt URL  : ${RECEIPT_URL}`);
-  console.log(`Poll interval: ${POLL_INTERVAL}ms\n`);
-
-  const agentKeypair = loadAgentKeypair(AGENT_ID!);
-  const connection = new Connection(RPC_URL, "confirmed");
+async function runAgent(
+  agentId: string,
+  template: string,
+  connection: Connection,
+  keypairOverride?: Keypair,
+): Promise<void> {
+  const agentKeypair = keypairOverride ?? loadAgentKeypair(agentId);
   const wallet = new Wallet(agentKeypair);
   const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
   const adjProgram = new Program(idlAdjudication as any, provider);
 
   const balance = await connection.getBalance(agentKeypair.publicKey);
-  console.log(`Balance      : ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+  console.log(`▶ Agent ${agentId.slice(0, 8)}... [${template}] — ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
 
   if (balance < 10_000_000) {
-    console.warn(`⚠️  Low balance — fund at https://faucet.solana.com`);
+    console.warn(`  ⚠️  Low balance on ${agentId.slice(0, 8)}... — fund at https://faucet.solana.com`);
   }
 
-  console.log(`\n👂 Listening for tasks...`);
-
-  const stop = startPolling(
-    INDEXER_URL, AGENT_ID!, POLL_INTERVAL,
+  startPolling(
+    INDEXER_URL, agentId, POLL_INTERVAL,
     async (tasks) => {
-      console.log(`\n📬 ${tasks.length} pending task(s)`);
+      console.log(`\n📬 [${agentId.slice(0, 8)}...] ${tasks.length} pending task(s)`);
       for (const task of tasks) {
         console.log(`\n📋 Task: ${task.taskId.slice(0, 16)}...`);
         console.log(`   Instruction : ${task.instruction}`);
         console.log(`   Deadline    : ${new Date(task.deadline * 1000).toISOString()}`);
+
         // SOL transfers are always allowed regardless of template
         const solDecision = await executeTask(task.instruction, "SOL_TRANSFER").catch(() => null);
         if (solDecision && solDecision.action === "transfer") {
@@ -785,7 +836,7 @@ async function main() {
           continue;
         }
 
-        switch (TEMPLATE) {
+        switch (template) {
           case "JUPITER_TRADER":
             await processJupiterTask(task, agentKeypair, connection, adjProgram);
             break;
@@ -810,15 +861,90 @@ async function main() {
       }
     }
   );
+}
 
 
+// Main
+async function main() {
+  const connection = new Connection(RPC_URL, "confirmed");
+
+  if (HOSTED_RUNTIME) {
+    // ── Hosted runtime mode ──────────────────────────────────────────────────
+    // Runs as Dolores infrastructure. No AGENT_ID or OPERATOR_PUBKEY needed.
+    // Periodically re-syncs from the API so newly registered agents are picked
+    // up automatically — users just register via MCP and their agents start running.
+    console.log("\n🤖 Dolores Hosted Runtime\n");
+    console.log(`RPC          : ${RPC_URL}`);
+    console.log(`API          : ${INDEXER_URL}`);
+    console.log(`Poll interval: ${POLL_INTERVAL}ms`);
+    console.log(`Agent sync   : every ${AGENT_SYNC_INTERVAL / 1000}s\n`);
+
+    // Track which agents are already running so we don't double-spawn
+    const runningAgents = new Set<string>();
+
+    const syncAndLaunchNewAgents = async () => {
+      const agents = await fetchAllAgentsFromAPI();
+      for (const { agentId, template, keypair } of agents) {
+        if (runningAgents.has(agentId)) continue;
+        runningAgents.add(agentId);
+        console.log(`▶ Spawning agent ${agentId.slice(0, 8)}... [${template}]`);
+        runAgent(agentId, template, connection, keypair).catch(err => {
+          console.error(` Agent ${agentId.slice(0, 8)}... crashed: ${err?.message}`);
+          runningAgents.delete(agentId); // allow re-spawn on next sync
+        });
+      }
+      console.log(`[sync] ${runningAgents.size} agent(s) running`);
+    };
+
+    await syncAndLaunchNewAgents();
+    setInterval(syncAndLaunchNewAgents, AGENT_SYNC_INTERVAL);
+
+  } else if (AGENT_ID) {
+    // ── Single-agent mode (backwards compatible) ─────────────────────────────
+    console.log("\n🤖 Dolores Agent Runtime\n");
+    console.log(`Agent ID     : ${AGENT_ID}`);
+    console.log(`RPC          : ${RPC_URL}`);
+    console.log(`Indexer      : ${INDEXER_URL}`);
+    console.log(`Poll interval: ${POLL_INTERVAL}ms\n`);
+
+    const meta = loadAgentMeta(AGENT_ID);
+    const template = meta.template || TEMPLATE;
+    console.log(`Template     : ${template}`);
+    console.log(`👂 Listening for tasks...`);
+
+    await runAgent(AGENT_ID, template, connection);
+
+  } else {
+    // ── Local manager mode — run all agents from ~/.dolores/agents/ ───────────
+    const agents = discoverAgents();
+
+    if (agents.length === 0) {
+      console.error(" No agents found in ~/.dolores/agents/");
+      console.error("   Register an agent first with: dolores register");
+      process.exit(1);
+    }
+
+    console.log("\n🤖 Dolores Agent Manager\n");
+    console.log(`RPC          : ${RPC_URL}`);
+    console.log(`Indexer      : ${INDEXER_URL}`);
+    console.log(`Poll interval: ${POLL_INTERVAL}ms`);
+    console.log(`Agents       : ${agents.length}\n`);
+
+    await Promise.all(
+      agents.map(({ agentId, template }) =>
+        runAgent(agentId, template, connection).catch(err =>
+          console.error(` Agent ${agentId.slice(0, 8)}... crashed: ${err?.message}`)
+        )
+      )
+    );
+  }
 
   process.on("SIGINT", () => {
-    console.log("\n\nStopping agent...");
-    stop();
+    console.log("\n\nStopping agent manager...");
     process.exit(0);
   });
 }
+
 
 main().catch((err) => {
   console.error("Fatal error:", err);

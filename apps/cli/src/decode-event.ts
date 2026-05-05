@@ -2,7 +2,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { BorshCoder, EventParser } from "@coral-xyz/anchor";
 import idlRegistry from "./idl/dolores_registry.json";
 
-const REGISTRY_PROGRAM_ID = "8mxK8nGahGAtGKWCjszTp6joRkW7XvVMXaNeEqda56pt";
+const REGISTRY_PROGRAM_ID = "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey";
 const TX_SIGNATURE = process.argv[2];
 
 if (!TX_SIGNATURE) {
