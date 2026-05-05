@@ -9,15 +9,24 @@ import idlAdjudication from "../idl/dolores_adjudication.json";
 import { startPolling, PendingTask } from "./poll";
 import { executeTask, AgentDecision } from "./execute";
 import { executeJupiterTask, JupiterDecision } from "./jupiter/execute-jupiter";
-import { buildJupiterReceipt, signJupiterReceipt, executeJupiterSwap, completeJupiterTaskOnChain } from "./jupiter/submit-jupiter";
+import {
+  buildJupiterReceipt,
+  signJupiterReceipt,
+  executeJupiterSwap,
+  completeJupiterTaskOnChain,
+} from "./jupiter/submit-jupiter";
 import { buildReceipt, signReceipt } from "./receipt";
-import { executeSolTransfer, completeTaskOnChain, submitToIndexer } from "./submit";
+import {
+  executeSolTransfer,
+  completeTaskOnChain,
+  submitToIndexer,
+} from "./submit";
 
-// Config 
+// Config
 
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
-const INDEXER_URL = process.env.INDEXER_URL || "http://localhost:8080";
+const INDEXER_URL = process.env.INDEXER_URL || "http://localhost:8545";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || "3000");
 const AGENT_ID = process.env.AGENT_ID;
 const TEMPLATE = process.env.AGENT_TEMPLATE || "SOL_TRANSFER";
@@ -27,7 +36,7 @@ if (!AGENT_ID) {
   process.exit(1);
 }
 
-// Load keypair 
+// Load keypair
 
 function loadAgentKeypair(agentId: string): Keypair {
   const keyPath = path.join(DOLORES_DIR, `${agentId}.json`);
@@ -39,13 +48,13 @@ function loadAgentKeypair(agentId: string): Keypair {
   return Keypair.fromSecretKey(Uint8Array.from(raw));
 }
 
-// Process SOL_TRANSFER task 
+// Process SOL_TRANSFER task
 
 async function processSolTransferTask(
   task: PendingTask,
   agentKeypair: Keypair,
   connection: Connection,
-  adjProgram: Program
+  adjProgram: Program,
 ): Promise<void> {
   console.log(`\n🤖 Asking Claude (template: SOL_TRANSFER)...`);
   let decision: AgentDecision;
@@ -61,9 +70,10 @@ async function processSolTransferTask(
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
     await fetch(`${INDEXER_URL}/tasks/${task.taskId}/status`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "dismissed" }),
-    }).catch(() => { });
+    }).catch(() => {});
     return;
   }
 
@@ -74,7 +84,10 @@ async function processSolTransferTask(
   let txSignature: string;
   try {
     txSignature = await executeSolTransfer(
-      connection, agentKeypair, decision.recipient, decision.amountLamports
+      connection,
+      agentKeypair,
+      decision.recipient,
+      decision.amountLamports,
     );
   } catch (err: any) {
     console.error(`   ❌ Transfer failed: ${err?.message}`);
@@ -85,8 +98,12 @@ async function processSolTransferTask(
 
   const timestamp = Math.floor(Date.now() / 1000);
   const receipt = buildReceipt({
-    taskId: task.taskId, agentId: agentKeypair.publicKey.toBase58(),
-    instruction: task.instruction, action: decision, txSignature, timestamp,
+    taskId: task.taskId,
+    agentId: agentKeypair.publicKey.toBase58(),
+    instruction: task.instruction,
+    action: decision,
+    txSignature,
+    timestamp,
   });
   const signed = signReceipt(receipt, agentKeypair);
 
@@ -96,7 +113,11 @@ async function processSolTransferTask(
   const taskIdBuffer = Buffer.from(task.taskId, "hex");
   try {
     const completeTx = await completeTaskOnChain(
-      connection, agentKeypair, adjProgram, taskIdBuffer, signed.outputHash
+      connection,
+      agentKeypair,
+      adjProgram,
+      taskIdBuffer,
+      signed.outputHash,
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
   } catch (err: any) {
@@ -107,7 +128,11 @@ async function processSolTransferTask(
   console.log(`\n📡 Submitting to indexer...`);
   try {
     const { attestationTx, cid } = await submitToIndexer(
-      INDEXER_URL, task.taskId, signed, timestamp, txSignature
+      INDEXER_URL,
+      task.taskId,
+      signed,
+      timestamp,
+      txSignature,
     );
     console.log(`   ✅ CID: ${cid}`);
     console.log(`   ✅ Attestation: ${attestationTx ?? "pending"}`);
@@ -124,7 +149,7 @@ async function processJupiterTask(
   task: PendingTask,
   agentKeypair: Keypair,
   connection: Connection,
-  adjProgram: Program
+  adjProgram: Program,
 ): Promise<void> {
   if (!process.env.JUPITER_API_KEY) {
     console.error(`   ❌ JUPITER_API_KEY not set in .env`);
@@ -149,15 +174,23 @@ async function processJupiterTask(
 
   if (decision.action === "wait") {
     console.log(`   ⏳ ${decision.reason}`);
-    console.log(`   Current: $${decision.currentPrice} | Target: $${decision.targetPrice}`);
+    console.log(
+      `   Current: $${decision.currentPrice} | Target: $${decision.targetPrice}`,
+    );
     return;
   }
 
   console.log(`\n⚡ Executing Jupiter swap...`);
-  console.log(`   ${decision.amountSol} ${decision.inputSymbol} → ${decision.outputSymbol}`);
+  console.log(
+    `   ${decision.amountSol} ${decision.inputSymbol} → ${decision.outputSymbol}`,
+  );
   console.log(`   Slippage: ${decision.slippageBps} bps`);
 
-  let swapResult: { txSignature: string; inputAmount: string; outputAmount: string };
+  let swapResult: {
+    txSignature: string;
+    inputAmount: string;
+    outputAmount: string;
+  };
   try {
     swapResult = await executeJupiterSwap(agentKeypair, decision);
   } catch (err: any) {
@@ -180,7 +213,10 @@ async function processJupiterTask(
     outputAmount: swapResult.outputAmount,
     timestamp,
   });
-  const { outputHash, agentSignature } = signJupiterReceipt(receipt, agentKeypair);
+  const { outputHash, agentSignature } = signJupiterReceipt(
+    receipt,
+    agentKeypair,
+  );
 
   console.log(`\n📝 output_hash: ${outputHash}`);
   console.log(`🔗 Writing on-chain...`);
@@ -188,7 +224,11 @@ async function processJupiterTask(
   const taskIdBuffer = Buffer.from(task.taskId, "hex");
   try {
     const completeTx = await completeJupiterTaskOnChain(
-      connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
+      connection,
+      agentKeypair,
+      adjProgram,
+      taskIdBuffer,
+      outputHash,
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
   } catch (err: any) {
@@ -199,15 +239,20 @@ async function processJupiterTask(
   console.log(`\n📡 Submitting to indexer...`);
   try {
     const res = await fetch(`${INDEXER_URL}/tasks/${task.taskId}/complete`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ outputHash, completedAt: timestamp }),
     });
 
     await fetch(`${INDEXER_URL}/receipts/upload`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         agentId: agentKeypair.publicKey.toBase58(),
-        taskId: task.taskId, outputHash, timestamp, agentSignature,
+        taskId: task.taskId,
+        outputHash,
+        timestamp,
+        agentSignature,
       }),
     });
 
@@ -232,7 +277,9 @@ async function main() {
   const agentKeypair = loadAgentKeypair(AGENT_ID!);
   const connection = new Connection(RPC_URL, "confirmed");
   const wallet = new Wallet(agentKeypair);
-  const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
+  const provider = new AnchorProvider(connection, wallet, {
+    commitment: "confirmed",
+  });
   const adjProgram = new Program(idlAdjudication as any, provider);
 
   const balance = await connection.getBalance(agentKeypair.publicKey);
@@ -245,21 +292,30 @@ async function main() {
   console.log(`\n👂 Listening for tasks...`);
 
   const stop = startPolling(
-    INDEXER_URL, AGENT_ID!, POLL_INTERVAL,
-    async (tasks) => {
+    INDEXER_URL,
+    AGENT_ID!,
+    POLL_INTERVAL,
+    async tasks => {
       console.log(`\n📬 ${tasks.length} pending task(s)`);
       for (const task of tasks) {
         console.log(`\n📋 Task: ${task.taskId.slice(0, 16)}...`);
         console.log(`   Instruction : ${task.instruction}`);
-        console.log(`   Deadline    : ${new Date(task.deadline * 1000).toISOString()}`);
+        console.log(
+          `   Deadline    : ${new Date(task.deadline * 1000).toISOString()}`,
+        );
 
         if (TEMPLATE === "JUPITER_TRADER") {
           await processJupiterTask(task, agentKeypair, connection, adjProgram);
         } else {
-          await processSolTransferTask(task, agentKeypair, connection, adjProgram);
+          await processSolTransferTask(
+            task,
+            agentKeypair,
+            connection,
+            adjProgram,
+          );
         }
       }
-    }
+    },
   );
 
   process.on("SIGINT", () => {
@@ -269,7 +325,7 @@ async function main() {
   });
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error("Fatal error:", err);
   process.exit(1);
 });

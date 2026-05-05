@@ -91,6 +91,10 @@ export async function submitToIndexer(
       outputHash: signedReceipt.outputHash,
       timestamp: signedReceipt.receipt.timestamp_unix,
       agentSignature: signedReceipt.agentSignature,
+      instruction: signedReceipt.receipt.instruction,
+      txSignature: signedReceipt.receipt.execution.tx_signature,
+      resultStatus: signedReceipt.receipt.result.status,
+      resultSummary: signedReceipt.receipt.result.summary,
     }),
   });
 

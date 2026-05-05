@@ -5,7 +5,7 @@ import type {
 } from "@dolores/shared";
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8545";
 
 export interface ChallengeResponse {
   message: string;
@@ -30,6 +30,7 @@ export interface AttestationRecord {
   outputHash: number[];
   newReputation: number;
   attestedAt: number; // Unix timestamp (seconds)
+  receiptCid?: string; // IPFS CID of the execution receipt (if available)
 }
 
 type TaskFilterParams = {

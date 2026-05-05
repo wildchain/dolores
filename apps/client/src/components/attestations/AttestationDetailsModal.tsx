@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { Modal } from "@mantine/core";
 import { StatTile } from "@/components/ui";
 import type { AttestationRecord } from "@/lib/api";
@@ -8,6 +9,29 @@ interface AttestationDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   attestation: AttestationRecord | null;
+}
+
+interface ExecutionReceipt {
+  schema_version: string;
+  task_id: string;
+  agent_id: string;
+  instruction: string;
+  timestamp_unix: number;
+  execution: { tx_signature: string };
+  result: { status: string; summary: string };
+}
+
+const IPFS_GATEWAY =
+  process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ?? "http://localhost:3002/get";
+
+const SOLANA_EXPLORER_BASE = "https://explorer.solana.com/tx";
+const SOLANA_CLUSTER =
+  process.env.NEXT_PUBLIC_SOLANA_NETWORK === "mainnet-beta"
+    ? ""
+    : `?cluster=${process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet"}`;
+
+function explorerUrl(txSig: string) {
+  return `${SOLANA_EXPLORER_BASE}/${txSig}${SOLANA_CLUSTER}`;
 }
 
 function fmtDateTime(ts: number) {
@@ -48,6 +72,32 @@ export function AttestationDetailsModal({
   onClose,
   attestation: a,
 }: AttestationDetailsModalProps) {
+  const [receipt, setReceipt] = useState<ExecutionReceipt | null>(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !a?.receiptCid) {
+      setReceipt(null);
+      return;
+    }
+    let cancelled = false;
+    setReceiptLoading(true);
+    fetch(`${IPFS_GATEWAY}/${a.receiptCid}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!cancelled) setReceipt(data as ExecutionReceipt);
+      })
+      .catch(() => {
+        if (!cancelled) setReceipt(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReceiptLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, a?.receiptCid]);
+
   if (!a) return null;
 
   const outputHex = Array.isArray(a.outputHash)
@@ -197,6 +247,77 @@ export function AttestationDetailsModal({
             {outputHex || "—"}
           </div>
         </div>
+
+        {/* Execution receipt */}
+        {(a.receiptCid || receiptLoading) && (
+          <div>
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                color: "var(--fg-subtle)",
+                textTransform: "uppercase",
+                letterSpacing: ".14em",
+                marginBottom: 10,
+              }}
+            >
+              Execution
+            </div>
+            <div
+              style={{
+                background: "var(--surface-raised)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-sm)",
+                padding: 16,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              {receiptLoading ? (
+                <span style={{ color: "var(--fg-subtle)" }}>
+                  Loading receipt…
+                </span>
+              ) : receipt ? (
+                <>
+                  <KvRow label="Instruction" value={receipt.instruction} />
+                  <KvRow
+                    label="Result"
+                    value={`${receipt.result.status} — ${receipt.result.summary}`}
+                  />
+                  <div className="flex justify-between items-start gap-4">
+                    <span
+                      style={{ color: "var(--fg-muted)", whiteSpace: "nowrap" }}
+                    >
+                      Tx:
+                    </span>
+                    <a
+                      href={explorerUrl(receipt.execution.tx_signature)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: "var(--accent)",
+                        fontWeight: 600,
+                        textAlign: "right",
+                        overflowWrap: "break-word",
+                        wordBreak: "break-all",
+                        maxWidth: 340,
+                      }}
+                    >
+                      {receipt.execution.tx_signature}
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <span style={{ color: "var(--fg-subtle)" }}>
+                  CID: {a.receiptCid}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );

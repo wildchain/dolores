@@ -60,6 +60,6 @@ COPY --chown=node:node --from=builder /app/apps/api/dist              ./apps/api
 # Optional: bake in .env for local Docker usage (exclude via .dockerignore in prod)
 COPY --chown=node:node apps/api/.env ./.env
 
-EXPOSE 3001
+EXPOSE 8545
 
 CMD ["node", "apps/api/dist/main.js"]

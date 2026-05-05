@@ -10,6 +10,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { ChallengesModule } from './attestation/attestation.module';
 import { SyncModule } from './sync/sync.module';
 import { IpfsModule } from './ipfs/ipfs.module';
+import { ReceiptsModule } from './receipts/receipts.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { IpfsModule } from './ipfs/ipfs.module';
     ChallengesModule,
     SyncModule,
     IpfsModule,
+    ReceiptsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

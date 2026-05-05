@@ -6,12 +6,17 @@ import { Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { executeTask } from "./execute";
 import { buildReceipt, signReceipt } from "./receipt";
-import { executeSolTransfer, submitAttestation } from "./submit";
+import {
+  executeSolTransfer,
+  submitToIndexer,
+  submitAttestation,
+} from "./submit";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const AGENT_ID = process.env.AGENT_ID!;
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
+const INDEXER_URL = "http://localhost:8545";
 
 if (!AGENT_ID) {
   console.error("❌ AGENT_ID env var required");
@@ -123,6 +128,24 @@ async function main() {
   console.log(`\nOutput hash  : ${outputHash}`);
   console.log(`Agent sig    : ${agentSignature.slice(0, 16)}...`);
 
+  // ── Submit to indexer (pins receipt to IPFS, stores receipt-cid) ─────────
+  console.log("\nUploading receipt to indexer...");
+  let cid: string;
+  try {
+    const indexerResult = await submitToIndexer(
+      INDEXER_URL,
+      taskId,
+      { receipt, outputHash, agentSignature },
+      timestamp,
+      txSignature,
+    );
+    cid = indexerResult.cid;
+    console.log(`Receipt CID  : ${cid}`);
+  } catch (err: any) {
+    console.error(`❌ Indexer upload failed: ${err?.message}`);
+    return;
+  }
+
   // ── Submit attestation on-chain ───────────────────────────────────────────
   console.log("\nSubmitting attestation on-chain...");
   let attestationTx: string;
@@ -146,6 +169,7 @@ async function main() {
   console.log(`  Claude parsed instruction    ✓`);
   console.log(`  SOL transfer executed        ✓`);
   console.log(`  output_hash signed by agent  ✓`);
+  console.log(`  Receipt pinned to IPFS       ✓  (${cid})`);
   console.log(`  Attestation submitted        ✓`);
 }
 

@@ -59,6 +59,11 @@ export class AttestationService {
       `AttestationSubmitted: agent=${agentId} score=${event.score} newReputation=${event.newReputation} attestedAt=${attestedAt}`,
     );
     try {
+      const outputHashBytes: number[] = Array.from(event.outputHash ?? []);
+      const outputHashHex = Buffer.from(outputHashBytes).toString('hex');
+      const receiptCid =
+        (await this.rocksdb.get(`receipt-cid:${outputHashHex}`)) ?? undefined;
+
       await Promise.all([
         this.agentsService.updateAgentCacheFields(agentId, {
           reputationScore: event.newReputation,
@@ -67,9 +72,10 @@ export class AttestationService {
         this.cacheAttestation({
           agentId,
           score: event.score,
-          outputHash: Array.from(event.outputHash ?? []),
+          outputHash: outputHashBytes,
           newReputation: event.newReputation,
           attestedAt,
+          receiptCid,
         }),
       ]);
     } catch (error) {

@@ -4,6 +4,7 @@ export interface AttestationCacheData {
   outputHash: number[]; // 32-byte output hash
   newReputation: number; // Reputation after this attestation
   attestedAt: number; // Unix timestamp (seconds)
+  receiptCid?: string; // IPFS CID of the execution receipt (if available)
 }
 
 export class AttestationCacheEntity {

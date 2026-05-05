@@ -3,6 +3,7 @@ import { json } from "@helia/json";
 import { FsBlockstore } from "blockstore-fs";
 import { CID } from "multiformats/cid";
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 
 const dataDir = process.env.IPFS_DATA_DIR ?? "./data/ipfs";
 const port = Number(process.env.IPFS_PORT ?? 3002);
@@ -12,6 +13,7 @@ const helia = await createHelia({ blockstore });
 const j = json(helia);
 
 const app = Fastify({ logger: true });
+await app.register(cors, { origin: true });
 
 app.get("/", async (_request, _reply) => {
   return { name: "dolores-ipfs" };
