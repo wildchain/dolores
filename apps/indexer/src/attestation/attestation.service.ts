@@ -3,7 +3,6 @@ import {
   Connection,
   Keypair,
   PublicKey,
-  SystemProgram,
   Transaction,
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
@@ -40,37 +39,53 @@ export class AttestationService implements OnModuleInit {
     try {
       const rpcUrl =
         process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
-      const reviewerKeyPath =
-        process.env.REVIEWER_KEYPAIR_PATH || process.env.WATCHER_KEYPAIR_PATH;
-      const idlPath = process.env.DOLORES_IDL_PATH;
 
-      if (!reviewerKeyPath || !idlPath) {
+      // Keypair: inline JSON array string takes priority over file path
+      let keypairBytes: Uint8Array | null = null;
+      if (process.env.REVIEWER_KEYPAIR) {
+        keypairBytes = Uint8Array.from(JSON.parse(process.env.REVIEWER_KEYPAIR));
+      } else {
+        const reviewerKeyPath =
+          process.env.REVIEWER_KEYPAIR_PATH || process.env.WATCHER_KEYPAIR_PATH;
+        if (reviewerKeyPath && fs.existsSync(reviewerKeyPath)) {
+          keypairBytes = Uint8Array.from(
+            JSON.parse(fs.readFileSync(reviewerKeyPath, 'utf-8')),
+          );
+        }
+      }
+
+      if (!keypairBytes) {
         this.logger.warn(
-          'REVIEWER_KEYPAIR_PATH or DOLORES_IDL_PATH not set — attestation disabled',
+          'No reviewer keypair found — set REVIEWER_KEYPAIR or REVIEWER_KEYPAIR_PATH. Attestation disabled.',
         );
         return;
       }
 
-      if (!fs.existsSync(reviewerKeyPath)) {
-        this.logger.warn(`Reviewer keypair not found at ${reviewerKeyPath}`);
+      // IDL: inline JSON string takes priority over file path
+      let idl: any = null;
+      if (process.env.DOLORES_IDL) {
+        idl = JSON.parse(process.env.DOLORES_IDL);
+      } else {
+        const idlPath = process.env.DOLORES_IDL_PATH;
+        if (idlPath && fs.existsSync(idlPath)) {
+          idl = JSON.parse(fs.readFileSync(idlPath, 'utf-8'));
+        }
+      }
+
+      if (!idl) {
+        this.logger.warn(
+          'No IDL found — set DOLORES_IDL or DOLORES_IDL_PATH. Attestation disabled.',
+        );
         return;
       }
 
-      if (!fs.existsSync(idlPath)) {
-        this.logger.warn(`IDL not found at ${idlPath}`);
-        return;
-      }
-
-      this.reviewerKeypair = Keypair.fromSecretKey(
-        Uint8Array.from(JSON.parse(fs.readFileSync(reviewerKeyPath, 'utf-8'))),
-      );
+      this.reviewerKeypair = Keypair.fromSecretKey(keypairBytes);
 
       this.connection = new Connection(rpcUrl, 'confirmed');
       const wallet = new Wallet(this.reviewerKeypair);
       const provider = new AnchorProvider(this.connection, wallet, {
         commitment: 'confirmed',
       });
-      const idl = JSON.parse(fs.readFileSync(idlPath, 'utf-8'));
 
       this.program = new Program(idl, provider);
 
@@ -128,6 +143,11 @@ export class AttestationService implements OnModuleInit {
         [Buffer.from('registry'), agentPublicKey.toBuffer()],
         this.program.programId,
       );
+
+      const [pendingAttestationPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from('pending_attestation'), agentPublicKey.toBuffer(), outputHashBytes],
+        this.program.programId,
+      );
       const agentSignatureBytes = Buffer.from(receipt.agentSignature ?? '', 'hex');
 
       const ed25519Ix = Ed25519Program.createInstructionWithPublicKey({
@@ -160,7 +180,7 @@ export class AttestationService implements OnModuleInit {
         `Pending attestation submitted — agent: ${receipt.agentId} taskId: ${receipt.taskId} tx: ${sig}`,
       );
 
-      return { signature: sig, pendingAttestationPda: null };
+      return { signature: sig, pendingAttestationPda: pendingAttestationPda.toBase58() };
     } catch (err: any) {
       this.logger.error(
         `Failed to submit pending attestation for ${receipt.taskId}: ${err?.message ?? err}`,
@@ -177,39 +197,18 @@ export class AttestationService implements OnModuleInit {
       return null;
     }
 
-    const outputHashBytes = this.parseHash(
-      receipt.outputHash,
-      receipt.taskId,
-      'outputHash',
-    );
-    if (!outputHashBytes) return null;
-
     const targetAgent = new PublicKey(receipt.agentId);
-    const [reviewerRegistryPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('registry'), this.reviewerKeypair.publicKey.toBuffer()],
-      this.program.programId,
-    );
     const [registryPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('registry'), targetAgent.toBuffer()],
-      this.program.programId,
-    );
-    const [pendingAttestationPda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('pending_attestation'),
-        targetAgent.toBuffer(),
-        outputHashBytes,
-      ],
       this.program.programId,
     );
 
     try {
       const approveIx = await (this.program.methods as any)
-        .approveAttestation(Array.from(outputHashBytes))
+        .recordChallengeSurvival()
         .accounts({
-          reviewer: this.reviewerKeypair.publicKey,
-          reviewerRegistry: reviewerRegistryPda,
+          authority: this.reviewerKeypair.publicKey,
           registry: registryPda,
-          pendingAttestation: pendingAttestationPda,
         })
         .instruction();
 
@@ -218,9 +217,7 @@ export class AttestationService implements OnModuleInit {
         this.connection,
         tx,
         [this.reviewerKeypair],
-        {
-          commitment: 'confirmed',
-        },
+        { commitment: 'confirmed' },
       );
     } catch (err: any) {
       this.logger.error(
@@ -242,54 +239,18 @@ export class AttestationService implements OnModuleInit {
       return null;
     }
 
-    const outputHashBytes = this.parseHash(
-      receipt.outputHash,
-      receipt.taskId,
-      'outputHash',
-    );
-    const violationHashBytes = this.parseHash(
-      violationHashHex,
-      receipt.taskId,
-      'violationHash',
-    );
-    if (!outputHashBytes || !violationHashBytes) return null;
-
     const targetAgent = new PublicKey(receipt.agentId);
-    const [reviewerRegistryPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('registry'), this.reviewerKeypair.publicKey.toBuffer()],
-      this.program.programId,
-    );
     const [registryPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('registry'), targetAgent.toBuffer()],
-      this.program.programId,
-    );
-    const [pendingAttestationPda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('pending_attestation'),
-        targetAgent.toBuffer(),
-        outputHashBytes,
-      ],
-      this.program.programId,
-    );
-    const [challengePda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('challenge'), pendingAttestationPda.toBuffer()],
       this.program.programId,
     );
 
     try {
       const challengeIx = await (this.program.methods as any)
-        .challengeAttestation(
-          Array.from(outputHashBytes),
-          Array.from(violationHashBytes),
-          evidenceCid,
-        )
+        .recordSlash()
         .accounts({
-          reviewer: this.reviewerKeypair.publicKey,
-          reviewerRegistry: reviewerRegistryPda,
+          slashAuthority: this.reviewerKeypair.publicKey,
           registry: registryPda,
-          pendingAttestation: pendingAttestationPda,
-          challenge: challengePda,
-          systemProgram: SystemProgram.programId,
         })
         .instruction();
 
