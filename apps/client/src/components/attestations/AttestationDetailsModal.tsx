@@ -4,6 +4,7 @@ import { Modal } from "@mantine/core";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { StatTile } from "@/components/ui";
 import type { AttestationRecord } from "@/lib/api";
+import { tasksApi } from "@/lib/api";
 import {
   buildFileChallengeTransaction,
   isValidTaskId,
@@ -91,6 +92,13 @@ export function AttestationDetailsModal({
 
   const [receipt, setReceipt] = useState<ExecutionReceipt | null>(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
+  const [taskDisputed, setTaskDisputed] = useState(false);
+  const [taskChallengePda, setTaskChallengePda] = useState<string | undefined>(
+    undefined,
+  );
+  const [taskDisputeReason, setTaskDisputeReason] = useState<
+    string | undefined
+  >(undefined);
 
   // Challenge form state
   const [challengeStep, setChallengeStep] = useState<ChallengeStep>("idle");
@@ -126,7 +134,38 @@ export function AttestationDetailsModal({
     setChallengeStep("idle");
     setChallengeError("");
     setChallengeTxSig("");
+    setTaskDisputed(false);
+    setTaskChallengePda(undefined);
+    setTaskDisputeReason(undefined);
   }, [a?.agentId, a?.attestedAt, isOpen]);
+
+  // Fetch task status once receipt is loaded and has a valid taskId
+  useEffect(() => {
+    const taskId = receipt?.task_id ?? "";
+    if (!isValidTaskId(taskId)) return;
+    let cancelled = false;
+    tasksApi
+      .getTaskDetails(taskId)
+      .then(res => {
+        if (cancelled) return;
+        const task = res.data as {
+          status: string;
+          challengePda?: string;
+          disputeReason?: string;
+        };
+        if (task?.status === "disputed") {
+          setTaskDisputed(true);
+          setTaskChallengePda(task.challengePda);
+          setTaskDisputeReason(task.disputeReason);
+        }
+      })
+      .catch(() => {
+        // Task may not be on-chain — silently ignore
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [receipt?.task_id]);
 
   if (!a) return null;
 
@@ -135,6 +174,7 @@ export function AttestationDetailsModal({
     !!publicKey &&
     !!signTransaction &&
     isValidTaskId(taskId) &&
+    !taskDisputed &&
     challengeStep === "idle";
 
   async function handleFileChallenge() {
@@ -387,6 +427,56 @@ export function AttestationDetailsModal({
                 </span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Disputed task banner */}
+        {taskDisputed && (
+          <div
+            style={{
+              background: "rgba(245,158,11,0.08)",
+              border: "1px solid rgba(245,158,11,0.30)",
+              borderRadius: "var(--radius-sm)",
+              padding: "10px 14px",
+              marginBottom: 6,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                color: "#d97706",
+                fontWeight: 600,
+              }}
+            >
+              ⚠ This task has already been challenged on-chain
+            </span>
+            {taskChallengePda && (
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "var(--fs-11)",
+                  color: "rgba(217,119,6,0.7)",
+                }}
+              >
+                Challenge PDA: {taskChallengePda.slice(0, 8)}...
+                {taskChallengePda.slice(-4)}
+              </span>
+            )}
+            {taskDisputeReason && (
+              <span
+                style={{
+                  fontSize: "var(--fs-12)",
+                  color: "rgba(217,119,6,0.65)",
+                  marginTop: 2,
+                }}
+              >
+                {taskDisputeReason}
+              </span>
+            )}
           </div>
         )}
 

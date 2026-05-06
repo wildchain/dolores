@@ -200,6 +200,31 @@ export class ChallengesService {
   }
 
   /**
+   * Get all challenges with optional agentId filter and pagination
+   */
+  async getAllChallenges(
+    limit = 20,
+    offset = 0,
+    agentId?: string,
+  ): Promise<ChallengeCacheData[]> {
+    const keys = await this.rocksdb.keys('challenge:');
+    const results: ChallengeCacheData[] = [];
+
+    for (const key of keys) {
+      const raw = await this.rocksdb.get(key);
+      if (raw) {
+        const data: ChallengeCacheData = JSON.parse(raw);
+        if (!agentId || data.agentId === agentId) {
+          results.push(data);
+        }
+      }
+    }
+
+    results.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    return results.slice(offset, offset + limit);
+  }
+
+  /**
    * Get cached challenge
    */
   private async getCachedChallenge(

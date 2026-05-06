@@ -3,9 +3,12 @@ import {
   Get,
   Post,
   Param,
+  Query,
   Body,
   UseGuards,
   Request,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { ChallengesService } from './challenges.service';
 import { AuthGuard } from '../../auth/auth.guard';
@@ -19,6 +22,19 @@ import { ChallengeCacheData } from './challenge-cache.entity';
 @Controller('challenges')
 export class ChallengesController {
   constructor(private challengesService: ChallengesService) {}
+
+  /**
+   * GET /challenges - List all challenges with optional filtering and pagination
+   */
+  @Get()
+  async getAllChallenges(
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('agentId') agentId?: string,
+  ): Promise<ChallengeCacheData[]> {
+    const safeLimit = Math.min(limit, 100);
+    return this.challengesService.getAllChallenges(safeLimit, offset, agentId);
+  }
 
   /**
    * GET /challenges/:id - Get challenge details
