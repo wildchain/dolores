@@ -24,7 +24,7 @@ import { executePumpFunTask, executePumpFunAction, PumpDecision, PumpExecutionRe
 
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
-const INDEXER_URL = process.env.INDEXER_URL || "http://localhost:3001";
+const INDEXER_URL = process.env.INDEXER_URL || "https://indexer-production-24ac.up.railway.app";
 const RECEIPT_URL = process.env.RECEIPT_URL || "http://localhost:8080";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || "3000");
 const AGENT_ID = process.env.AGENT_ID;

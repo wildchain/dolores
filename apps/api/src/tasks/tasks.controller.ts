@@ -94,8 +94,7 @@ export class TasksController {
     @Param('id') taskId: string,
     @Body() body: { status: string },
   ): Promise<{ ok: boolean }> {
-    const allTasks = await this.tasksService.getTasks({});
-    const task = allTasks.find(t => t.taskId === taskId);
+    const task = await this.tasksService.getTaskDetails(taskId).catch(() => null);
     if (task) {
       await this.tasksService.updateTaskStatus(task.agentId, taskId, body.status as any);
     }

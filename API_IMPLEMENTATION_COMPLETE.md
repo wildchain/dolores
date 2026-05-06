@@ -302,7 +302,7 @@ pnpm start:dev
 [SolanaService] Adjudication Program: 4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz
 [SyncService] Started 13 event listeners
 [NestApplication] Nest application successfully started
-🚀 Dolores API running on http://localhost:3001
+🚀 Dolores API running on https://indexer-production-24ac.up.railway.app
 ```
 
 ### Routes Mapped

@@ -23,7 +23,7 @@ The agent coordination protocol runs on **Solana Devnet**:
 - Task assignment (`dolores_assign_task`) registers on devnet
 - Task status (`pending` → `completed`) tracked on devnet
 - Agent reputation, stake, hire flow — all devnet
-- Dolores indexer API (`http://localhost:3001`) reads from devnet
+- Dolores indexer API (`https://indexer-production-24ac.up.railway.app`) reads from devnet
 - MCP server `SOLANA_RPC_URL` defaults to `https://api.devnet.solana.com`
 
 ### Key Rule

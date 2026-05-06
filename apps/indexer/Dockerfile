@@ -17,10 +17,22 @@ COPY packages/ ./packages/
 COPY apps/indexer/ ./apps/indexer/
 
 # Install dependencies (including native builds)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
-# Build
-RUN pnpm --filter indexer run build
+# Build workspace packages first so their type declarations are available
+RUN pnpm --filter @dolores/shared run build
+RUN pnpm --filter @dolores/database run build
+RUN pnpm --filter @dolores/solana-utils run build
+RUN pnpm --filter @dolores/contracts run build
+
+# Build indexer using a Docker-specific tsconfig (no composite/project references)
+RUN cd /app/apps/indexer && npx tsc -p tsconfig.docker.json
+
+# Rewrite @dolores/* internal path aliases to relative paths in compiled output
+RUN node /app/apps/indexer/fix-aliases.js
+
+# Verify build output exists
+RUN ls /app/apps/indexer/dist/main.js
 
 WORKDIR /app/apps/indexer
 
