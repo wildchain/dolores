@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { PublicKey } from '@solana/web3.js';
 import { SolanaService } from '../solana/solana.service';
 import { RocksDBService } from '@dolores/database';
@@ -12,13 +17,22 @@ import { AgentCacheEntity, AgentCacheData } from './agent-cache.entity';
 import axios from 'axios';
 
 @Injectable()
-export class AgentsService {
+export class AgentsService implements OnModuleInit {
   private readonly logger = new Logger(AgentsService.name);
 
   constructor(
     private solanaService: SolanaService,
     private rocksdb: RocksDBService,
   ) {}
+
+  async onModuleInit() {
+    this.logger.log('AgentsService initialized');
+    try {
+      this.fetchAllAgentsFromSolana();
+    } catch (error) {
+      this.logger.error('Failed to fetch agents on startup', error);
+    }
+  }
 
   /**
    * Get agents by operator wallet address
@@ -27,7 +41,7 @@ export class AgentsService {
     operatorAddress: string,
   ): Promise<AgentListItemDto[]> {
     try {
-      const agents = await this.fetchAllAgentsFromSolana();
+      const agents = await this.getAllCachedAgents();
       return agents
         .filter((a) => a.operator === operatorAddress)
         .map((a) => this.mapToListDto(a));
@@ -46,7 +60,9 @@ export class AgentsService {
   async getAgents(limit = 20, offset = 0): Promise<AgentListItemDto[]> {
     try {
       // Fetch all agents directly from Solana
-      const agents = await this.fetchAllAgentsFromSolana();
+      const agents = await this.getAllCachedAgents();
+
+      console;
 
       // Apply pagination
       const paginatedAgents = agents
@@ -161,7 +177,9 @@ export class AgentsService {
           );
         }
       }
-
+      this.cacheAgents(agents).catch((err) => {
+        this.logger.error('Failed to cache agents', err);
+      });
       // Sort by registration date (newest first)
       agents.sort((a, b) => b.registeredAt - a.registeredAt);
 
@@ -275,7 +293,19 @@ export class AgentsService {
    */
   private async cacheAgent(data: AgentCacheData): Promise<void> {
     const entity = new AgentCacheEntity(data);
-    await this.rocksdb.put(entity.getKey(), entity.toJSON());
+    await this.rocksdb.put(entity.getKey(), data);
+  }
+
+  private async cacheAgents(agents: AgentCacheData[]): Promise<void> {
+    const operations = agents.map((data) => {
+      const entity = new AgentCacheEntity(data);
+      return {
+        type: 'put' as const,
+        key: entity.getKey(),
+        value: JSON.parse(entity.toJSON()),
+      };
+    });
+    await this.rocksdb.batch(operations);
   }
 
   /**
@@ -302,8 +332,7 @@ export class AgentsService {
     agentId: string,
   ): Promise<AgentCacheData | null> {
     const key = AgentCacheEntity.createKey(agentId);
-    const cached = await this.rocksdb.get(key);
-    return cached ? JSON.parse(cached) : null;
+    return this.rocksdb.get<AgentCacheData>(key);
   }
 
   /**
@@ -314,9 +343,9 @@ export class AgentsService {
     const agents: AgentCacheData[] = [];
 
     for (const key of keys) {
-      const data = await this.rocksdb.get(key);
+      const data = await this.rocksdb.get<AgentCacheData>(key);
       if (data) {
-        agents.push(JSON.parse(data));
+        agents.push(data);
       }
     }
 
