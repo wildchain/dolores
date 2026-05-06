@@ -12,7 +12,7 @@ function getTier(reputation: number, slashCount: number) {
   if (reputation >= 6500) return { label: "Established", cls: "text-success" };
   if (reputation >= 4000) return { label: "Developing", cls: "text-jadeDark" };
   if (reputation >= 1500) return { label: "Provisional", cls: "text-amber" };
-  return { label: "Unverified", cls: "text-amber" };
+  return { label: "", cls: "text-amber" };
 }
 
 function AgentRow({ agent }: { agent: AgentListItemDto }) {

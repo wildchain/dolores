@@ -86,7 +86,7 @@ export function Step3RegisterOnChain({
               cls: "info",
             },
             {
-              text: `IPFS: https://ipfs.io/ipfs/${success.manifestCid}`,
+              text: `IPFS: https://ipfs.dolores.id/get/${success.manifestCid}`,
               cls: "info",
             },
           ]}

@@ -57,12 +57,25 @@ export class AgentsService implements OnModuleInit {
   /**
    * Get paginated list of agents
    */
-  async getAgents(limit = 20, offset = 0): Promise<AgentListItemDto[]> {
+  async getAgents(
+    limit = 20,
+    offset = 0,
+    agentId?: string,
+    capability?: string,
+  ): Promise<AgentListItemDto[]> {
     try {
-      // Fetch all agents directly from Solana
-      const agents = await this.getAllCachedAgents();
+      let agents = await this.getAllCachedAgents();
 
-      console;
+      if (agentId) {
+        agents = agents.filter((a) => a.agentId === agentId);
+      }
+
+      if (capability) {
+        const capLower = capability.toLowerCase();
+        agents = agents.filter((a) =>
+          a.capabilities.some((c) => c.toLowerCase() === capLower),
+        );
+      }
 
       // Apply pagination
       const paginatedAgents = agents
@@ -223,13 +236,22 @@ export class AgentsService implements OnModuleInit {
 
       const fundAccount: any = fundAccountInfo;
 
+      if (
+        agentPubkey.toBase58() ===
+        'Hx7mdqK5oE3e6Nj5kfCKyFgt9Xt9VMorJTriuuNQu8x3'
+      ) {
+        console.log('Registry Account:', registryAccount);
+        console.log('Fund Account:', fundAccount);
+        console.log('Stake amount', fundAccount?.totalLockedStake);
+      }
+
       // Fetch manifest from IPFS
       let manifest: any = null;
       const manifestCid = registryAccount.arweaveCid || '';
       if (manifestCid) {
         try {
           const ipfsGateway =
-            process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs';
+            process.env.IPFS_GATEWAY_URL || 'https://ipfs.dolores.id/get';
           const manifestUrl = `${ipfsGateway}/${manifestCid}`;
           const response = await axios.get(manifestUrl, { timeout: 5000 });
           manifest = response.data;
@@ -253,7 +275,7 @@ export class AgentsService implements OnModuleInit {
         description: manifest?.description || '',
         capabilities,
         manifestUrl: manifestCid
-          ? `${process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs'}/${manifestCid}`
+          ? `${process.env.IPFS_GATEWAY_URL || 'https://ipfs.dolores.id/get'}/${manifestCid}`
           : '',
         manifest,
         registryPda: registryPda.toBase58(),
@@ -261,7 +283,7 @@ export class AgentsService implements OnModuleInit {
         registeredAt: registryAccount.registeredAt?.toNumber() || 0,
         fundCreatedAt: fundAccount?.createdAt?.toNumber() || 0,
         isActive: registryAccount.isActive || false,
-        stakeAmount: fundAccount?.stakeAmount?.toNumber() || 0,
+        stakeAmount: fundAccount?.totalLockedStake?.toNumber() || 0,
         // Registry account fields
         capabilityHash: Array.from(registryAccount.capabilityHash || []),
         reputationScore: registryAccount.reputationScore || 0,
