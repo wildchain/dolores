@@ -17,7 +17,7 @@ import {
 
 const AGENT_ID = process.env.AGENT_ID!;
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
-const INDEXER_URL = "http://localhost:8545";
+const INDEXER_URL = "https://node.dolores.id";
 
 if (!AGENT_ID) {
   console.error("❌ AGENT_ID env var required");
@@ -155,6 +155,7 @@ async function main() {
   console.log("\nUploading receipt to indexer...");
   let cid: string;
   try {
+    console.log(`Submitting to indexer at ${INDEXER_URL}...`);
     const indexerResult = await submitToIndexer(
       INDEXER_URL,
       taskId,

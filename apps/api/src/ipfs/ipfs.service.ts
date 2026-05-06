@@ -12,7 +12,7 @@ export class IpfsService implements OnModuleInit {
   private nodeUrl: string;
 
   onModuleInit() {
-    this.nodeUrl = process.env.IPFS_NODE_URL || 'http://localhost:3002';
+    this.nodeUrl = process.env.IPFS_NODE_URL || 'https://ipfs.dolores.id';
     this.logger.log(`IPFS service configured. Node URL: ${this.nodeUrl}`);
   }
 
