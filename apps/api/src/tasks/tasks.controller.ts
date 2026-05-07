@@ -89,14 +89,31 @@ export class TasksController {
   }
 
 
+  // @Patch(':id')
+  // async updateTaskStatus(
+  //   @Param('id') taskId: string,
+  //   @Body() body: { status: string, },
+  // ): Promise<{ ok: boolean }> {
+  //   const task = await this.tasksService.getTaskDetails(taskId).catch(() => null);
+  //   if (task) {
+  //     await this.tasksService.updateTaskStatus(task.agentId, taskId, body.status as any);
+  //   }
+  //   return { ok: true };
+  // }
+
   @Patch(':id')
   async updateTaskStatus(
     @Param('id') taskId: string,
-    @Body() body: { status: string },
+    @Body() body: { status: string; failureReason?: string },
   ): Promise<{ ok: boolean }> {
     const task = await this.tasksService.getTaskDetails(taskId).catch(() => null);
     if (task) {
-      await this.tasksService.updateTaskStatus(task.agentId, taskId, body.status as any);
+      await this.tasksService.updateTaskStatus(
+        task.agentId,
+        taskId,
+        body.status as any,
+        body.failureReason ? { disputeReason: body.failureReason } : {}
+      );
     }
     return { ok: true };
   }

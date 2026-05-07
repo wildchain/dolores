@@ -203,7 +203,7 @@ export class AgentsService {
         registeredAt: registryAccount.registeredAt?.toNumber() || 0,
         fundCreatedAt: fundAccount?.createdAt?.toNumber() || 0,
         isActive: registryAccount.isActive || false,
-        stakeAmount: fundAccount?.stakeAmount?.toNumber() || 0,
+        stakeAmount: fundAccount?.totalLockedStake?.toNumber() || 0,
         // Registry account fields
         capabilityHash: Array.from(registryAccount.capabilityHash || []),
         reputationScore: registryAccount.reputationScore || 0, // trust score 0–1000
@@ -529,5 +529,18 @@ export class AgentsService {
     const entity = new AgentCacheEntity(agentData);
     await this.rocksdb.put(entity.getKey(), entity.toJSON());
     this.logger.log(`Seeded agent ${agentId} with name: ${data.name}`);
+  }
+
+  async refreshAgentFromSolana(agentId: string): Promise<void> {
+    try {
+      const agentPubkey = new PublicKey(agentId);
+      const agent = await this.fetchAgentFromSolana(agentPubkey);
+      if (agent) {
+        await this.cacheAgent(agent);
+        this.logger.log(`Refreshed agent ${agentId.slice(0, 8)}... from Solana`);
+      }
+    } catch (err: any) {
+      this.logger.warn(`Failed to refresh agent ${agentId}: ${err?.message}`);
+    }
   }
 }

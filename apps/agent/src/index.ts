@@ -20,8 +20,6 @@ import { executeRaydiumTask, executeRaydiumAction, RaydiumDecision, RaydiumExecu
 import { PublicKey, VersionedTransaction } from "@solana/web3.js";
 import { executePumpFunTask, executePumpFunAction, PumpDecision, PumpExecutionResult } from "./pumpfun/execute-pumpfun";
 
-
-
 const DOLORES_DIR = path.join(os.homedir(), ".dolores", "agents");
 const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 const INDEXER_URL = process.env.INDEXER_URL || "https://indexer-production-24ac.up.railway.app";
@@ -29,12 +27,9 @@ const RECEIPT_URL = process.env.RECEIPT_URL || "http://localhost:8080";
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || "3000");
 const AGENT_ID = process.env.AGENT_ID;
 const TEMPLATE = process.env.AGENT_TEMPLATE || "SOL_TRANSFER";
-// Set HOSTED_RUNTIME=true to run as a shared hosted runtime for all operators.
-// The API handles all keypair encryption/decryption — no keys needed here.
 const HOSTED_RUNTIME = process.env.HOSTED_RUNTIME === "true";
 const RUNTIME_SECRET = process.env.RUNTIME_SECRET || "";
 const AGENT_SYNC_INTERVAL = parseInt(process.env.AGENT_SYNC_INTERVAL_MS || "60000");
-
 
 interface AgentMeta {
   template: string;
@@ -47,7 +42,6 @@ function loadAgentMeta(agentId: string): AgentMeta {
   if (fs.existsSync(metaPath)) {
     return JSON.parse(fs.readFileSync(metaPath, "utf-8"));
   }
-  // fallback: use TEMPLATE env var (backwards compat)
   return { template: TEMPLATE };
 }
 
@@ -55,18 +49,16 @@ function discoverAgents(): { agentId: string; template: string; name?: string }[
   if (!fs.existsSync(DOLORES_DIR)) return [];
   return fs
     .readdirSync(DOLORES_DIR)
-    .filter(f => f.endsWith(".meta.json"))  // ← only agents with metadata
+    .filter(f => f.endsWith(".meta.json"))
     .map(f => {
       const agentId = f.replace(".meta.json", "");
       const meta = loadAgentMeta(agentId);
-      // verify keypair exists
       const keypairPath = path.join(DOLORES_DIR, `${agentId}.json`);
       if (!fs.existsSync(keypairPath)) return null;
       return { agentId, ...meta };
     })
     .filter(Boolean) as { agentId: string; template: string; name?: string }[];
 }
-
 
 function loadAgentKeypair(agentId: string): Keypair {
   const keyPath = path.join(DOLORES_DIR, `${agentId}.json`);
@@ -78,8 +70,6 @@ function loadAgentKeypair(agentId: string): Keypair {
   return Keypair.fromSecretKey(Uint8Array.from(raw));
 }
 
-// Fetch all agents from the API for the hosted runtime.
-// The API decrypts keypairs server-side before returning them over HTTPS.
 async function fetchAllAgentsFromAPI(): Promise<{ agentId: string; template: string; name?: string; keypair: Keypair }[]> {
   try {
     const res = await fetch(`${INDEXER_URL}/agents/runtime/all`, {
@@ -104,7 +94,7 @@ async function fetchAllAgentsFromAPI(): Promise<{ agentId: string; template: str
   }
 }
 
-/** Mark a task completed in the API cache — prevents retry loops */
+/** Mark a task completed — only call when execution AND on-chain write both succeeded */
 async function markTaskCompleted(taskId: string): Promise<void> {
   try {
     await fetch(`${INDEXER_URL}/tasks/${taskId}`, {
@@ -113,6 +103,22 @@ async function markTaskCompleted(taskId: string): Promise<void> {
       body: JSON.stringify({ status: "completed" }),
     });
   } catch { /* best-effort */ }
+}
+
+/** Mark a task failed with a specific reason — prevents retry loops */
+async function markTaskFailed(taskId: string, reason?: string): Promise<void> {
+  try {
+    await fetch(`${INDEXER_URL}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "failed", failureReason: reason }),
+    });
+  } catch { /* best-effort */ }
+}
+
+/** Determine if a Claude API error is transient (should retry) or permanent (should fail) */
+function isTransientError(msg: string): boolean {
+  return msg.includes('529') || msg.includes('timeout') || msg.includes('network') || msg.includes('ECONNRESET');
 }
 
 /** Upload a signed receipt to the indexer */
@@ -134,7 +140,7 @@ async function uploadReceipt(params: {
   }
 }
 
-// SOL_TRANSFER 
+//  SOL_TRANSFER 
 
 async function processSolTransferTask(
   task: PendingTask,
@@ -148,13 +154,20 @@ async function processSolTransferTask(
   try {
     decision = await executeTask(task.instruction, "SOL_TRANSFER");
   } catch (err: any) {
-    console.error(`   ❌ Claude failed: ${err?.message}`);
+    const msg = err?.message || '';
+    if (isTransientError(msg)) {
+      console.error(`   ❌ Transient error — will retry: ${msg}`);
+    } else {
+      console.error(`   ❌ Permanent error — marking failed: ${msg}`);
+      await markTaskFailed(task.taskId, msg);
+    }
     return;
   }
   console.log(`   Decision    : ${JSON.stringify(decision)}`);
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    await markTaskFailed(task.taskId, decision.reason);
     return;
   }
 
@@ -169,6 +182,7 @@ async function processSolTransferTask(
     );
   } catch (err: any) {
     console.error(`   ❌ Transfer failed: ${err?.message}`);
+    await markTaskFailed(task.taskId, `Transfer failed: ${err?.message}`);
     return;
   }
   console.log(`   ✅ TX: ${txSignature}`);
@@ -189,11 +203,12 @@ async function processSolTransferTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, signed.outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    console.log(`   ⚠️  Continuing to receipt submission`);
+    await markTaskFailed(task.taskId, `complete_task failed: ${err?.message}`);
+    return;
   }
-  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -209,7 +224,7 @@ async function processSolTransferTask(
   console.log(`\n✅ Task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-// JUPITER_TRADER 
+// ─── JUPITER_TRADER ──────────────────────────────────────────────────────────
 
 async function processJupiterTask(
   task: PendingTask,
@@ -219,6 +234,7 @@ async function processJupiterTask(
 ): Promise<void> {
   if (!process.env.JUPITER_API_KEY) {
     console.error(`   ❌ JUPITER_API_KEY not set in .env`);
+    await markTaskFailed(task.taskId, "JUPITER_API_KEY not configured");
     return;
   }
 
@@ -228,18 +244,26 @@ async function processJupiterTask(
   try {
     decision = await executeJupiterTask(task.instruction);
   } catch (err: any) {
-    console.error(`   ❌ Claude failed: ${err?.message}`);
+    const msg = err?.message || '';
+    if (isTransientError(msg)) {
+      console.error(`   ❌ Transient error — will retry: ${msg}`);
+    } else {
+      console.error(`   ❌ Permanent error — marking failed: ${msg}`);
+      await markTaskFailed(task.taskId, msg);
+    }
     return;
   }
   console.log(`   Decision    : ${JSON.stringify(decision)}`);
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    await markTaskFailed(task.taskId, decision.reason);
     return;
   }
   if (decision.action === "wait") {
     console.log(`   ⏳ ${decision.reason}`);
     console.log(`   Current: $${decision.currentPrice} | Target: $${decision.targetPrice}`);
+    // Leave pending — condition not met yet, retry makes sense
     return;
   }
 
@@ -253,6 +277,7 @@ async function processJupiterTask(
     swapResult = await executeJupiterSwap(agentKeypair, decision);
   } catch (err: any) {
     console.error(`   ❌ Swap failed: ${err?.message}`);
+    await markTaskFailed(task.taskId, `Swap failed: ${err?.message}`);
     return;
   }
   console.log(`   ✅ TX: ${swapResult.txSignature}`);
@@ -284,10 +309,8 @@ async function processJupiterTask(
     await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    // Still mark completed in API cache to prevent infinite retry
-    await markTaskCompleted(task.taskId);
-    console.log(`   ⚠️  Marked completed in API cache to prevent retry loop`);
-    // Don't return — still submit receipt
+    await markTaskFailed(task.taskId, `complete_task failed: ${err?.message}`);
+    return;
   }
 
   console.log(`\n📡 Submitting to indexer...`);
@@ -307,7 +330,7 @@ async function processJupiterTask(
   console.log(`\n✅ Jupiter task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-// PYTH_ORACLE_READER 
+//  PYTH_ORACLE_READER 
 
 async function processPythTask(
   task: PendingTask,
@@ -323,15 +346,21 @@ async function processPythTask(
     console.log(`   Decision    : ${JSON.stringify(decision)}`);
     if (decision.action === "reject") {
       console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+      await markTaskFailed(task.taskId, decision.reason);
       return;
     }
     result = await executePythDecision(decision);
   } catch (err: any) {
-    console.error(`   ❌ Pyth failed: ${err?.message}`);
+    const msg = err?.message || '';
+    if (isTransientError(msg)) {
+      console.error(`   ❌ Transient error — will retry: ${msg}`);
+    } else {
+      console.error(`   ❌ Permanent error — marking failed: ${msg}`);
+      await markTaskFailed(task.taskId, msg);
+    }
     return;
   }
 
-  // Print price results
   if (result.action === "price" && result.prices) {
     for (const p of result.prices) {
       console.log(`   📊 ${p.symbol}: $${p.price.toFixed(4)} (conf: ±${p.confidence?.toFixed(4)})`);
@@ -360,11 +389,12 @@ async function processPythTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    console.log(`   ⚠️  Continuing to receipt submission`);
+    await markTaskFailed(task.taskId, `complete_task failed: ${err?.message}`);
+    return;
   }
-  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -383,83 +413,7 @@ async function processPythTask(
   console.log(`\n✅ Pyth task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-
-// Generic DeFi Decision Handler 
-// Used for templates that parse decisions but don't execute on-chain yet
-// (KAMINO_LENDING, METEORA_POOLS, RAYDIUM_LP, PUMPFUN)
-
-async function processDefiDecisionTask(
-  template: string,
-  executeTask: (instruction: string) => Promise<any>,
-  task: PendingTask,
-  agentKeypair: Keypair,
-  connection: Connection,
-  adjProgram: Program
-): Promise<void> {
-  console.log(`\n🤖 Asking Claude (template: ${template})...`);
-
-  let decision: any;
-  try {
-    decision = await executeTask(task.instruction);
-  } catch (err: any) {
-    console.error(`   ❌ Claude failed: ${err?.message}`);
-    return;
-  }
-  console.log(`   Decision    : ${JSON.stringify(decision)}`);
-
-  if (decision.action === "reject") {
-    console.warn(`   ⚠️  Rejected: ${decision.reason}`);
-    return;
-  }
-
-  console.log(`\n⚡ Decision parsed — execution not yet implemented for ${template}`);
-  console.log(`   Action: ${decision.action}`);
-
-  const timestamp = Math.floor(Date.now() / 1000);
-  const crypto = require("crypto");
-  const nacl = require("tweetnacl");
-  const outputHash = crypto
-    .createHash("sha256")
-    .update(JSON.stringify({ decision, timestamp }))
-    .digest("hex");
-  const outputHashBytes = Buffer.from(outputHash, "hex");
-  const agentSignature = Buffer.from(
-    nacl.sign.detached(outputHashBytes, agentKeypair.secretKey)
-  ).toString("hex");
-
-  console.log(`\n📝 output_hash: ${outputHash}`);
-  console.log(`🔗 Writing on-chain...`);
-
-  const taskIdBuffer = Buffer.from(task.taskId, "hex");
-  try {
-    const completeTx = await completeTaskOnChain(
-      connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
-    );
-    console.log(`   ✅ complete_task TX: ${completeTx}`);
-  } catch (err: any) {
-    console.error(`   ❌ complete_task failed: ${err?.message}`);
-    console.log(`   ⚠️  Continuing to receipt submission`);
-  }
-  await markTaskCompleted(task.taskId);
-
-  console.log(`\n📡 Submitting to indexer...`);
-  try {
-    await uploadReceipt({
-      agentId: agentKeypair.publicKey.toBase58(),
-      taskId: task.taskId,
-      outputHash,
-      timestamp,
-      agentSignature,
-    });
-    console.log(`   ✅ Receipt submitted`);
-  } catch (err: any) {
-    console.error(`   ❌ Indexer failed: ${err?.message}`);
-  }
-
-  console.log(`\n✅ ${template} task complete: ${task.taskId.slice(0, 16)}...\n`);
-}
-
-// KAMINO_LENDING
+//  KAMINO_LENDING 
 
 async function processKaminoTask(
   task: PendingTask,
@@ -473,17 +427,25 @@ async function processKaminoTask(
   try {
     decision = await executeKaminoTask(task.instruction);
   } catch (err: any) {
-    console.error(`   ❌ Claude failed: ${err?.message}`);
+    const msg = err?.message || '';
+    if (isTransientError(msg)) {
+      console.error(`   ❌ Transient error — will retry: ${msg}`);
+    } else {
+      console.error(`   ❌ Permanent error — marking failed: ${msg}`);
+      await markTaskFailed(task.taskId, msg);
+    }
     return;
   }
   console.log(`   Decision    : ${JSON.stringify(decision)}`);
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${(decision as any).reason}`);
+    await markTaskFailed(task.taskId, (decision as any).reason);
     return;
   }
   if (decision.action === "status") {
     console.log(`   ℹ️  Status check — no execution needed`);
+    await markTaskCompleted(task.taskId);
     return;
   }
 
@@ -498,11 +460,11 @@ async function processKaminoTask(
     console.log(`   ✅ TX: ${result.txSignature}`);
   } catch (err: any) {
     console.error(`   ❌ Kamino execution failed: ${err?.message}`);
+    await markTaskFailed(task.taskId, `Kamino execution failed: ${err?.message}`);
     return;
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const crypto = require("crypto");
   const nacl = require("tweetnacl");
   const outputHash = crypto.createHash("sha256")
     .update(JSON.stringify({ result, timestamp }))
@@ -521,11 +483,12 @@ async function processKaminoTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    console.log(`   ⚠️  Continuing to receipt submission`);
+    await markTaskFailed(task.taskId, `complete_task failed: ${err?.message}`);
+    return;
   }
-  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -544,7 +507,7 @@ async function processKaminoTask(
   console.log(`\n✅ Kamino task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-// METEORA_POOLS 
+//  METEORA_POOLS 
 
 async function processMeteoraTask(
   task: PendingTask,
@@ -558,17 +521,25 @@ async function processMeteoraTask(
   try {
     decision = await executeMeteoraTask(task.instruction);
   } catch (err: any) {
-    console.error(`   ❌ Claude failed: ${err?.message}`);
+    const msg = err?.message || '';
+    if (isTransientError(msg)) {
+      console.error(`   ❌ Transient error — will retry: ${msg}`);
+    } else {
+      console.error(`   ❌ Permanent error — marking failed: ${msg}`);
+      await markTaskFailed(task.taskId, msg);
+    }
     return;
   }
   console.log(`   Decision    : ${JSON.stringify(decision)}`);
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    await markTaskFailed(task.taskId, decision.reason);
     return;
   }
   if (decision.action === "status") {
     console.log(`   ℹ️  Status check`);
+    await markTaskCompleted(task.taskId);
     return;
   }
 
@@ -580,11 +551,11 @@ async function processMeteoraTask(
     console.log(`   ✅ TX: ${result.txSignature}`);
   } catch (err: any) {
     console.error(`   ❌ Meteora execution failed: ${err?.message}`);
+    await markTaskFailed(task.taskId, `Meteora execution failed: ${err?.message}`);
     return;
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const crypto = require("crypto");
   const nacl = require("tweetnacl");
   const outputHash = crypto.createHash("sha256")
     .update(JSON.stringify({ result, timestamp }))
@@ -603,11 +574,12 @@ async function processMeteoraTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    console.log(`   ⚠️  Continuing to receipt submission`);
+    await markTaskFailed(task.taskId, `complete_task failed: ${err?.message}`);
+    return;
   }
-  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -626,7 +598,7 @@ async function processMeteoraTask(
   console.log(`\n✅ Meteora task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-// RAYDIUM_LP 
+//  RAYDIUM_LP 
 
 async function processRaydiumTask(
   task: PendingTask,
@@ -640,17 +612,25 @@ async function processRaydiumTask(
   try {
     decision = await executeRaydiumTask(task.instruction);
   } catch (err: any) {
-    console.error(`   ❌ Claude failed: ${err?.message}`);
+    const msg = err?.message || '';
+    if (isTransientError(msg)) {
+      console.error(`   ❌ Transient error — will retry: ${msg}`);
+    } else {
+      console.error(`   ❌ Permanent error — marking failed: ${msg}`);
+      await markTaskFailed(task.taskId, msg);
+    }
     return;
   }
   console.log(`   Decision    : ${JSON.stringify(decision)}`);
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    await markTaskFailed(task.taskId, decision.reason);
     return;
   }
   if (decision.action === "status") {
     console.log(`   ℹ️  Status check`);
+    await markTaskCompleted(task.taskId);
     return;
   }
 
@@ -662,20 +642,11 @@ async function processRaydiumTask(
     console.log(`   ✅ TX: ${result.txSignature}`);
   } catch (err: any) {
     console.error(`   ❌ Full error:`, err);
-    if (err?.message?.includes('429') ||
-      err?.message?.includes('not found') ||
-      err?.message?.includes('block height') ||
-      !err?.message) {
-      console.warn(`   ⚠️  Raydium failed — skipping: ${err?.message}`);
-      await markTaskCompleted(task.taskId);
-      return;
-    }
-    console.error(`   ❌ Raydium execution failed: ${err?.message}`);
+    await markTaskFailed(task.taskId, `Raydium execution failed: ${err?.message}`);
     return;
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const crypto = require("crypto");
   const nacl = require("tweetnacl");
   const outputHash = crypto.createHash("sha256")
     .update(JSON.stringify({ result, timestamp }))
@@ -694,11 +665,12 @@ async function processRaydiumTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    console.log(`   ⚠️  Continuing to receipt submission`);
+    await markTaskFailed(task.taskId, `complete_task failed: ${err?.message}`);
+    return;
   }
-  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -717,7 +689,7 @@ async function processRaydiumTask(
   console.log(`\n✅ Raydium task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
 
-// PUMPFUN_TRADER
+// ─── PUMPFUN_TRADER ──────────────────────────────────────────────────────────
 
 async function processPumpFunTask(
   task: PendingTask,
@@ -731,17 +703,25 @@ async function processPumpFunTask(
   try {
     decision = await executePumpFunTask(task.instruction);
   } catch (err: any) {
-    console.error(`   ❌ Claude failed: ${err?.message}`);
+    const msg = err?.message || '';
+    if (isTransientError(msg)) {
+      console.error(`   ❌ Transient error — will retry: ${msg}`);
+    } else {
+      console.error(`   ❌ Permanent error — marking failed: ${msg}`);
+      await markTaskFailed(task.taskId, msg);
+    }
     return;
   }
   console.log(`   Decision    : ${JSON.stringify(decision)}`);
 
   if (decision.action === "reject") {
     console.warn(`   ⚠️  Rejected: ${decision.reason}`);
+    await markTaskFailed(task.taskId, decision.reason);
     return;
   }
   if (decision.action === "status") {
     console.log(`   ℹ️  Status check`);
+    await markTaskCompleted(task.taskId);
     return;
   }
 
@@ -755,12 +735,11 @@ async function processPumpFunTask(
     console.log(`   ✅ TX: ${result.txSignature}`);
   } catch (err: any) {
     console.error(`   ❌ PumpFun execution failed: ${err?.message}`);
-    await markTaskCompleted(task.taskId);
+    await markTaskFailed(task.taskId, `PumpFun execution failed: ${err?.message}`);
     return;
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const crypto = require("crypto");
   const nacl = require("tweetnacl");
   const outputHash = crypto.createHash("sha256")
     .update(JSON.stringify({ result, timestamp }))
@@ -779,11 +758,12 @@ async function processPumpFunTask(
       connection, agentKeypair, adjProgram, taskIdBuffer, outputHash
     );
     console.log(`   ✅ complete_task TX: ${completeTx}`);
+    await markTaskCompleted(task.taskId);
   } catch (err: any) {
     console.error(`   ❌ complete_task failed: ${err?.message}`);
-    console.log(`   ⚠️  Continuing to receipt submission`);
+    await markTaskFailed(task.taskId, `complete_task failed: ${err?.message}`);
+    return;
   }
-  await markTaskCompleted(task.taskId);
 
   console.log(`\n📡 Submitting to indexer...`);
   try {
@@ -801,6 +781,8 @@ async function processPumpFunTask(
 
   console.log(`\n✅ PumpFun task complete: ${task.taskId.slice(0, 16)}...\n`);
 }
+
+// ─── Agent runner ─────────────────────────────────────────────────────────────
 
 async function runAgent(
   agentId: string,
@@ -863,23 +845,18 @@ async function runAgent(
   );
 }
 
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
-// Main
 async function main() {
   const connection = new Connection(RPC_URL, "confirmed");
 
   if (HOSTED_RUNTIME) {
-    // ── Hosted runtime mode ──────────────────────────────────────────────────
-    // Runs as Dolores infrastructure. No AGENT_ID or OPERATOR_PUBKEY needed.
-    // Periodically re-syncs from the API so newly registered agents are picked
-    // up automatically — users just register via MCP and their agents start running.
     console.log("\n🤖 Dolores Hosted Runtime\n");
     console.log(`RPC          : ${RPC_URL}`);
     console.log(`API          : ${INDEXER_URL}`);
     console.log(`Poll interval: ${POLL_INTERVAL}ms`);
     console.log(`Agent sync   : every ${AGENT_SYNC_INTERVAL / 1000}s\n`);
 
-    // Track which agents are already running so we don't double-spawn
     const runningAgents = new Set<string>();
 
     const syncAndLaunchNewAgents = async () => {
@@ -890,7 +867,7 @@ async function main() {
         console.log(`▶ Spawning agent ${agentId.slice(0, 8)}... [${template}]`);
         runAgent(agentId, template, connection, keypair).catch(err => {
           console.error(` Agent ${agentId.slice(0, 8)}... crashed: ${err?.message}`);
-          runningAgents.delete(agentId); // allow re-spawn on next sync
+          runningAgents.delete(agentId);
         });
       }
       console.log(`[sync] ${runningAgents.size} agent(s) running`);
@@ -900,7 +877,6 @@ async function main() {
     setInterval(syncAndLaunchNewAgents, AGENT_SYNC_INTERVAL);
 
   } else if (AGENT_ID) {
-    // ── Single-agent mode (backwards compatible) ─────────────────────────────
     console.log("\n🤖 Dolores Agent Runtime\n");
     console.log(`Agent ID     : ${AGENT_ID}`);
     console.log(`RPC          : ${RPC_URL}`);
@@ -915,7 +891,6 @@ async function main() {
     await runAgent(AGENT_ID, template, connection);
 
   } else {
-    // ── Local manager mode — run all agents from ~/.dolores/agents/ ───────────
     const agents = discoverAgents();
 
     if (agents.length === 0) {
@@ -944,7 +919,6 @@ async function main() {
     process.exit(0);
   });
 }
-
 
 main().catch((err) => {
   console.error("Fatal error:", err);

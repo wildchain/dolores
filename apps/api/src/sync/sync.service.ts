@@ -25,7 +25,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     private agentsService: AgentsService,
     private tasksService: TasksService,
     private challengesService: ChallengesService,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     await this.startEventListeners();
@@ -100,6 +100,23 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
           this.logger.log(
             `Other Registry transaction detected: ${logInfo.signature}`,
           );
+
+          (async () => {
+            try {
+              const conn = this.solanaService.getConnection();
+              const tx = await conn.getTransaction(logInfo.signature, {
+                commitment: 'confirmed',
+                maxSupportedTransactionVersion: 0,
+              });
+              if (tx?.transaction?.message?.staticAccountKeys) {
+                const keys = tx.transaction.message.staticAccountKeys;
+                if (keys.length > 1) {
+                  const candidate = keys[1].toBase58();
+                  this.agentsService.refreshAgentFromSolana(candidate).catch(() => { });
+                }
+              }
+            } catch { /* best-effort */ }
+          })();
         },
       );
 
@@ -113,7 +130,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
       this.listenerIds.push(fundCreatedListenerId);
 
       const stakeAddedListenerId = fundProgram.addEventListener(
-        'StakeAdded',
+        'Staked',
         async (event: any) => {
           await this.handleStakeAdded(event);
         },
@@ -185,6 +202,28 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
       );
       this.listenerIds.push(stakeSlashedListenerId);
 
+      const attestationSubmittedListenerId = registryProgram.addEventListener(
+        'AttestationSubmitted',
+        async (event: any) => {
+          const agentId = event.agent.toBase58();
+          this.logger.log(`AttestationSubmitted: ${agentId} — refreshing cache`);
+          await this.agentsService.refreshAgentFromSolana(agentId).catch(err =>
+            this.logger.warn(`Failed to refresh after attestation: ${err?.message}`)
+          );
+        },
+      );
+      this.listenerIds.push(attestationSubmittedListenerId);
+
+      const slashRecordedListenerId = registryProgram.addEventListener(
+        'AgentSlashed',
+        async (event: any) => {
+          const agentId = event.agent.toBase58();
+          this.logger.log(`AgentSlashed on-chain: ${agentId} — refreshing cache`);
+          await this.agentsService.refreshAgentFromSolana(agentId).catch(() => { });
+        },
+      );
+      this.listenerIds.push(slashRecordedListenerId);
+
       this.logger.log(`Started ${this.listenerIds.length} event listeners`);
     } catch (error) {
       this.logger.error('Failed to start event listeners', error);
@@ -197,6 +236,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
   private async stopEventListeners() {
     try {
       const connection = this.solanaService.getConnection();
+      const registryProgram = this.solanaService.getRegistryProgram();
       const fundProgram = this.solanaService.getFundProgram();
       const adjudicationProgram = this.solanaService.getAdjudicationProgram();
 
@@ -210,9 +250,12 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
 
       // Remove other event listeners
       for (const id of this.listenerIds) {
-        // Remove from fund and adjudication programs
-        await fundProgram.removeEventListener(id);
-        await adjudicationProgram.removeEventListener(id);
+        await Promise.allSettled([
+          registryProgram.removeEventListener(id),
+          fundProgram.removeEventListener(id),
+          adjudicationProgram.removeEventListener(id),
+        ]);
+
       }
 
       this.logger.log('Stopped all event listeners');
@@ -232,16 +275,22 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
   ) {
     try {
       this.logger.log(`Processing ${eventType} from transaction log`);
-      // Log the full transaction details
       this.logger.log(`Transaction Signature: ${logInfo.signature}`);
-      this.logger.log(`Logs: ${JSON.stringify(logInfo.logs, null, 2)}`);
 
-      // You can fetch full transaction details if needed for parsing event data
-      // const connection = this.solanaService.getConnection();
-      // const tx = await connection.getTransaction(logInfo.signature);
-      // Parse transaction accounts and data to extract event information
+      // Fetch full transaction to extract the agent pubkey
+      const connection = this.solanaService.getConnection();
+      const tx = await connection.getTransaction(logInfo.signature, {
+        commitment: 'confirmed',
+        maxSupportedTransactionVersion: 0,
+      });
 
-      // For now, just log the event detection
+      if (tx?.transaction?.message?.staticAccountKeys) {
+        const registryProgramId = this.solanaService.getRegistryProgram().programId.toBase58();
+        // The agent pubkey is typically account index 1 in registry transactions
+        const accounts = tx.transaction.message.staticAccountKeys.map(k => k.toBase58());
+        this.logger.log(`Transaction accounts: ${accounts.slice(0, 4).join(', ')}`);
+      }
+
       this.logger.log(`${eventType} event logged successfully`);
     } catch (error) {
       this.logger.error(`Failed to handle ${eventType} transaction log`, error);
@@ -263,14 +312,12 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
 
   private async handleAgentDeactivated(event: any) {
     this.logger.log(`AgentDeactivated: ${event.agent.toBase58()}`);
-    // Update agent cache
-    // TODO: Update agent.isActive = false in cache
+    await this.agentsService.refreshAgentFromSolana(event.agent.toBase58()).catch(() => { });
   }
 
   private async handleAgentReactivated(event: any) {
     this.logger.log(`AgentReactivated: ${event.agent.toBase58()}`);
-    // Update agent cache
-    // TODO: Update agent.isActive = true in cache
+    await this.agentsService.refreshAgentFromSolana(event.agent.toBase58()).catch(() => { });
   }
 
   private async handleFundCreated(event: any) {
@@ -284,19 +331,20 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async handleStakeAdded(event: any) {
-    this.logger.log(`StakeAdded: ${event.agent.toBase58()} - ${event.amount}`);
-    // Update agent stake amount in cache
-    // TODO: Increment agent.stakeAmount in cache
+    const agentId = event.agent.toBase58();
+    this.logger.log(`StakeAdded: ${agentId} — ${event.amount}`);
+
+    // Re-fetch agent from Solana to get updated stake + reputation
+    await this.agentsService.refreshAgentFromSolana(agentId).catch(err =>
+      this.logger.warn(`Failed to refresh agent ${agentId} after stake: ${err?.message}`)
+    );
   }
 
   private async handleStakeWithdrawn(event: any) {
-    this.logger.log(
-      `StakeWithdrawn: ${event.agent.toBase58()} - ${event.amount}`,
-    );
-    // Update agent stake amount in cache
-    // TODO: Decrement agent.stakeAmount in cache
+    const agentId = event.agent.toBase58();
+    this.logger.log(`StakeWithdrawn: ${agentId} — ${event.amount}`);
+    await this.agentsService.refreshAgentFromSolana(agentId).catch(() => { });
   }
-
   private async handleTaskRegistered(event: any) {
     this.logger.log(
       `TaskRegistered: Agent ${event.agent.toBase58()}, Task ${Buffer.from(event.taskId).toString('hex')}`,
@@ -461,10 +509,8 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async handleStakeSlashed(event: any) {
-    this.logger.log(
-      `StakeSlashed: ${event.agent.toBase58()} - ${event.amount}`,
-    );
-    // Update agent stake amount
-    // TODO: Decrement agent.stakeAmount in cache
+    const agentId = event.agent.toBase58();
+    this.logger.log(`StakeSlashed: ${agentId} — ${event.amount}`);
+    await this.agentsService.refreshAgentFromSolana(agentId).catch(() => { });
   }
 }

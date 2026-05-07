@@ -206,10 +206,7 @@ pub mod dolores_registry {
 
     /// Set the validator alignment bonus (0–70) for this agent.
     /// Called by the validation consensus program after each peer-review round.
-    pub fn set_validator_alignment(
-        ctx: Context<SetValidatorAlignment>,
-        points: u8,
-    ) -> Result<()> {
+    pub fn set_validator_alignment(ctx: Context<SetValidatorAlignment>, points: u8) -> Result<()> {
         require!(points <= 70, RegistryError::InvalidValidatorPoints);
 
         let registry = &mut ctx.accounts.registry;
@@ -231,21 +228,21 @@ pub mod dolores_registry {
 #[account]
 #[derive(Default)]
 pub struct RegistryAccount {
-    pub operator: Pubkey,              // 32
-    pub agent: Pubkey,                 // 32
-    pub capability_hash: [u8; 32],     // 32  — immutable after registration
-    pub reputation_score: u16,         // 2   — cached trust score 0–1000
-    pub slash_count: u8,               // 1   — permanent, never resets
-    pub arweave_cid: String,           // 4 + ARWEAVE_CID_MAX_LEN
-    pub declared_stake: u64,           // 8   — lamports staked (stake depth bonus)
-    pub registered_at: i64,            // 8   — used for tenure factor
-    pub last_attested_at: i64,         // 8
-    pub bump: u8,                      // 1
+    pub operator: Pubkey,          // 32
+    pub agent: Pubkey,             // 32
+    pub capability_hash: [u8; 32], // 32  — immutable after registration
+    pub reputation_score: u16,     // 2   — cached trust score 0–1000
+    pub slash_count: u8,           // 1   — permanent, never resets
+    pub arweave_cid: String,       // 4 + ARWEAVE_CID_MAX_LEN
+    pub declared_stake: u64,       // 8   — lamports staked (stake depth bonus)
+    pub registered_at: i64,        // 8   — used for tenure factor
+    pub last_attested_at: i64,     // 8
+    pub bump: u8,                  // 1
     // Trust score components
-    pub weighted_score_sum: u32,       // 4   — Σ (score_i × stake_weight_i)
-    pub weighted_task_sum: u32,        // 4   — Σ stake_weight_i (attestation denominator)
-    pub total_task_count: u32,         // 4   — number of attested tasks
-    pub challenge_survival_count: u8,  // 1   — survived frivolous challenges (max 20)
+    pub weighted_score_sum: u32, // 4   — Σ (score_i × stake_weight_i)
+    pub weighted_task_sum: u32,  // 4   — Σ stake_weight_i (attestation denominator)
+    pub total_task_count: u32,   // 4   — number of attested tasks
+    pub challenge_survival_count: u8, // 1   — survived frivolous challenges (max 20)
     pub validator_alignment_points: u8, // 1  — 0–70, set by validation consensus
 }
 
@@ -265,7 +262,7 @@ impl RegistryAccount {
         + 4   // weighted_task_sum
         + 4   // total_task_count
         + 1   // challenge_survival_count
-        + 1;  // validator_alignment_points
+        + 1; // validator_alignment_points
 }
 
 #[account]
@@ -511,8 +508,7 @@ fn compute_trust_score(registry: &RegistryAccount, current_time: i64) -> u16 {
     let task_multiplier_1000: u64 = if registry.total_task_count == 0 {
         1_000
     } else {
-        let avg_stake =
-            (registry.weighted_task_sum as u64) / (registry.total_task_count as u64);
+        let avg_stake = (registry.weighted_task_sum as u64) / (registry.total_task_count as u64);
         (1_000u64 + avg_stake.min(10) * 50).min(1_500)
     };
 
@@ -528,6 +524,13 @@ fn compute_trust_score(registry: &RegistryAccount, current_time: i64) -> u16 {
         .saturating_mul(850)
         / 1_000_000_000;
 
+    // Apply floor: new agents get at least 1 point per completed task
+    // (prevents perpetual zero during the first month of tenure)
+    let primary_score: u64 = if registry.total_task_count > 0 && primary_score == 0 {
+        (registry.total_task_count as u64).min(50)
+    } else {
+        primary_score
+    };
     // 4. Bonuses
     // Stake depth: +5 per SOL declared, max +50 at 10 SOL
     let stake_sol = registry.declared_stake / 1_000_000_000;
@@ -550,21 +553,20 @@ fn compute_trust_score(registry: &RegistryAccount, current_time: i64) -> u16 {
     final_score as u16
 }
 
-/// Precomputed: ln(m+1) / ln(13) × 1000 for m = 0..=12 (capped at 1000 for m ≥ 12)
 fn tenure_factor_1000(months: u64) -> u64 {
     const LOOKUP: [u64; 13] = [
-        0,   // m=0
-        270, // m=1  ln(2)/ln(13)
-        428, // m=2
-        540, // m=3
-        628, // m=4
-        699, // m=5
-        759, // m=6
-        811, // m=7
-        857, // m=8
-        898, // m=9
-        935, // m=10
-        969, // m=11
+        0,    // m=0
+        270,  // m=1  ln(2)/ln(13)
+        428,  // m=2
+        540,  // m=3
+        628,  // m=4
+        699,  // m=5
+        759,  // m=6
+        811,  // m=7
+        857,  // m=8
+        898,  // m=9
+        935,  // m=10
+        969,  // m=11
         1000, // m=12+  (capped)
     ];
     LOOKUP[months.min(12) as usize]

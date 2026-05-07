@@ -232,43 +232,13 @@ export class AttestationService implements OnModuleInit {
     violationHashHex: string,
     evidenceCid: string,
   ): Promise<string | null> {
-    if (!this.program || !this.reviewerKeypair || !this.connection) {
-      this.logger.warn(
-        `Challenge skipped for ${receipt.taskId} — reviewer client not initialized`,
-      );
-      return null;
-    }
-
-    const targetAgent = new PublicKey(receipt.agentId);
-    const [registryPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('registry'), targetAgent.toBuffer()],
-      this.program.programId,
+    // Automated slashing disabled — slashing must go through the on-chain
+    // file_challenge() → auto_adjudicate() flow initiated by a human challenger.
+    this.logger.warn(
+      `challengeAttestation called for ${receipt.taskId} — automated slashing disabled. ` +
+      `Challenger must file_challenge() on-chain via the adjudication program.`
     );
-
-    try {
-      const challengeIx = await (this.program.methods as any)
-        .recordSlash()
-        .accounts({
-          slashAuthority: this.reviewerKeypair.publicKey,
-          registry: registryPda,
-        })
-        .instruction();
-
-      const tx = new Transaction().add(challengeIx);
-      return await sendAndConfirmTransaction(
-        this.connection,
-        tx,
-        [this.reviewerKeypair],
-        {
-          commitment: 'confirmed',
-        },
-      );
-    } catch (err: any) {
-      this.logger.error(
-        `Failed to challenge attestation for ${receipt.taskId}: ${err?.message ?? err}`,
-      );
-      return null;
-    }
+    return null;
   }
 
   async processPendingSubmissions(
