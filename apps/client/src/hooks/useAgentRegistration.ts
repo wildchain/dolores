@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   Keypair,
@@ -8,9 +8,14 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
-import { doloresRegistryIdl, PROGRAM_IDS } from "@dolores/contracts";
+import {
+  doloresRegistryIdl,
+  doloresFundIdl,
+  PROGRAM_IDS,
+} from "@dolores/contracts";
 
 const REGISTRY_PROGRAM_ID = new PublicKey(PROGRAM_IDS.REGISTRY);
+const FUND_PROGRAM_ID = new PublicKey(PROGRAM_IDS.FUND);
 const REGISTRY_SEED = Buffer.from("registry");
 
 interface RegistrationParams {
@@ -19,11 +24,26 @@ interface RegistrationParams {
   onError?: (error: Error) => void;
 }
 
+export type RegistrationPhase =
+  | "idle"
+  | "registering"
+  | "uploading"
+  | "writing_cid"
+  | "done"
+  | "error";
+
 export function useAgentRegistration() {
   const { connection } = useConnection();
   const wallet = useWallet();
-  const [loading, setLoading] = useState(false);
+  const [registrationPhase, setRegistrationPhase] =
+    useState<RegistrationPhase>("idle");
   const [agentKeypair, setAgentKeypair] = useState<Keypair | null>(null);
+  const isInFlight = useRef(false);
+
+  const loading =
+    registrationPhase !== "idle" &&
+    registrationPhase !== "done" &&
+    registrationPhase !== "error";
 
   const generateAgent = () => {
     const keypair = Keypair.generate();
@@ -61,7 +81,9 @@ export function useAgentRegistration() {
       return;
     }
 
-    setLoading(true);
+    if (isInFlight.current) return;
+    isInFlight.current = true;
+    setRegistrationPhase("registering");
 
     try {
       // Create provider (wallet will be used as fallback signer)
@@ -69,8 +91,9 @@ export function useAgentRegistration() {
         commitment: "confirmed",
       });
 
-      // Load the registry program
+      // Load programs
       const registryProgram = new Program(doloresRegistryIdl as any, provider);
+      const fundProgram = new Program(doloresFundIdl as any, provider);
 
       // Derive the registry PDA
       const [registryPda] = PublicKey.findProgramAddressSync(
@@ -78,12 +101,31 @@ export function useAgentRegistration() {
         REGISTRY_PROGRAM_ID,
       );
 
+      // Derive fund PDAs — seeds: ["fund", operator, agent] and ["vault", operator, agent]
+      const [fundPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("fund"),
+          wallet.publicKey.toBuffer(),
+          agentKeypair.publicKey.toBuffer(),
+        ],
+        FUND_PROGRAM_ID,
+      );
+      const [vaultPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("vault"),
+          wallet.publicKey.toBuffer(),
+          agentKeypair.publicKey.toBuffer(),
+        ],
+        FUND_PROGRAM_ID,
+      );
+
       console.log("Registering agent:", agentKeypair.publicKey.toBase58());
       console.log("Registry PDA:", registryPda.toBase58());
+      console.log("Fund PDA:", fundPda.toBase58());
       console.log("Capability hash:", capabilityHash);
 
-      // Build the transaction
-      const tx = await registryProgram.methods
+      // Build register_agent instruction
+      const tx = await (registryProgram.methods as any)
         .registerAgent(capabilityHash)
         .accounts({
           operator: wallet.publicKey,
@@ -92,6 +134,19 @@ export function useAgentRegistration() {
           systemProgram: SystemProgram.programId,
         })
         .transaction();
+
+      // Append initialize_fund to the same transaction
+      const initFundIx = await (fundProgram.methods as any)
+        .initializeFund()
+        .accounts({
+          operator: wallet.publicKey,
+          agent: agentKeypair.publicKey,
+          fund: fundPda,
+          vault: vaultPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .instruction();
+      tx.add(initFundIx);
 
       // Get recent blockhash
       const { blockhash, lastValidBlockHeight } =
@@ -136,17 +191,56 @@ export function useAgentRegistration() {
       onSuccess?.(agentKeypair.publicKey.toBase58(), signature);
     } catch (error) {
       console.error("Registration failed:", error);
+      setRegistrationPhase("error");
       onError?.(error as Error);
     } finally {
-      setLoading(false);
+      isInFlight.current = false;
+    }
+  };
+
+  const writeArweaveCid = async (cid: string): Promise<void> => {
+    if (!wallet.publicKey || !agentKeypair) {
+      throw new Error("Wallet or agent keypair not available");
+    }
+
+    setRegistrationPhase("writing_cid");
+
+    try {
+      const provider = new AnchorProvider(connection, wallet as any, {
+        commitment: "confirmed",
+      });
+
+      const registryProgram = new Program(doloresRegistryIdl as any, provider);
+
+      const [registryPda] = PublicKey.findProgramAddressSync(
+        [REGISTRY_SEED, agentKeypair.publicKey.toBuffer()],
+        REGISTRY_PROGRAM_ID,
+      );
+
+      await (registryProgram.methods as any)
+        .writeArweaveCid(cid)
+        .accounts({
+          authority: wallet.publicKey,
+          registry: registryPda,
+        })
+        .rpc();
+
+      setRegistrationPhase("done");
+    } catch (error) {
+      console.error("writeArweaveCid failed:", error);
+      setRegistrationPhase("error");
+      throw error;
     }
   };
 
   return {
     loading,
+    registrationPhase,
+    setRegistrationPhase,
     agentKeypair,
     generateAgent,
     downloadKeypair,
     register,
+    writeArweaveCid,
   };
 }

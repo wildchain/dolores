@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("Ft8uiLucHyK58rU77ph7NApwepxSUqonRkfnhe4JjpWY");
+declare_id!("AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5");
 
 pub const FUND_SEED: &[u8] = b"fund";
 pub const STAKER_SEED: &[u8] = b"staker";

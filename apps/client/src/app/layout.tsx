@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "@mantine/core/styles.css";
-import { Navbar } from "@/components/layout/Navbar";
+import { ConditionalNavbar } from "@/components/layout/ConditionalNavbar";
 import { ToastProvider } from "@/components/ui/Toast";
 import { WalletContextProvider } from "@/context/WalletContextProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppQueryProvider } from "@/context/QueryProvider";
+import { PendingChallengesProvider } from "@/context/PendingChallengesContext";
 import { MantineProviderWrapper } from "@/components/providers/MantineProviderWrapper";
 import { MantineProvider } from "@mantine/core";
 
@@ -26,12 +27,14 @@ export default function RootLayout({
           <WalletContextProvider>
             <MantineProvider>
               <AuthProvider>
-                <ToastProvider>
-                  <div className="relative z-10">
-                    <Navbar />
-                    <main className="min-h-screen">{children}</main>
-                  </div>
-                </ToastProvider>
+                <PendingChallengesProvider>
+                  <ToastProvider>
+                    <div className="relative z-10">
+                      <ConditionalNavbar />
+                      <main className="min-h-screen">{children}</main>
+                    </div>
+                  </ToastProvider>
+                </PendingChallengesProvider>
               </AuthProvider>
             </MantineProvider>
           </WalletContextProvider>

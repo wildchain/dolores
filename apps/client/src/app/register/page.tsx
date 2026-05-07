@@ -6,6 +6,12 @@ import { Step1GenerateAgent } from "@/components/register/Step1GenerateAgent";
 import { Step2SelectCapabilities } from "@/components/register/Step2SelectCapabilities";
 import { Step3RegisterOnChain } from "@/components/register/Step3RegisterOnChain";
 import { useAgentRegistration } from "@/hooks/useAgentRegistration";
+import { pinManifest } from "@/lib/ipfs";
+import {
+  CAPABILITY_TEMPLATES,
+  hashManifest,
+  type CapabilityTemplateId,
+} from "@dolores/shared";
 
 type Step = 1 | 2 | 3;
 
@@ -22,21 +28,41 @@ export default function RegisterPage() {
     [],
   );
   const [registrationError, setRegistrationError] = useState<string>();
+  const [onChainSignature, setOnChainSignature] = useState<string>();
+  const [agentName, setAgentName] = useState("");
+  const [agentDescription, setAgentDescription] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState<{
     signature: string;
+    manifestCid: string;
   }>();
 
-  const { loading, agentKeypair, generateAgent, downloadKeypair, register } =
-    useAgentRegistration();
+  const {
+    loading,
+    registrationPhase,
+    setRegistrationPhase,
+    agentKeypair,
+    generateAgent,
+    downloadKeypair,
+    register,
+    writeArweaveCid,
+  } = useAgentRegistration();
 
   const handleStep1Next = () => {
     const keypair = generateAgent();
+    setOnChainSignature(undefined);
+    setRegistrationError(undefined);
     toast("Agent keypair generated successfully!");
     setStep(2);
   };
 
-  const handleStep2Next = (capabilities: string[]) => {
+  const handleStep2Next = (
+    capabilities: string[],
+    name: string,
+    description: string,
+  ) => {
     setSelectedCapabilities(capabilities);
+    setAgentName(name);
+    setAgentDescription(description);
     setStep(3);
   };
 
@@ -47,6 +73,7 @@ export default function RegisterPage() {
   };
 
   const handleRegister = async (stakeAmount: string) => {
+    if (loading) return;
     if (!agentKeypair) {
       toast("Agent keypair not found", "error");
       return;
@@ -54,22 +81,61 @@ export default function RegisterPage() {
 
     setRegistrationError(undefined);
 
-    // Create capability hash (simplified - in real implementation, use proper hashing)
-    const capabilityHash = Array.from({ length: 32 }, () =>
-      Math.floor(Math.random() * 256),
-    );
+    const templateId = selectedCapabilities[0] as CapabilityTemplateId;
+    const manifest = CAPABILITY_TEMPLATES[templateId];
+    if (!manifest) {
+      toast("Unknown capability template", "error");
+      return;
+    }
+    const capabilityHash = await hashManifest(manifest);
 
-    await register({
-      capabilityHash,
-      onSuccess: (agentPubkey, signature) => {
-        setRegistrationSuccess({ signature });
-        toast("Agent registered successfully!");
-      },
-      onError: error => {
-        setRegistrationError(error.message);
-        toast(error.message, "error");
-      },
-    });
+    // Phase 1: register on-chain — skipped on retry if already succeeded
+    let sig = onChainSignature;
+    if (!sig) {
+      await register({
+        capabilityHash,
+        onSuccess: (_agentPubkey, signature) => {
+          sig = signature;
+          setOnChainSignature(signature);
+        },
+        onError: error => {
+          setRegistrationError(error.message);
+          toast(error.message, "error");
+        },
+      });
+      if (!sig) return;
+    } else {
+      setRegistrationPhase("uploading");
+    }
+
+    // Phase 2: pin manifest to IPFS
+    let manifestCid: string;
+    try {
+      setRegistrationPhase("uploading");
+      const pinnedManifest: Record<string, unknown> = {
+        ...(manifest as unknown as Record<string, unknown>),
+        name: agentName,
+        description: agentDescription || manifest.description,
+      };
+      manifestCid = await pinManifest(pinnedManifest);
+    } catch (error) {
+      const msg = (error as Error).message ?? "IPFS pin failed";
+      setRegistrationError(msg);
+      toast(msg, "error");
+      setRegistrationPhase("error");
+      return;
+    }
+
+    // Phase 3: write CID on-chain
+    try {
+      await writeArweaveCid(manifestCid);
+      setRegistrationSuccess({ signature: sig, manifestCid });
+      toast("Agent registered successfully!");
+    } catch (error) {
+      const msg = (error as Error).message ?? "Failed to write CID on-chain";
+      setRegistrationError(msg);
+      toast(msg, "error");
+    }
   };
 
   return (
@@ -77,12 +143,12 @@ export default function RegisterPage() {
       <div className="max-w-lg mx-auto">
         <div className="mb-7">
           <div className="ink-rule" />
-          <p className="font-mono text-[11px] text-jadeMid uppercase tracking-widest mb-2">
+          <p className="font-mono text-[--fs-12] text-[--accent] uppercase tracking-[.14em] mb-2">
             Onboarding
           </p>
           <h1
-            className="font-display text-4xl font-medium text-moss"
-            style={{ letterSpacing: "-0.02em" }}
+            className="text-[--fs-32] font-bold text-[--fg]"
+            style={{ letterSpacing: "-0.025em" }}
           >
             Register Agent
           </h1>
@@ -108,6 +174,7 @@ export default function RegisterPage() {
             onBack={() => setStep(2)}
             onRegister={handleRegister}
             loading={loading}
+            registrationPhase={registrationPhase}
             error={registrationError}
             success={registrationSuccess}
           />

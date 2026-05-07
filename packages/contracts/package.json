@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rm -f tsconfig.tsbuildinfo && tsc && mkdir -p dist/idl && cp -r src/idl/* dist/idl/",
+    "build": "tsc && cp -r src/idl dist/",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -16,11 +16,7 @@
   "author": "Wildchain",
   "license": "UNLICENSED",
   "devDependencies": {
-    "@types/node": "^25.6.0",
+    "@types/node": "^20.0.0",
     "typescript": "^5.4.5"
-  },
-  "exports": {
-    ".": "./dist/index.js",
-    "./idl/*": "./src/idl/*.json"
   }
 }
