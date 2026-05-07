@@ -31,9 +31,18 @@ export class ChallengesController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('agentId') agentId?: string,
+    @Query('requester') requester?: string,
+    @Query('unresolved') unresolvedStr?: string,
   ): Promise<ChallengeCacheData[]> {
     const safeLimit = Math.min(limit, 100);
-    return this.challengesService.getAllChallenges(safeLimit, offset, agentId);
+    const unresolved = unresolvedStr === 'true' || unresolvedStr === '1';
+    return this.challengesService.getAllChallenges(
+      safeLimit,
+      offset,
+      agentId,
+      requester,
+      unresolved || undefined,
+    );
   }
 
   /**

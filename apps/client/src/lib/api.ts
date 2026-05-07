@@ -163,6 +163,8 @@ export class ApiClient {
   challenges = {
     getChallenges: (params?: {
       agentId?: string;
+      requester?: string;
+      unresolved?: boolean;
       limit?: number;
       offset?: number;
     }): Promise<AxiosResponse<ChallengeCacheData[]>> => {

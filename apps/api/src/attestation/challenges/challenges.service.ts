@@ -206,6 +206,8 @@ export class ChallengesService {
     limit = 20,
     offset = 0,
     agentId?: string,
+    requester?: string,
+    unresolved?: boolean,
   ): Promise<ChallengeCacheData[]> {
     const keys = await this.rocksdb.keys('challenge:');
     const results: ChallengeCacheData[] = [];
@@ -214,9 +216,14 @@ export class ChallengesService {
       const raw = await this.rocksdb.get(key);
       if (raw) {
         const data: ChallengeCacheData = JSON.parse(raw);
-        if (!agentId || data.agentId === agentId) {
-          results.push(data);
-        }
+        if (agentId && data.agentId !== agentId) continue;
+        if (requester && data.requester !== requester) continue;
+        if (
+          unresolved &&
+          (data.status === 'completed' || data.status === 'failed')
+        )
+          continue;
+        results.push(data);
       }
     }
 
