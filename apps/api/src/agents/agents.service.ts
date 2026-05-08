@@ -543,4 +543,21 @@ export class AgentsService {
       this.logger.warn(`Failed to refresh agent ${agentId}: ${err?.message}`);
     }
   }
+
+  async updateAgentCacheFields(agentId: string, fields: Partial<AgentCacheData>): Promise<void> {
+    const key = AgentCacheEntity.createKey(agentId);
+    const cached = await this.rocksdb.get(key);
+    if (!cached) return;
+    const data: AgentCacheData = JSON.parse(cached);
+    Object.assign(data, fields, { updatedAt: Date.now() });
+    await this.rocksdb.put(key, JSON.stringify(data));
+  }
+
+  async getAgentsByOperator(operatorAddress: string, limit = 20, offset = 0): Promise<AgentListItemDto[]> {
+    const agents = await this.fetchAllAgentsFromSolana();
+    return agents
+      .filter(a => a.operator === operatorAddress)
+      .slice(offset, offset + limit)
+      .map(a => this.mapToListDto(a));
+  }
 }

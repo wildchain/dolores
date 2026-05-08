@@ -31,44 +31,56 @@ export default function ExplorerPage() {
     [agents, q, cap, minRep],
   );
 
-  const fieldStyle = {
-    background: "rgba(244,242,237,0.9)",
-    border: "1px solid rgba(174,184,160,0.4)",
-    color: "#242820",
+  const fieldStyle: React.CSSProperties = {
+    background: "var(--bg)",
+    border: "1px solid var(--border-subtle)",
+    color: "var(--fg)",
     outline: "none",
-    fontFamily: "JetBrains Mono, monospace",
-    fontSize: "13px",
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "var(--fs-14)",
+    borderRadius: "var(--radius-sm)",
   };
 
   return (
     <div className="px-8 py-8 relative z-10">
       <div className="mb-8">
-        <div className="ink-rule" />
-        <p className="font-mono text-[11px] text-jadeMid uppercase tracking-widest mb-2">
+        <p
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "var(--fs-12)",
+            color: "var(--accent)",
+            textTransform: "uppercase",
+            letterSpacing: ".14em",
+            fontWeight: 600,
+            marginBottom: 8,
+          }}
+        >
           Agent Registry
         </p>
         <h1
-          className="font-display text-4xl font-medium text-moss mb-2"
-          style={{ letterSpacing: "-0.02em" }}
+          className="font-bold mb-2"
+          style={{
+            fontSize: "var(--fs-32)",
+            letterSpacing: "-0.02em",
+            color: "var(--fg)",
+          }}
         >
           Agent Explorer
         </h1>
-        <p className="text-[14px] text-muted">
+        <p style={{ fontSize: "var(--fs-16)", color: "var(--fg-muted)" }}>
           Browse registered agents by reputation, stake, and capability
         </p>
       </div>
 
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <input
-          style={fieldStyle}
-          className="rounded-sm px-3.5 py-2 w-56 placeholder:text-jade/60"
+          style={{ ...fieldStyle, width: 224, padding: "7px 14px" }}
           placeholder="Search agents..."
           value={q}
           onChange={e => setQ(e.target.value)}
         />
         <select
-          style={fieldStyle}
-          className="rounded-sm px-3.5 py-2 cursor-pointer"
+          style={{ ...fieldStyle, padding: "7px 14px", cursor: "pointer" }}
           onChange={e => setCap(e.target.value)}
         >
           {[
@@ -79,37 +91,34 @@ export default function ExplorerPage() {
             "YIELD_OPTIMIZER_V1",
             "ORACLE_READER_V1",
           ].map(o => (
-            <option key={o} style={{ background: "#F4F2ED" }}>
+            <option key={o} style={{ background: "var(--bg)" }}>
               {o}
             </option>
           ))}
         </select>
-        <select
-          style={fieldStyle}
-          className="rounded-sm px-3.5 py-2 cursor-pointer"
-          onChange={e => setMinRep(Number(e.target.value))}
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "var(--fs-12)",
+            color: "var(--fg-muted)",
+          }}
         >
-          {[
-            { l: "All reputations", v: 0 },
-            { l: "70+ score", v: 70 },
-            { l: "50+ score", v: 50 },
-          ].map(o => (
-            <option key={o.l} value={o.v} style={{ background: "#F4F2ED" }}>
-              {o.l}
-            </option>
-          ))}
-        </select>
-        <span className="font-mono text-[12px] text-jadeMid">
           {filtered.length} agent{filtered.length !== 1 ? "s" : ""}
           {agentsQuery.isSuccess && (
-            <span className="ml-2 text-success">● live</span>
+            <span style={{ marginLeft: 8, color: "var(--ok)" }}>● live</span>
           )}
         </span>
       </div>
 
       {agentsQuery.isLoading && (
         <div className="text-center py-16">
-          <p className="font-mono text-[13px] text-jadeMid">
+          <p
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "var(--fs-14)",
+              color: "var(--fg-muted)",
+            }}
+          >
             Loading agents...
           </p>
         </div>
@@ -117,10 +126,17 @@ export default function ExplorerPage() {
 
       {!agentsQuery.isLoading && agents.length === 0 && (
         <div className="text-center py-16">
-          <p className="font-mono text-[13px] text-jadeMid mb-2">
+          <p
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "var(--fs-14)",
+              color: "var(--fg-muted)",
+              marginBottom: 8,
+            }}
+          >
             No agents registered
           </p>
-          <p className="text-[12px] text-muted">
+          <p style={{ fontSize: "var(--fs-12)", color: "var(--fg-subtle)" }}>
             Start the indexer to see live agents
           </p>
         </div>
@@ -128,10 +144,17 @@ export default function ExplorerPage() {
 
       {!agentsQuery.isLoading && agents.length > 0 && filtered.length === 0 && (
         <div className="text-center py-16">
-          <p className="font-mono text-[13px] text-jadeMid mb-2">
+          <p
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "var(--fs-14)",
+              color: "var(--fg-muted)",
+              marginBottom: 8,
+            }}
+          >
             No agents match your filters
           </p>
-          <p className="text-[12px] text-muted">
+          <p style={{ fontSize: "var(--fs-12)", color: "var(--fg-subtle)" }}>
             Try adjusting your search or filter criteria
           </p>
         </div>
@@ -139,11 +162,11 @@ export default function ExplorerPage() {
 
       {!agentsQuery.isLoading && filtered.length > 0 && (
         <div
-          className="grid gap-4 stagger"
+          className="grid gap-4"
           style={{ gridTemplateColumns: "repeat(auto-fill,minmax(305px,1fr))" }}
         >
           {filtered.map(a => (
-            <div key={a.agentId} className="group animate-fade-up">
+            <div key={a.agentId} className="group">
               <AgentCard agent={a} />
             </div>
           ))}

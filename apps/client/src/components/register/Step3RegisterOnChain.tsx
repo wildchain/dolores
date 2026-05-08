@@ -7,6 +7,7 @@ import { FormInput } from "@/components/forms/FormInput";
 import { RegistrationSummary } from "./RegistrationSummary";
 import { Terminal } from "./Terminal";
 import type { Keypair } from "@solana/web3.js";
+import type { RegistrationPhase } from "@/hooks/useAgentRegistration";
 
 const schema = z.object({
   stakeAmount: z
@@ -25,8 +26,9 @@ interface Step3Props {
   onBack: () => void;
   onRegister: (stakeAmount: string) => void;
   loading: boolean;
+  registrationPhase: RegistrationPhase;
   error?: string;
-  success?: { signature: string };
+  success?: { signature: string; manifestCid: string };
 }
 
 export function Step3RegisterOnChain({
@@ -35,6 +37,7 @@ export function Step3RegisterOnChain({
   onBack,
   onRegister,
   loading,
+  registrationPhase,
   error,
   success,
 }: Step3Props) {
@@ -58,10 +61,10 @@ export function Step3RegisterOnChain({
   if (success) {
     return (
       <div className="animate-fade-up">
-        <h2 className="font-display text-2xl font-medium text-moss mb-2">
+        <h2 className="text-[--fs-20] font-semibold text-[--fg] mb-2">
           Agent Registered Successfully! 🎉
         </h2>
-        <p className="text-[14px] text-muted mb-6">
+        <p className="text-[--fs-14] text-[--fg-muted] mb-6">
           Your agent is now live on devnet. Reputation builds with every
           verified task.
         </p>
@@ -70,14 +73,20 @@ export function Step3RegisterOnChain({
           lines={[
             { text: "✓ Agent registered on dolores_registry", cls: "success" },
             { text: "✓ Fund initialized on dolores_fund", cls: "success" },
+            { text: "✓ Manifest pinned to IPFS", cls: "success" },
             { text: "" },
             {
               text: `Agent: ${agentKeypair.publicKey.toBase58()}`,
               cls: "info",
             },
             { text: `Transaction: ${success.signature}`, cls: "info" },
+            { text: `CID: ${success.manifestCid}`, cls: "info" },
             {
               text: `Explorer: https://explorer.solana.com/tx/${success.signature}?cluster=devnet`,
+              cls: "info",
+            },
+            {
+              text: `IPFS: https://ipfs.dolores.id/get/${success.manifestCid}`,
               cls: "info",
             },
           ]}
@@ -103,37 +112,37 @@ export function Step3RegisterOnChain({
 
   return (
     <div className="animate-fade-up">
-      <h2 className="font-display text-2xl font-medium text-moss mb-2">
+      <h2 className="text-[--fs-20] font-semibold text-[--fg] mb-2">
         Register On-Chain
       </h2>
-      <p className="text-[14px] text-muted mb-6">
+      <p className="text-[--fs-14] text-[--fg-muted] mb-6">
         Submit the registration transaction to Solana. Both your operator wallet
         and the agent keypair will sign this transaction.
       </p>
 
       {error && (
-        <div className="bg-danger/10 border border-danger/30 rounded-sm p-4 mb-5 text-danger text-[13px]">
+        <div className="bg-[--surface-raised] border border-[--danger] rounded-[--radius-sm] p-4 mb-5 text-[--danger] text-[--fs-14]">
           <strong>Registration Failed:</strong> {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="bg-jade/8 border border-jade/20 rounded-sm p-3.5 mb-5 font-mono text-[11px]">
+        <div className="bg-[--primary-subtle] border border-[--border-subtle] rounded-[--radius-sm] p-3.5 mb-5 font-mono text-[--fs-12]">
           <div className="mb-2">
-            <span className="text-jadeMid">Agent: </span>
-            <span className="text-jadeDark break-all">
+            <span className="text-[--fg-muted]">Agent: </span>
+            <span className="text-[--accent] break-all">
               {agentKeypair.publicKey.toBase58()}
             </span>
           </div>
           <div>
-            <span className="text-jadeMid">Capabilities: </span>
-            <span className="text-jadeDark">{capabilities.join(", ")}</span>
+            <span className="text-[--fg-muted]">Capabilities: </span>
+            <span className="text-[--accent]">{capabilities.join(", ")}</span>
           </div>
         </div>
 
         <FormInput
           name="stakeAmount"
-          control={control}
+          control={control as any}
           label="Initial Stake Amount (SOL)"
           type="number"
           step="0.1"
@@ -146,34 +155,34 @@ export function Step3RegisterOnChain({
               {
                 label: "Templates",
                 value: capabilities.join(", "),
-                valueClass: "text-jadeDark",
+                valueClass: "text-[--accent]",
               },
               {
                 label: "Initial stake",
                 value: stakeAmount ? `${stakeAmount} SOL` : "— SOL",
-                valueClass: "text-jadeDeep",
+                valueClass: "text-[--accent]",
               },
               {
                 label: "Slash exposure (60%)",
                 value: slashExposure,
-                valueClass: "text-danger",
+                valueClass: "text-[--danger]",
               },
               {
                 label: "Dual signature",
                 value: "Operator + Agent",
-                valueClass: "text-amber",
+                valueClass: "text-[--warn]",
               },
               {
                 label: "Network",
                 value: "Solana Devnet",
-                valueClass: "text-jadeMid",
+                valueClass: "text-[--fg-muted]",
               },
             ]}
           />
         </div>
 
-        <div className="bg-amber/10 border border-amber/30 rounded-sm p-4 mb-5">
-          <div className="text-[12px] text-muted space-y-1">
+        <div className="bg-[--surface-raised] border border-[--border-subtle] rounded-[--radius-sm] p-4 mb-5">
+          <div className="text-[--fs-14] text-[--fg-muted] space-y-1">
             <p>
               <strong>Transaction will:</strong>
             </p>
@@ -182,13 +191,15 @@ export function Step3RegisterOnChain({
               <li>Initialize fund account (signed by operator wallet)</li>
               <li>Lock capability template on-chain (immutable)</li>
               <li>Set initial reputation score to 0</li>
+              <li>Pin capability manifest to IPFS</li>
+              <li>Write IPFS CID on-chain</li>
             </ul>
           </div>
         </div>
 
         <div className="flex gap-3">
           <Button
-            type="button"
+            type={"button"}
             variant="secondary"
             className="flex-1"
             onClick={onBack}
@@ -197,7 +208,13 @@ export function Step3RegisterOnChain({
             ← Back
           </Button>
           <Button type="submit" className="flex-1" disabled={loading}>
-            {loading ? "Registering on-chain..." : "Register Agent →"}
+            {registrationPhase === "registering"
+              ? "Registering on-chain…"
+              : registrationPhase === "uploading"
+                ? "Uploading manifest…"
+                : registrationPhase === "writing_cid"
+                  ? "Writing CID on-chain…"
+                  : "Register Agent →"}
           </Button>
         </div>
       </form>

@@ -5,7 +5,8 @@ import { useToast } from '@/components/ui/Toast'
 import { useWalletState } from '@/hooks/useWalletState'
 import { cn } from '@/lib/data'
 
-const INDEXER = 'http://localhost:8080'
+const INDEXER = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+
 
 export default function StakerPage() {
   const { toast } = useToast()

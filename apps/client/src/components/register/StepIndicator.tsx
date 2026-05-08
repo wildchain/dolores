@@ -16,10 +16,13 @@ export function StepIndicator({ current, steps }: StepIndicatorProps) {
           <div
             className="w-2 h-2 rounded-sm transition-all duration-300"
             style={{
-              background: step.number <= current ? "#4A5640" : "#AEB8A0",
+              background:
+                step.number <= current
+                  ? "var(--accent)"
+                  : "var(--border-strong)",
               boxShadow:
                 step.number === current
-                  ? "0 0 0 3px rgba(107,122,96,0.2)"
+                  ? "0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent)"
                   : "none",
             }}
           />
@@ -29,8 +32,8 @@ export function StepIndicator({ current, steps }: StepIndicatorProps) {
               style={{
                 background:
                   step.number < current
-                    ? "rgba(74,86,64,0.5)"
-                    : "rgba(174,184,160,0.3)",
+                    ? "var(--accent)"
+                    : "var(--border-subtle)",
               }}
             />
           )}

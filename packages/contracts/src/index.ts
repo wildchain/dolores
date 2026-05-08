@@ -2,10 +2,10 @@
  * Program IDs for Dolores Protocol contracts
  */
 export const PROGRAM_IDS = {
-  ADJUDICATION: "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A",
-  FUND: "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5",
   REGISTRY: "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey",
-} as const;
+  FUND: "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5",
+  ADJUDICATION: "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz",
+};
 
 // Use require for JSON imports to work with composite builds
 const doloresAdjudicationIdl = require("./idl/dolores_adjudication.json");

@@ -56,6 +56,16 @@ export class AgentsController {
     return this.agentsService.getAllAgentsForRuntime();
   }
 
+  @Get('operator/:address')
+  async getAgentsByOperator(
+    @Param('address') operatorAddress: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+  ): Promise<AgentListItemDto[]> {
+    const safeLimit = Math.min(limit, 100);
+    return this.agentsService.getAgentsByOperator(operatorAddress, safeLimit, offset);
+  }
+
   /**
    * GET /agents/:id - Get agent details
    */

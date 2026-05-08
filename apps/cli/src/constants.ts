@@ -1,6 +1,6 @@
 //  Program IDs 
 
-export const ADJ_PROGRAM_ID = "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A"; // redeployed
+export const ADJ_PROGRAM_ID = "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz"; // redeployed
 export const FUND_PROGRAM_ID = "AyLZfg3r8PA1TLoqVkoyH8QZtzpAdDDyk82iM4AsbWn5";
 export const REGISTRY_PROGRAM_ID = "3LBwDJqrDqoaimGa5JgpZXx3DiupDsiVHJAgAJTXmRey";
 

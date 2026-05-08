@@ -1,2 +1,5 @@
-import { redirect } from 'next/navigation'
-export default function Home() { redirect('/explorer') }
+import Landing from "@/app/landing/page";
+
+export default function Home() {
+  return <Landing />;
+}

@@ -13,6 +13,8 @@ import { TaskStatus } from '@dolores/shared';
 import { AgentCacheData } from '../agents/agent-cache.entity';
 import { TaskCacheData } from '../tasks/task-cache.entity';
 import { ChallengeCacheData } from '../challenges/challenge-cache.entity';
+import { AttestationService } from '../attestation/services/attestation.service';
+
 
 @Injectable()
 export class SyncService implements OnModuleInit, OnModuleDestroy {
@@ -25,6 +27,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     private agentsService: AgentsService,
     private tasksService: TasksService,
     private challengesService: ChallengesService,
+    private attestationService: AttestationService,
   ) { }
 
   async onModuleInit() {
@@ -207,9 +210,10 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
         async (event: any) => {
           const agentId = event.agent.toBase58();
           this.logger.log(`AttestationSubmitted: ${agentId} — refreshing cache`);
-          await this.agentsService.refreshAgentFromSolana(agentId).catch(err =>
-            this.logger.warn(`Failed to refresh after attestation: ${err?.message}`)
-          );
+          await Promise.allSettled([
+            this.agentsService.refreshAgentFromSolana(agentId),
+            this.attestationService.handleAttestationSubmitted(event),
+          ]);
         },
       );
       this.listenerIds.push(attestationSubmittedListenerId);
@@ -513,4 +517,6 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(`StakeSlashed: ${agentId} — ${event.amount}`);
     await this.agentsService.refreshAgentFromSolana(agentId).catch(() => { });
   }
+
+
 }

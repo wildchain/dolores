@@ -5,7 +5,7 @@ import type {
 } from "@dolores/shared";
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8545";
 
 export interface ChallengeResponse {
   message: string;
@@ -22,6 +22,33 @@ export interface VerifyResponse {
   token: string;
   wallet: string;
   expiresAt: number;
+}
+
+export interface AttestationRecord {
+  agentId: string;
+  score: number;
+  outputHash: number[];
+  newReputation: number;
+  attestedAt: number; // Unix timestamp (seconds)
+  receiptCid?: string; // IPFS CID of the execution receipt (if available)
+}
+
+export interface ChallengeCacheData {
+  challengePda: string;
+  taskId: string;
+  agentId: string;
+  requester: string;
+  status: string;
+  capabilityName: string;
+  parametersJson: string;
+  receiptUrl?: string;
+  receipt?: unknown;
+  createdAt: number;
+  completedAt?: number;
+  disputeReason?: string;
+  adjudicatedBy?: string;
+  adjudicatedAt?: number;
+  updatedAt?: number;
 }
 
 type TaskFilterParams = {
@@ -84,6 +111,14 @@ export class ApiClient {
       });
     },
 
+    getAgentsByOperator: (
+      operatorAddress: string,
+    ): Promise<AxiosResponse<AgentListItemDto[]>> => {
+      return this.client.get<AgentListItemDto[]>(
+        `/agents/operator/${operatorAddress}`,
+      );
+    },
+
     getAgentDetails: (
       agentId: string,
     ): Promise<AxiosResponse<AgentDetailsDto>> => {
@@ -126,10 +161,20 @@ export class ApiClient {
 
   // Challenges endpoints
   challenges = {
+    getChallenges: (params?: {
+      agentId?: string;
+      requester?: string;
+      unresolved?: boolean;
+      limit?: number;
+      offset?: number;
+    }): Promise<AxiosResponse<ChallengeCacheData[]>> => {
+      return this.client.get<ChallengeCacheData[]>("/challenges", { params });
+    },
+
     getChallengeDetails: (
       challengeId: string,
-    ): Promise<AxiosResponse<unknown>> => {
-      return this.client.get<unknown>(`/challenges/${challengeId}`);
+    ): Promise<AxiosResponse<ChallengeCacheData>> => {
+      return this.client.get<ChallengeCacheData>(`/challenges/${challengeId}`);
     },
 
     buildFileChallenge: (data: {
@@ -149,6 +194,25 @@ export class ApiClient {
       );
     },
   };
+  // Attestations endpoints
+  attestations = {
+    getAll: (params?: {
+      limit?: number;
+      offset?: number;
+    }): Promise<AxiosResponse<AttestationRecord[]>> => {
+      return this.client.get<AttestationRecord[]>("/attestations", { params });
+    },
+
+    getByAgent: (
+      agentId: string,
+      params?: { limit?: number; offset?: number },
+    ): Promise<AxiosResponse<AttestationRecord[]>> => {
+      return this.client.get<AttestationRecord[]>(
+        `/attestations/agent/${agentId}`,
+        { params },
+      );
+    },
+  };
 }
 
 export const apiClient = new ApiClient();
@@ -158,3 +222,4 @@ export const authApi = apiClient.auth;
 export const agentsApi = apiClient.agents;
 export const tasksApi = apiClient.tasks;
 export const challengesApi = apiClient.challenges;
+export const attestationsApi = apiClient.attestations;

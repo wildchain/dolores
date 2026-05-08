@@ -11,7 +11,7 @@ import fetch from "node-fetch";
 import { SignedReceipt, outputHashToBytes } from "./receipt";
 
 const TASK_SEED = Buffer.from("task");
-const ADJ_PROGRAM_ID = "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A"; // redeployed
+const ADJ_PROGRAM_ID = "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz"; // redeployed
 const RECEIPT_URL = process.env.RECEIPT_URL || "http://localhost:8080";
 
 
