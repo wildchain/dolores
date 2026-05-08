@@ -14,7 +14,7 @@ import { SwapAction } from "./execute-jupiter";
 import { outputHashToBytes } from "../receipt";
 
 const TASK_SEED      = Buffer.from("task");
-const ADJ_PROGRAM_ID = "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A";
+const ADJ_PROGRAM_ID = "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz";
 const JUPITER_V6     = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
 
 const BASE    = "https://api.jup.ag";

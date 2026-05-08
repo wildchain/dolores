@@ -1,5 +1,5 @@
 {
-  "address": "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A",
+  "address": "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz",
   "metadata": {
     "name": "dolores_adjudication",
     "version": "0.1.0",
@@ -144,12 +144,7 @@
     {
       "name": "complete_task",
       "docs": [
-        "Mark a task as completed. Only the agent keypair can call this.",
-        "",
-        "`output_hash` = sha256(execution_receipt_json).",
-        "This is the agent's on-chain commitment to exactly what it did.",
-        "A challenger can fetch the receipt from Arweave, recompute the hash,",
-        "and verify it matches what is stored here."
+        "Mark a task as completed. Only the agent can call this."
       ],
       "discriminator": [
         109,
@@ -337,15 +332,7 @@
       "name": "register_task",
       "docs": [
         "Register a task when a user hires an agent.",
-        "",
-        "`instruction` is the natural-language or structured goal given to the",
-        "agent — e.g. \"transfer 0.001 SOL to <pubkey>\" or",
-        "\"swap 1 SOL to USDC when price > $200\".",
-        "It is stored on-chain as the ground truth for what the agent was asked",
-        "to do. Max 256 bytes.",
-        "",
-        "`output_hash` is left zeroed at registration time.",
-        "It is written by `complete_task()` after execution."
+        "Locks the deadline on-chain — ground truth for challenge resolution."
       ],
       "discriminator": [
         248,
@@ -411,8 +398,13 @@
           "type": "i64"
         },
         {
-          "name": "instruction",
-          "type": "string"
+          "name": "output_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ]
     }
@@ -557,16 +549,6 @@
       "code": 6008,
       "name": "Unauthorized",
       "msg": "Caller is not authorized"
-    },
-    {
-      "code": 6009,
-      "name": "InstructionTooLong",
-      "msg": "Instruction text exceeds maximum length of 256 bytes"
-    },
-    {
-      "code": 6010,
-      "name": "OutputHashEmpty",
-      "msg": "output_hash cannot be all zeros — agent must provide a real hash"
     }
   ],
   "types": [
@@ -814,10 +796,6 @@
             }
           },
           {
-            "name": "instruction",
-            "type": "string"
-          },
-          {
             "name": "output_hash",
             "type": {
               "array": [
@@ -876,10 +854,6 @@
           {
             "name": "assigned_by",
             "type": "pubkey"
-          },
-          {
-            "name": "instruction",
-            "type": "string"
           },
           {
             "name": "deadline",

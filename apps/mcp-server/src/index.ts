@@ -1144,7 +1144,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const maxTasks = limit ?? 10;
 
         const connection = new Connection(RPC_URL, "confirmed");
-        const ADJ_PROGRAM_ID = "8gm7LX32iTGMst7sutoWDmyrzDLYu3FHp3Hcv3HvVJ8A";
+        const ADJ_PROGRAM_ID = "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz";
 
         // Load IDL and fetch all task records for this agent
         const idlAdj = require(path.join(__dirname, "idl/dolores_adjudication.json"));
