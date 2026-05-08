@@ -1,0 +1,22 @@
+{
+  "name": "@dolores/contracts",
+  "version": "1.0.0",
+  "description": "Solana smart contract IDLs and program IDs for Dolores Protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && cp -r src/idl dist/",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "dolores",
+    "solana",
+    "contracts"
+  ],
+  "author": "Wildchain",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.5"
+  }
+}

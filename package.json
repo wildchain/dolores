@@ -1,0 +1,40 @@
+{
+  "name": "@dolores/monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dolores Protocol - Decentralized AI Agent Trust & Accountability",
+  "scripts": {
+    "build": "pnpm -r --filter='./packages/*' build && pnpm -r --filter='./apps/*' build",
+    "dev:indexer": "pnpm --filter indexer run start:dev",
+    "dev:api": "pnpm --filter api run start:dev",
+    "dev:client": "pnpm --filter client run dev",
+    "dev:cli": "pnpm --filter @dolores/cli run dev",
+    "dev:ipfs": "pnpm --filter ipfs-node run start:dev",
+    "clean": "pnpm -r exec rm -rf dist node_modules",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test"
+  },
+  "keywords": [
+    "solana",
+    "ai-agents",
+    "blockchain",
+    "accountability"
+  ],
+  "author": "Wildchain",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@ipshipyard/node-datachannel"
+    ],
+    "overrides": {
+      "@coral-xyz/anchor": "^0.32.1"
+    }
+  }
+}

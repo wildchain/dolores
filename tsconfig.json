@@ -1,0 +1,32 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./packages/contracts"
+    },
+    {
+      "path": "./packages/database"
+    },
+    {
+      "path": "./packages/solana-utils"
+    },
+    {
+      "path": "./apps/indexer"
+    },
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./apps/cli"
+    },
+    {
+      "path": "./apps/ipfs"
+    },
+    {
+      "path": "./apps/agents"
+    }
+  ]
+}

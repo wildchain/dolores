@@ -1,0 +1,28 @@
+{
+  "name": "@dolores/solana-utils",
+  "version": "1.0.0",
+  "description": "Common Solana utilities for Dolores Protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "dolores",
+    "solana",
+    "utilities"
+  ],
+  "author": "Wildchain",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@dolores/contracts": "workspace:*",
+    "@solana/web3.js": "^1.98.4",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "typescript": "^5.4.5"
+  }
+}

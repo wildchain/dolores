@@ -1,0 +1,92 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+coverage/
+.nyc_output
+*.lcov
+
+# Database
+data/
+*.db
+*.db-lock
+
+# Temporary files
+.temp
+.tmp
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IDE - JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IDE - Other
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# Solana/Anchor
+.anchor/
+target/
+test-ledger/
+**/*.rs.bk
+
+# Solana keypairs (security)
+*.json
+!package.json
+!package-lock.json
+!tsconfig*.json
+!**/idl/*.json
+!dolores-adjudication-keypair.json
+
+# pnpm
+.pnpm-store/
+.pnpm-debug.log
+
+# Runtime
+pids
+*.pid
+*.seed
+*.pid.lock

@@ -1,0 +1,21 @@
+{
+  "name": "@dolores/database",
+  "version": "0.1.0",
+  "description": "Shared RocksDB utilities for Dolores monorepo",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.0",
+    "rocksdb": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,893 @@
+{
+  "address": "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz",
+  "metadata": {
+    "name": "dolores_adjudication",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Dolores Protocol — challenge filing and auto-adjudication"
+  },
+  "instructions": [
+    {
+      "name": "auto_adjudicate",
+      "docs": [
+        "Auto-adjudicate on-chain. No humans involved.",
+        "Valid proof → slash agent. Invalid proof → dismiss challenge."
+      ],
+      "discriminator": [
+        254,
+        184,
+        108,
+        130,
+        104,
+        169,
+        47,
+        87
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "signer": true
+        },
+        {
+          "name": "task_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  97,
+                  115,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "task_record.agent",
+                "account": "TaskRecord"
+              },
+              {
+                "kind": "account",
+                "path": "task_record.task_id",
+                "account": "TaskRecord"
+              }
+            ]
+          }
+        },
+        {
+          "name": "challenge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge.agent",
+                "account": "Challenge"
+              },
+              {
+                "kind": "account",
+                "path": "challenge.task_id",
+                "account": "Challenge"
+              }
+            ]
+          }
+        },
+        {
+          "name": "adjudication_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_account",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "challenger",
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "fund_program"
+        },
+        {
+          "name": "registry_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "complete_task",
+      "docs": [
+        "Mark a task as completed. Only the agent can call this."
+      ],
+      "discriminator": [
+        109,
+        167,
+        192,
+        41,
+        129,
+        108,
+        220,
+        196
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "signer": true
+        },
+        {
+          "name": "task_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  97,
+                  115,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent"
+              },
+              {
+                "kind": "account",
+                "path": "task_record.task_id",
+                "account": "TaskRecord"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "output_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "file_challenge",
+      "docs": [
+        "File a challenge. Locks the fund via CPI to dolores_fund."
+      ],
+      "discriminator": [
+        200,
+        165,
+        22,
+        96,
+        219,
+        87,
+        83,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "challenger",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "task_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  97,
+                  115,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "task_record.agent",
+                "account": "TaskRecord"
+              },
+              {
+                "kind": "account",
+                "path": "task_record.task_id",
+                "account": "TaskRecord"
+              }
+            ]
+          }
+        },
+        {
+          "name": "challenge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "task_record.agent",
+                "account": "TaskRecord"
+              },
+              {
+                "kind": "account",
+                "path": "task_record.task_id",
+                "account": "TaskRecord"
+              }
+            ]
+          }
+        },
+        {
+          "name": "adjudication_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_account",
+          "writable": true
+        },
+        {
+          "name": "fund_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "failure_type",
+          "type": {
+            "defined": {
+              "name": "FailureType"
+            }
+          }
+        },
+        {
+          "name": "proof_data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "register_task",
+      "docs": [
+        "Register a task when a user hires an agent.",
+        "Locks the deadline on-chain — ground truth for challenge resolution."
+      ],
+      "discriminator": [
+        248,
+        122,
+        184,
+        250,
+        185,
+        100,
+        190,
+        79
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "agent"
+        },
+        {
+          "name": "task_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  97,
+                  115,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent"
+              },
+              {
+                "kind": "arg",
+                "path": "task_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "task_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "deadline",
+          "type": "i64"
+        },
+        {
+          "name": "output_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Challenge",
+      "discriminator": [
+        119,
+        250,
+        161,
+        121,
+        119,
+        81,
+        22,
+        208
+      ]
+    },
+    {
+      "name": "TaskRecord",
+      "discriminator": [
+        62,
+        42,
+        105,
+        214,
+        9,
+        85,
+        60,
+        158
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AgentSlashedEvent",
+      "discriminator": [
+        62,
+        129,
+        50,
+        239,
+        182,
+        210,
+        232,
+        77
+      ]
+    },
+    {
+      "name": "ChallengeDismissedEvent",
+      "discriminator": [
+        138,
+        79,
+        60,
+        193,
+        234,
+        17,
+        213,
+        100
+      ]
+    },
+    {
+      "name": "ChallengeFiledEvent",
+      "discriminator": [
+        66,
+        120,
+        80,
+        69,
+        40,
+        125,
+        61,
+        61
+      ]
+    },
+    {
+      "name": "TaskCompleted",
+      "discriminator": [
+        132,
+        223,
+        98,
+        152,
+        2,
+        9,
+        57,
+        128
+      ]
+    },
+    {
+      "name": "TaskRegistered",
+      "discriminator": [
+        209,
+        137,
+        168,
+        227,
+        19,
+        178,
+        212,
+        9
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "DeadlineInPast",
+      "msg": "Deadline must be in the future"
+    },
+    {
+      "code": 6001,
+      "name": "TaskNotPending",
+      "msg": "Task is not in pending state"
+    },
+    {
+      "code": 6002,
+      "name": "TaskNotChallengeable",
+      "msg": "Task cannot be challenged in its current state"
+    },
+    {
+      "code": 6003,
+      "name": "ChallengeAlreadyResolved",
+      "msg": "Challenge has already been resolved"
+    },
+    {
+      "code": 6004,
+      "name": "TaskChallengeMismatch",
+      "msg": "Task and challenge agent/task_id do not match"
+    },
+    {
+      "code": 6005,
+      "name": "AgentCannotChallenge",
+      "msg": "Agent cannot challenge their own task"
+    },
+    {
+      "code": 6006,
+      "name": "BondTooLow",
+      "msg": "Challenger bond is below minimum required"
+    },
+    {
+      "code": 6007,
+      "name": "ProofDataTooLarge",
+      "msg": "Proof data exceeds maximum size of 1024 bytes"
+    },
+    {
+      "code": 6008,
+      "name": "Unauthorized",
+      "msg": "Caller is not authorized"
+    }
+  ],
+  "types": [
+    {
+      "name": "AgentSlashedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "task_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "challenger",
+            "type": "pubkey"
+          },
+          {
+            "name": "failure_type",
+            "type": {
+              "defined": {
+                "name": "FailureType"
+              }
+            }
+          },
+          {
+            "name": "slashed_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Challenge",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "task_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "challenger",
+            "type": "pubkey"
+          },
+          {
+            "name": "bond_amount",
+            "type": "u64"
+          },
+          {
+            "name": "failure_type",
+            "type": {
+              "defined": {
+                "name": "FailureType"
+              }
+            }
+          },
+          {
+            "name": "proof_data",
+            "type": "bytes"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "ChallengeStatus"
+              }
+            }
+          },
+          {
+            "name": "filed_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChallengeDismissedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "task_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "challenger",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChallengeFiledEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "task_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "challenger",
+            "type": "pubkey"
+          },
+          {
+            "name": "failure_type",
+            "type": {
+              "defined": {
+                "name": "FailureType"
+              }
+            }
+          },
+          {
+            "name": "filed_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChallengeStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Filed"
+          },
+          {
+            "name": "Resolved"
+          },
+          {
+            "name": "Dismissed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FailureType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "MissedDeadline"
+          },
+          {
+            "name": "OutOfScopeCall"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TaskCompleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "task_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "output_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "completed_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TaskRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "assigned_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "task_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "output_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "deadline",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "TaskStatus"
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "completed_at",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TaskRegistered",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "task_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "assigned_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "deadline",
+            "type": "i64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TaskStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Completed"
+          },
+          {
+            "name": "Challenged"
+          },
+          {
+            "name": "Slashed"
+          },
+          {
+            "name": "Dismissed"
+          }
+        ]
+      }
+    }
+  ]
+}
