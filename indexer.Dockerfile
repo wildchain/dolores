@@ -1,6 +1,6 @@
 FROM node:20-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.12.4 --activate
 
 WORKDIR /app
 
@@ -32,11 +32,13 @@ RUN pnpm --filter api build
 # ── Runtime image ──────────────────────────────────────────────
 FROM node:20-alpine
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.12.4 --activate
 
 WORKDIR /app
 RUN chown node:node /app
 USER node
+
+RUN corepack prepare pnpm@10.12.4 --activate
 
 COPY --chown=node:node .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY --chown=node:node packages/shared/package.json        ./packages/shared/
