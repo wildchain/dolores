@@ -57,6 +57,15 @@ body::before {
   box-shadow: var(--shadow-md);
 }
 
+/* Stone card — warm cream surface, used throughout app */
+.stone-card {
+  @apply bg-stone border border-border rounded-lg shadow-card;
+}
+
+.stone-card:hover {
+  @apply shadow-cardHover;
+}
+
 /* Accent-left emphasis variant */
 .accent-left {
   border-left: 3px solid var(--accent) !important;

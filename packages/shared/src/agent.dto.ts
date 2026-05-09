@@ -45,3 +45,10 @@ export interface AgentTaskDto {
   requester: string; // Pubkey as base58
   receiptUrl?: string; // Arweave URL (optional)
 }
+
+export interface AgentFilterDto {
+  agentId?: string; // Exact match on agent pubkey (base58)
+  capability?: string; // Exact match against capabilities array
+  limit?: number;
+  offset?: number;
+}
