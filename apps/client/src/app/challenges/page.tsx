@@ -44,20 +44,23 @@ function ChallengeDetailsModal({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ background: "rgba(36,40,32,0.45)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(13,27,42,0.65)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
-        className="stone-card w-full max-w-lg p-7 animate-fade-up overflow-y-auto max-h-[90vh]"
+        className="bg-[--bg] border border-[--border-subtle] rounded-[--radius-lg] shadow-[--shadow-lg] w-full max-w-lg p-7 animate-fade-up overflow-y-auto max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-display text-xl font-medium text-moss">
+          <h2
+            className="font-sans text-[--fs-20] font-semibold text-[--fg]"
+            style={{ letterSpacing: "-0.01em" }}
+          >
             Challenge Details
           </h2>
           <button
             onClick={onClose}
-            className="font-mono text-[12px] text-jadeMid hover:text-moss transition-colors"
+            className="font-mono text-[--fs-12] text-[--fg-subtle] hover:text-[--fg] transition-colors"
           >
             ✕
           </button>
@@ -74,11 +77,11 @@ function ChallengeDetailsModal({
             ] as [string, string][]
           ).map(([label, value]) => (
             <div key={label} className="flex justify-between gap-4">
-              <span className="font-mono text-[11px] text-jadeMid whitespace-nowrap">
+              <span className="font-mono text-[--fs-12] text-[--fg-subtle] whitespace-nowrap">
                 {label}
               </span>
               <span
-                className="font-mono text-[11px] text-moss text-right break-all"
+                className="font-mono text-[--fs-12] text-[--fg] text-right break-all"
                 style={{ maxWidth: 280 }}
               >
                 {value}
@@ -87,23 +90,27 @@ function ChallengeDetailsModal({
           ))}
 
           <div className="flex justify-between gap-4">
-            <span className="font-mono text-[11px] text-jadeMid">Status</span>
+            <span className="font-mono text-[--fs-12] text-[--fg-subtle]">
+              Status
+            </span>
             <ChallengeBadge status={c.status} />
           </div>
 
           <div className="flex justify-between gap-4">
-            <span className="font-mono text-[11px] text-jadeMid">Filed At</span>
-            <span className="font-mono text-[11px] text-muted">
+            <span className="font-mono text-[--fs-12] text-[--fg-subtle]">
+              Filed At
+            </span>
+            <span className="font-mono text-[--fs-12] text-[--fg-muted]">
               {fmtTime(c.createdAt)}
             </span>
           </div>
 
           {c.completedAt && (
             <div className="flex justify-between gap-4">
-              <span className="font-mono text-[11px] text-jadeMid">
+              <span className="font-mono text-[--fs-12] text-[--fg-subtle]">
                 Completed At
               </span>
-              <span className="font-mono text-[11px] text-muted">
+              <span className="font-mono text-[--fs-12] text-[--fg-muted]">
                 {fmtTime(c.completedAt)}
               </span>
             </div>
@@ -111,10 +118,10 @@ function ChallengeDetailsModal({
 
           {c.adjudicatedAt && (
             <div className="flex justify-between gap-4">
-              <span className="font-mono text-[11px] text-jadeMid">
+              <span className="font-mono text-[--fs-12] text-[--fg-subtle]">
                 Adjudicated At
               </span>
-              <span className="font-mono text-[11px] text-muted">
+              <span className="font-mono text-[--fs-12] text-[--fg-muted]">
                 {fmtTime(c.adjudicatedAt)}
               </span>
             </div>
@@ -122,11 +129,11 @@ function ChallengeDetailsModal({
 
           {c.adjudicatedBy && (
             <div className="flex justify-between gap-4">
-              <span className="font-mono text-[11px] text-jadeMid">
+              <span className="font-mono text-[--fs-12] text-[--fg-subtle]">
                 Adjudicated By
               </span>
               <span
-                className="font-mono text-[11px] text-moss break-all text-right"
+                className="font-mono text-[--fs-12] text-[--fg] break-all text-right"
                 style={{ maxWidth: 280 }}
               >
                 {c.adjudicatedBy}
@@ -134,27 +141,16 @@ function ChallengeDetailsModal({
             </div>
           )}
 
-          {c.disputeReason && (
-            <div className="pt-2 border-t border-jade/15">
-              <div className="font-mono text-[10px] text-jadeMid uppercase tracking-wider mb-1.5">
-                Dispute Reason
-              </div>
-              <p className="text-[12px] text-moss leading-relaxed">
-                {c.disputeReason}
-              </p>
-            </div>
-          )}
-
           {c.receiptUrl && (
-            <div className="pt-2 border-t border-jade/15">
-              <div className="font-mono text-[10px] text-jadeMid uppercase tracking-wider mb-1.5">
+            <div className="pt-2 border-t border-[--border-subtle]">
+              <div className="font-mono text-[--fs-12] text-[--fg-subtle] uppercase tracking-[.08em] mb-1.5">
                 Receipt
               </div>
               <a
                 href={c.receiptUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono text-[11px] text-jadeDark hover:text-moss break-all transition-colors"
+                className="font-mono text-[--fs-12] text-[--accent] hover:text-[--fg] break-all transition-colors"
               >
                 {c.receiptUrl} ↗
               </a>
