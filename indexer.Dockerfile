@@ -38,6 +38,8 @@ WORKDIR /app
 RUN chown node:node /app
 USER node
 
+RUN corepack prepare pnpm@10.12.4 --activate
+
 COPY --chown=node:node .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY --chown=node:node packages/shared/package.json        ./packages/shared/
 COPY --chown=node:node packages/database/package.json      ./packages/database/
