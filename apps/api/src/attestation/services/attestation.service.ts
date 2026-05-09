@@ -20,6 +20,7 @@ export class AttestationService {
     offset = 0,
   ): Promise<AttestationCacheData[]> {
     const keys = await this.rocksdb.keys('attestation:');
+    console.log(`Found ${keys.length} total attestations in cache`);
     const paged = keys.reverse().slice(offset, offset + limit);
     const results: AttestationCacheData[] = [];
     for (const key of paged) {
