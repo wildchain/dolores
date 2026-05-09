@@ -179,7 +179,6 @@ export class AgentsService implements OnModuleInit {
           // Extract agent public key from the account
           const agentPubkey = accountInfo.account.agent as PublicKey;
           const agentData = await this.fetchAgentFromSolana(agentPubkey);
-
           if (agentData) {
             agents.push(agentData);
           }
@@ -190,6 +189,7 @@ export class AgentsService implements OnModuleInit {
           );
         }
       }
+
       this.cacheAgents(agents).catch((err) => {
         this.logger.error('Failed to cache agents', err);
       });
@@ -235,31 +235,20 @@ export class AgentsService implements OnModuleInit {
         await fundProgram.account['fundAccount'].fetchNullable(fundPda);
 
       const fundAccount: any = fundAccountInfo;
-
-      if (
-        agentPubkey.toBase58() ===
-        'Hx7mdqK5oE3e6Nj5kfCKyFgt9Xt9VMorJTriuuNQu8x3'
-      ) {
-        console.log('Registry Account:', registryAccount);
-        console.log('Fund Account:', fundAccount);
-        console.log('Stake amount', fundAccount?.totalLockedStake);
-      }
-
       // Fetch manifest from IPFS
       let manifest: any = null;
       const manifestCid = registryAccount.arweaveCid || '';
       if (manifestCid) {
-        try {
-          const ipfsGateway =
-            process.env.IPFS_GATEWAY_URL || 'https://ipfs.dolores.id/get';
-          const manifestUrl = `${ipfsGateway}/${manifestCid}`;
-          const response = await axios.get(manifestUrl, { timeout: 5000 });
-          manifest = response.data;
-        } catch (error) {
-          this.logger.warn(
-            `Failed to fetch manifest for agent ${agentPubkey.toBase58()}`,
-          );
-        }
+        const ipfsGateway =
+          process.env.IPFS_GATEWAY_URL || 'https://ipfs.dolores.id/get';
+        const manifestUrl = `${ipfsGateway}/${manifestCid}`;
+        const response = await axios.get(manifestUrl, { timeout: 5000 });
+        manifest = response.data;
+      } else {
+        this.logger.warn(
+          `Agent ${agentPubkey.toBase58()} has no manifest data`,
+        );
+        throw new Error(`Agent ${agentPubkey.toBase58()} has no manifest data`);
       }
 
       // Extract data
@@ -302,10 +291,10 @@ export class AgentsService implements OnModuleInit {
       };
       return agentData;
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch agent from Solana: ${agentPubkey.toBase58()}`,
-        error,
-      );
+      // this.logger.error(
+      //   `Failed to fetch agent from Solana: ${agentPubkey.toBase58()}`,
+      //   error,
+      // );
       return null;
     }
   }
