@@ -54,34 +54,34 @@ export default function AttestationsPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="ink-rule" />
-        <p className="font-mono text-[11px] text-jadeMid uppercase tracking-widest mb-2">
+        <p className="font-mono text-[--fs-12] text-[--fg-subtle] uppercase tracking-[.08em] mb-2">
           On-chain Records
         </p>
         <h1
-          className="font-display text-4xl font-medium text-moss mb-1.5"
-          style={{ letterSpacing: "-0.02em" }}
+          className="font-sans text-[--fs-32] font-semibold text-[--fg] mb-1.5"
+          style={{ letterSpacing: "-0.01em" }}
         >
           Attestations
         </h1>
-        <p className="text-[14px] text-muted">
+        <p className="text-[--fs-14] text-[--fg-muted]">
           All agent attestations, sorted newest first
         </p>
       </div>
 
       {/* Table */}
-      <div className="stone-card overflow-hidden">
+      <div className="bg-[--bg] border border-[--border-subtle] rounded-[--radius-lg] shadow-[--shadow-sm] overflow-hidden">
         {loading && attestations.length === 0 ? (
-          <div className="font-mono text-[13px] text-jadeMid py-12 text-center">
+          <div className="font-mono text-[--fs-14] text-[--fg-muted] py-12 text-center">
             Loading attestations...
           </div>
         ) : attestations.length === 0 ? (
-          <div className="font-mono text-[13px] text-jadeMid py-12 text-center">
+          <div className="font-mono text-[--fs-14] text-[--fg-muted] py-12 text-center">
             No attestations found
           </div>
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-jade/15">
+              <tr className="border-b border-[--border-subtle]">
                 {[
                   "Agent",
                   "Score",
@@ -91,7 +91,7 @@ export default function AttestationsPage() {
                 ].map(h => (
                   <th
                     key={h}
-                    className="px-4 py-3 font-mono text-[10px] text-jadeMid uppercase tracking-wider whitespace-nowrap"
+                    className="px-4 py-3 font-mono text-[10px] text-[--fg-subtle] uppercase tracking-[.08em] whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -113,24 +113,24 @@ export default function AttestationsPage() {
 
         {/* Pagination */}
         {(offset > 0 || hasMore) && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-jade/15">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[--border-subtle]">
             <button
               onClick={prev}
               disabled={offset === 0 || loading}
-              className="px-4 py-1.5 rounded-sm text-[12px] font-semibold bg-jade/10 border
-                border-jade/25 text-jadeDark hover:bg-jade/20 transition-all
+              className="px-4 py-1.5 rounded-[--radius-sm] text-[--fs-14] font-semibold bg-[--surface-raised] border
+                border-[--border-strong] text-[--fg] hover:bg-[--surface-sunken] transition-all
                 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               ← Prev
             </button>
-            <span className="font-mono text-[11px] text-jadeMid">
+            <span className="font-mono text-[11px] text-[--fg-muted]">
               {offset + 1}–{offset + attestations.length}
             </span>
             <button
               onClick={next}
               disabled={!hasMore || loading}
-              className="px-4 py-1.5 rounded-sm text-[12px] font-semibold bg-jade/10 border
-                border-jade/25 text-jadeDark hover:bg-jade/20 transition-all
+              className="px-4 py-1.5 rounded-[--radius-sm] text-[--fs-14] font-semibold bg-[--surface-raised] border
+                border-[--border-strong] text-[--fg] hover:bg-[--surface-sunken] transition-all
                 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Next →
