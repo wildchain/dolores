@@ -7,9 +7,8 @@ import { Footer } from "@/components/landing/Footer";
 
 const NAV_LINKS = [
   { href: "#protocol", label: "Protocol" },
-  { href: "#audiences", label: "Audiences" },
-  { href: "#sdk", label: "SDK" },
-  { href: "#docs", label: "Docs" },
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#cta", label: "Get started" },
 ];
 
 type TerminalLine = {
