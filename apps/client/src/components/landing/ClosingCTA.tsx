@@ -74,7 +74,7 @@ export function ClosingCTA() {
             Launch app
           </Link>
           <Link
-            href="#docs"
+            href="docs"
             className="px-6 py-3 font-semibold transition-opacity hover:opacity-70"
             style={{
               fontSize: "var(--fs-16)",

@@ -26,7 +26,7 @@ export function Navbar() {
       }}
     >
       <Link
-        href="/explorer"
+        href="/"
         className="font-bold"
         style={{
           fontSize: "var(--fs-20)",
@@ -56,14 +56,14 @@ export function Navbar() {
               fontSize: "var(--fs-14)",
               ...(path === l.href
                 ? {
-                    background: "var(--primary-subtle)",
-                    color: "var(--accent)",
-                    border: "1px solid var(--primary)",
-                  }
+                  background: "var(--primary-subtle)",
+                  color: "var(--accent)",
+                  border: "1px solid var(--primary)",
+                }
                 : {
-                    color: "var(--fg-muted)",
-                    border: "1px solid transparent",
-                  }),
+                  color: "var(--fg-muted)",
+                  border: "1px solid transparent",
+                }),
             }}
             onMouseEnter={e => {
               if (path !== l.href) {

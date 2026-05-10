@@ -8,7 +8,7 @@ import { Footer } from "@/components/landing/Footer";
 const NAV_LINKS = [
   { href: "#protocol", label: "Protocol" },
   { href: "#how-it-works", label: "How it works" },
-  { href: "#cta", label: "Get started" },
+  { href: "docs", label: "Get started" },
 ];
 
 type TerminalLine = {
@@ -103,12 +103,12 @@ export default function Landing() {
                 color: "var(--fg-muted)",
               }}
               onMouseEnter={e =>
-                ((e.currentTarget as HTMLAnchorElement).style.color =
-                  "var(--fg)")
+              ((e.currentTarget as HTMLAnchorElement).style.color =
+                "var(--fg)")
               }
               onMouseLeave={e =>
-                ((e.currentTarget as HTMLAnchorElement).style.color =
-                  "var(--fg-muted)")
+              ((e.currentTarget as HTMLAnchorElement).style.color =
+                "var(--fg-muted)")
               }
             >
               {l.label}
@@ -198,7 +198,7 @@ export default function Landing() {
                 Launch app
               </Link>
               <Link
-                href="#docs"
+                href="docs"
                 className="px-6 py-3 rounded-[var(--radius-sm)] font-semibold transition-colors hover:border-[var(--fg)]"
                 style={{
                   fontSize: "var(--fs-16)",
