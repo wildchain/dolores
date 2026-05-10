@@ -33,6 +33,24 @@ export interface AttestationRecord {
   receiptCid?: string; // IPFS CID of the execution receipt (if available)
 }
 
+export interface ChallengeCacheData {
+  challengePda: string;
+  taskId: string;
+  agentId: string;
+  requester: string;
+  status: string;
+  capabilityName: string;
+  parametersJson: string;
+  receiptUrl?: string;
+  receipt?: unknown;
+  createdAt: number;
+  completedAt?: number;
+  disputeReason?: string;
+  adjudicatedBy?: string;
+  adjudicatedAt?: number;
+  updatedAt?: number;
+}
+
 type TaskFilterParams = {
   agentId?: string;
   requester?: string;
@@ -143,10 +161,20 @@ export class ApiClient {
 
   // Challenges endpoints
   challenges = {
+    getChallenges: (params?: {
+      agentId?: string;
+      requester?: string;
+      unresolved?: boolean;
+      limit?: number;
+      offset?: number;
+    }): Promise<AxiosResponse<ChallengeCacheData[]>> => {
+      return this.client.get<ChallengeCacheData[]>("/challenges", { params });
+    },
+
     getChallengeDetails: (
       challengeId: string,
-    ): Promise<AxiosResponse<unknown>> => {
-      return this.client.get<unknown>(`/challenges/${challengeId}`);
+    ): Promise<AxiosResponse<ChallengeCacheData>> => {
+      return this.client.get<ChallengeCacheData>(`/challenges/${challengeId}`);
     },
 
     buildFileChallenge: (data: {

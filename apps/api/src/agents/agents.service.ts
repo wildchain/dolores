@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { PublicKey } from '@solana/web3.js';
 import { SolanaService } from '../solana/solana.service';
 import { RocksDBService } from '@dolores/database';
@@ -12,13 +17,22 @@ import { AgentCacheEntity, AgentCacheData } from './agent-cache.entity';
 import axios from 'axios';
 
 @Injectable()
-export class AgentsService {
+export class AgentsService implements OnModuleInit {
   private readonly logger = new Logger(AgentsService.name);
 
   constructor(
     private solanaService: SolanaService,
     private rocksdb: RocksDBService,
   ) {}
+
+  async onModuleInit() {
+    this.logger.log('AgentsService initialized');
+    try {
+      this.fetchAllAgentsFromSolana();
+    } catch (error) {
+      this.logger.error('Failed to fetch agents on startup', error);
+    }
+  }
 
   /**
    * Get agents by operator wallet address
@@ -27,7 +41,7 @@ export class AgentsService {
     operatorAddress: string,
   ): Promise<AgentListItemDto[]> {
     try {
-      const agents = await this.fetchAllAgentsFromSolana();
+      const agents = await this.getAllCachedAgents();
       return agents
         .filter((a) => a.operator === operatorAddress)
         .map((a) => this.mapToListDto(a));
@@ -43,10 +57,25 @@ export class AgentsService {
   /**
    * Get paginated list of agents
    */
-  async getAgents(limit = 20, offset = 0): Promise<AgentListItemDto[]> {
+  async getAgents(
+    limit = 20,
+    offset = 0,
+    agentId?: string,
+    capability?: string,
+  ): Promise<AgentListItemDto[]> {
     try {
-      // Fetch all agents directly from Solana
-      const agents = await this.fetchAllAgentsFromSolana();
+      let agents = await this.getAllCachedAgents();
+
+      if (agentId) {
+        agents = agents.filter((a) => a.agentId === agentId);
+      }
+
+      if (capability) {
+        const capLower = capability.toLowerCase();
+        agents = agents.filter((a) =>
+          a.capabilities.some((c) => c.toLowerCase() === capLower),
+        );
+      }
 
       // Apply pagination
       const paginatedAgents = agents
@@ -150,7 +179,6 @@ export class AgentsService {
           // Extract agent public key from the account
           const agentPubkey = accountInfo.account.agent as PublicKey;
           const agentData = await this.fetchAgentFromSolana(agentPubkey);
-
           if (agentData) {
             agents.push(agentData);
           }
@@ -162,6 +190,9 @@ export class AgentsService {
         }
       }
 
+      this.cacheAgents(agents).catch((err) => {
+        this.logger.error('Failed to cache agents', err);
+      });
       // Sort by registration date (newest first)
       agents.sort((a, b) => b.registeredAt - a.registeredAt);
 
@@ -204,22 +235,20 @@ export class AgentsService {
         await fundProgram.account['fundAccount'].fetchNullable(fundPda);
 
       const fundAccount: any = fundAccountInfo;
-
       // Fetch manifest from IPFS
       let manifest: any = null;
       const manifestCid = registryAccount.arweaveCid || '';
       if (manifestCid) {
-        try {
-          const ipfsGateway =
-            process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs';
-          const manifestUrl = `${ipfsGateway}/${manifestCid}`;
-          const response = await axios.get(manifestUrl, { timeout: 5000 });
-          manifest = response.data;
-        } catch (error) {
-          this.logger.warn(
-            `Failed to fetch manifest for agent ${agentPubkey.toBase58()}`,
-          );
-        }
+        const ipfsGateway =
+          process.env.IPFS_GATEWAY_URL || 'https://ipfs.dolores.id/get';
+        const manifestUrl = `${ipfsGateway}/${manifestCid}`;
+        const response = await axios.get(manifestUrl, { timeout: 5000 });
+        manifest = response.data;
+      } else {
+        this.logger.warn(
+          `Agent ${agentPubkey.toBase58()} has no manifest data`,
+        );
+        throw new Error(`Agent ${agentPubkey.toBase58()} has no manifest data`);
       }
 
       // Extract data
@@ -235,7 +264,7 @@ export class AgentsService {
         description: manifest?.description || '',
         capabilities,
         manifestUrl: manifestCid
-          ? `${process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs'}/${manifestCid}`
+          ? `${process.env.IPFS_GATEWAY_URL || 'https://ipfs.dolores.id/get'}/${manifestCid}`
           : '',
         manifest,
         registryPda: registryPda.toBase58(),
@@ -243,7 +272,7 @@ export class AgentsService {
         registeredAt: registryAccount.registeredAt?.toNumber() || 0,
         fundCreatedAt: fundAccount?.createdAt?.toNumber() || 0,
         isActive: registryAccount.isActive || false,
-        stakeAmount: fundAccount?.stakeAmount?.toNumber() || 0,
+        stakeAmount: fundAccount?.totalLockedStake?.toNumber() || 0,
         // Registry account fields
         capabilityHash: Array.from(registryAccount.capabilityHash || []),
         reputationScore: registryAccount.reputationScore || 0,
@@ -262,10 +291,10 @@ export class AgentsService {
       };
       return agentData;
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch agent from Solana: ${agentPubkey.toBase58()}`,
-        error,
-      );
+      // this.logger.error(
+      //   `Failed to fetch agent from Solana: ${agentPubkey.toBase58()}`,
+      //   error,
+      // );
       return null;
     }
   }
@@ -275,7 +304,19 @@ export class AgentsService {
    */
   private async cacheAgent(data: AgentCacheData): Promise<void> {
     const entity = new AgentCacheEntity(data);
-    await this.rocksdb.put(entity.getKey(), entity.toJSON());
+    await this.rocksdb.put(entity.getKey(), data);
+  }
+
+  private async cacheAgents(agents: AgentCacheData[]): Promise<void> {
+    const operations = agents.map((data) => {
+      const entity = new AgentCacheEntity(data);
+      return {
+        type: 'put' as const,
+        key: entity.getKey(),
+        value: JSON.parse(entity.toJSON()),
+      };
+    });
+    await this.rocksdb.batch(operations);
   }
 
   /**
@@ -302,8 +343,7 @@ export class AgentsService {
     agentId: string,
   ): Promise<AgentCacheData | null> {
     const key = AgentCacheEntity.createKey(agentId);
-    const cached = await this.rocksdb.get(key);
-    return cached ? JSON.parse(cached) : null;
+    return this.rocksdb.get<AgentCacheData>(key);
   }
 
   /**
@@ -314,9 +354,9 @@ export class AgentsService {
     const agents: AgentCacheData[] = [];
 
     for (const key of keys) {
-      const data = await this.rocksdb.get(key);
+      const data = await this.rocksdb.get<AgentCacheData>(key);
       if (data) {
-        agents.push(JSON.parse(data));
+        agents.push(data);
       }
     }
 

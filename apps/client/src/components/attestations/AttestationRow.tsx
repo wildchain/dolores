@@ -25,23 +25,23 @@ export function AttestationRow({
     <tr
       onClick={() => onClick(a)}
       className={cn(
-        "border-b border-jade/10 transition-colors hover:bg-jade/5 cursor-pointer",
+        "border-b border-[--border-subtle]/50 transition-colors hover:bg-[--surface-raised] cursor-pointer",
         i % 2 !== 0 && "bg-white/[0.01]",
       )}
     >
-      <td className="px-4 py-3 font-mono text-[11px] text-jadeDark whitespace-nowrap">
+      <td className="px-4 py-3 font-mono text-[11px] text-[--fg] whitespace-nowrap">
         {a.agentId.slice(0, 8)}...{a.agentId.slice(-4)}
       </td>
       <td className="px-4 py-3">
         <ScoreBadge score={a.score} />
       </td>
-      <td className="px-4 py-3 font-mono text-[11px] text-ink">
+      <td className="px-4 py-3 font-mono text-[11px] text-[--fg]">
         {a.newReputation}
       </td>
-      <td className="px-4 py-3 font-mono text-[11px] text-muted">
+      <td className="px-4 py-3 font-mono text-[11px] text-[--fg-muted]">
         {outputHex.slice(0, 16)}…
       </td>
-      <td className="px-4 py-3 font-mono text-[11px] text-muted whitespace-nowrap">
+      <td className="px-4 py-3 font-mono text-[11px] text-[--fg-muted] whitespace-nowrap">
         {fmtTime(a.attestedAt)}
       </td>
     </tr>

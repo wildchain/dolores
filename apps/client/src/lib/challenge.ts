@@ -108,6 +108,7 @@ export async function buildFileChallengeTransaction(
 
 /** Returns true if taskId is a valid 64-char lowercase hex string (32 bytes). */
 export function isValidTaskId(taskId: string): boolean {
+  console.log("Validating task ID:", taskId);
   return /^[0-9a-f]{64}$/.test(taskId);
 }
 

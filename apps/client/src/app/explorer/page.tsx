@@ -96,20 +96,6 @@ export default function ExplorerPage() {
             </option>
           ))}
         </select>
-        <select
-          style={{ ...fieldStyle, padding: "7px 14px", cursor: "pointer" }}
-          onChange={e => setMinRep(Number(e.target.value))}
-        >
-          {[
-            { l: "All reputations", v: 0 },
-            { l: "70+ score", v: 70 },
-            { l: "50+ score", v: 50 },
-          ].map(o => (
-            <option key={o.l} value={o.v} style={{ background: "var(--bg)" }}>
-              {o.l}
-            </option>
-          ))}
-        </select>
         <span
           style={{
             fontFamily: "'JetBrains Mono', monospace",

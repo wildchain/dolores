@@ -18,16 +18,18 @@ export class AgentsController {
   constructor(private agentsService: AgentsService) {}
 
   /**
-   * GET /agents - List all agents with pagination
+   * GET /agents - List all agents with pagination and optional filters
    */
   @Get()
   async getAgents(
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('agentId') agentId?: string,
+    @Query('capability') capability?: string,
   ): Promise<AgentListItemDto[]> {
     // Enforce max limit
     const safeLimit = Math.min(limit, 100);
-    return this.agentsService.getAgents(safeLimit, offset);
+    return this.agentsService.getAgents(safeLimit, offset, agentId, capability);
   }
 
   /**

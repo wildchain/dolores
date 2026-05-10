@@ -4,6 +4,7 @@ import { Modal } from "@mantine/core";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { StatTile } from "@/components/ui";
 import type { AttestationRecord } from "@/lib/api";
+import { usePendingChallenges } from "@/context/PendingChallengesContext";
 import {
   buildFileChallengeTransaction,
   isValidTaskId,
@@ -89,6 +90,9 @@ export function AttestationDetailsModal({
   const { publicKey, signTransaction } = useWallet();
   const { connection } = useConnection();
 
+  const { hasPendingChallenge, getChallengeForTask, refresh } =
+    usePendingChallenges();
+
   const [receipt, setReceipt] = useState<ExecutionReceipt | null>(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
 
@@ -131,10 +135,14 @@ export function AttestationDetailsModal({
   if (!a) return null;
 
   const taskId = receipt?.task_id ?? "";
+  const existingChallenge = isValidTaskId(taskId)
+    ? getChallengeForTask(taskId)
+    : undefined;
   const canChallenge =
     !!publicKey &&
     !!signTransaction &&
     isValidTaskId(taskId) &&
+    !existingChallenge &&
     challengeStep === "idle";
 
   async function handleFileChallenge() {
@@ -165,6 +173,7 @@ export function AttestationDetailsModal({
 
       setChallengeTxSig(sig);
       setChallengeStep("success");
+      refresh();
     } catch (err: unknown) {
       setChallengeError(err instanceof Error ? err.message : String(err));
       setChallengeStep("error");
@@ -348,9 +357,43 @@ export function AttestationDetailsModal({
               }}
             >
               {receiptLoading ? (
-                <span style={{ color: "var(--fg-subtle)" }}>
-                  Loading receipt…
-                </span>
+                <div
+                  style={{
+                    background: "var(--surface-raised)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: 20,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <style>{`
+                @keyframes dlrs-spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+                  <span
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      borderTopColor: "var(--fg-muted)",
+                      display: "inline-block",
+                      animation: "dlrs-spin 0.7s linear infinite",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "var(--fs-12)",
+                      color: "var(--fg-subtle)",
+                    }}
+                  >
+                    Loading receipt…
+                  </span>
+                </div>
               ) : receipt ? (
                 <>
                   <KvRow label="Instruction" value={receipt.instruction} />
@@ -390,159 +433,271 @@ export function AttestationDetailsModal({
           </div>
         )}
 
-        {/* File Challenge */}
-        <div>
+        {/* Already-challenged banner */}
+        {existingChallenge && (
           <div
             style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: "var(--fs-12)",
-              color: "var(--fg-subtle)",
-              textTransform: "uppercase",
-              letterSpacing: ".14em",
-              marginBottom: 10,
-            }}
-          >
-            File Challenge
-          </div>
-          <div
-            style={{
-              background: "var(--surface-raised)",
-              border: "1px solid var(--border-subtle)",
+              background: "rgba(245,158,11,0.08)",
+              border: "1px solid rgba(245,158,11,0.30)",
               borderRadius: "var(--radius-sm)",
-              padding: 16,
+              padding: "10px 14px",
               display: "flex",
               flexDirection: "column",
-              gap: 12,
+              gap: 4,
             }}
           >
-            {/* Failure type */}
-            <div className="flex flex-col gap-1">
-              <label
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "var(--fs-11)",
-                  color: "var(--fg-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: ".1em",
-                }}
-              >
-                Failure Type
-              </label>
-              <select
-                value={failureType}
-                onChange={e => setFailureType(e.target.value as FailureType)}
-                disabled={challengeStep !== "idle"}
-                style={{
-                  background: "var(--bg)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "var(--radius-sm)",
-                  color: "var(--fg)",
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "var(--fs-12)",
-                  padding: "6px 10px",
-                  outline: "none",
-                  cursor: challengeStep !== "idle" ? "not-allowed" : "pointer",
-                  opacity: challengeStep !== "idle" ? 0.5 : 1,
-                }}
-              >
-                <option value="MissedDeadline">Missed Deadline</option>
-                <option value="OutOfScopeCall">Out of Scope Call</option>
-              </select>
+            <span
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                color: "#d97706",
+                fontWeight: 600,
+              }}
+            >
+              ⚠ You have already filed a challenge for this task
+            </span>
+            <span
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-11)",
+                color: "rgba(217,119,6,0.7)",
+              }}
+            >
+              {existingChallenge.challengePda.slice(0, 8)}...
+              {existingChallenge.challengePda.slice(-4)} ·{" "}
+              {existingChallenge.status}
+            </span>
+          </div>
+        )}
+
+        {/* File Challenge */}
+        {!receiptLoading && (
+          <div>
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "var(--fs-12)",
+                color: "var(--fg-subtle)",
+                textTransform: "uppercase",
+                letterSpacing: ".14em",
+                marginBottom: 10,
+              }}
+            >
+              File Challenge
             </div>
 
-            {/* Status / action */}
-            {challengeStep === "idle" && (
-              <>
-                <button
-                  onClick={() => {
-                    setChallengeStep("confirming");
-                    setChallengeError("");
-                  }}
-                  disabled={!canChallenge}
-                  style={{
-                    background: canChallenge
-                      ? "var(--fg)"
-                      : "var(--surface-raised)",
-                    color: canChallenge ? "var(--bg)" : "var(--fg-subtle)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "var(--radius-sm)",
-                    fontFamily: "Inter, sans-serif",
-                    fontSize: "var(--fs-13)",
-                    fontWeight: 600,
-                    padding: "8px 16px",
-                    cursor: canChallenge ? "pointer" : "not-allowed",
-                    alignSelf: "flex-start",
-                  }}
-                >
-                  File Challenge
-                </button>
-                {!publicKey && (
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: "var(--fs-11)",
-                      color: "var(--fg-subtle)",
-                    }}
-                  >
-                    Connect your wallet to file a challenge.
-                  </span>
-                )}
-                {publicKey && !isValidTaskId(taskId) && (
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: "var(--fs-11)",
-                      color: "var(--fg-subtle)",
-                    }}
-                  >
-                    This task was not registered on-chain — challenges require a
-                    32-byte task ID.
-                  </span>
-                )}
-              </>
-            )}
-
-            {challengeStep === "confirming" && (
-              <div
-                style={{
-                  background: "var(--bg)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "var(--radius-sm)",
-                  padding: 12,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                <span
+            <div
+              style={{
+                background: "var(--surface-raised)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-sm)",
+                padding: 16,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              {/* Failure type */}
+              <div className="flex flex-col gap-1">
+                <label
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "var(--fs-12)",
-                    color: "var(--fg)",
+                    fontSize: "var(--fs-11)",
+                    color: "var(--fg-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: ".1em",
                   }}
                 >
-                  This will submit an on-chain challenge for task{" "}
-                  <strong>{taskId.slice(0, 16)}…</strong> against agent{" "}
-                  <strong>{a.agentId.slice(0, 8)}…</strong>. Your wallet must
-                  sign and pay fees.
-                </span>
-                <div className="flex gap-2">
+                  Failure Type
+                </label>
+                <select
+                  value={failureType}
+                  onChange={e => setFailureType(e.target.value as FailureType)}
+                  disabled={challengeStep !== "idle"}
+                  style={{
+                    background: "var(--bg)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "var(--radius-sm)",
+                    color: "var(--fg)",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "var(--fs-12)",
+                    padding: "6px 10px",
+                    outline: "none",
+                    cursor:
+                      challengeStep !== "idle" ? "not-allowed" : "pointer",
+                    opacity: challengeStep !== "idle" ? 0.5 : 1,
+                  }}
+                >
+                  <option value="MissedDeadline">Missed Deadline</option>
+                  <option value="OutOfScopeCall">Out of Scope Call</option>
+                </select>
+              </div>
+
+              {/* Status / action */}
+              {challengeStep === "idle" && (
+                <>
                   <button
-                    onClick={handleFileChallenge}
+                    onClick={() => {
+                      setChallengeStep("confirming");
+                      setChallengeError("");
+                    }}
+                    disabled={!canChallenge}
                     style={{
-                      background: "var(--fg)",
-                      color: "var(--bg)",
-                      border: "none",
+                      background: canChallenge
+                        ? "var(--fg)"
+                        : "var(--surface-raised)",
+                      color: canChallenge ? "var(--bg)" : "var(--fg-subtle)",
+                      border: "1px solid var(--border-subtle)",
                       borderRadius: "var(--radius-sm)",
                       fontFamily: "Inter, sans-serif",
                       fontSize: "var(--fs-13)",
                       fontWeight: 600,
-                      padding: "6px 14px",
-                      cursor: "pointer",
+                      padding: "8px 16px",
+                      cursor: canChallenge ? "pointer" : "not-allowed",
+                      alignSelf: "flex-start",
                     }}
                   >
-                    Confirm
+                    File Challenge
                   </button>
+                  {!publicKey ? (
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "var(--fs-11)",
+                        color: "var(--fg-subtle)",
+                      }}
+                    >
+                      Connect your wallet to file a challenge.
+                    </span>
+                  ) : !isValidTaskId(taskId) ? (
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "var(--fs-11)",
+                        color: "var(--fg-subtle)",
+                      }}
+                    >
+                      This task was not registered on-chain — challenges require
+                      a 32-byte task ID.
+                    </span>
+                  ) : null}
+                </>
+              )}
+
+              {challengeStep === "confirming" && (
+                <div
+                  style={{
+                    background: "var(--bg)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: 12,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "var(--fs-12)",
+                      color: "var(--fg)",
+                    }}
+                  >
+                    This will submit an on-chain challenge for task{" "}
+                    <strong>{taskId.slice(0, 16)}…</strong> against agent{" "}
+                    <strong>{a.agentId.slice(0, 8)}…</strong>. Your wallet must
+                    sign and pay fees.
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleFileChallenge}
+                      style={{
+                        background: "var(--fg)",
+                        color: "var(--bg)",
+                        border: "none",
+                        borderRadius: "var(--radius-sm)",
+                        fontFamily: "Inter, sans-serif",
+                        fontSize: "var(--fs-13)",
+                        fontWeight: 600,
+                        padding: "6px 14px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => setChallengeStep("idle")}
+                      style={{
+                        background: "transparent",
+                        color: "var(--fg-muted)",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: "var(--radius-sm)",
+                        fontFamily: "Inter, sans-serif",
+                        fontSize: "var(--fs-13)",
+                        padding: "6px 14px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {(challengeStep === "signing" ||
+                challengeStep === "submitting") && (
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "var(--fs-12)",
+                    color: "var(--fg-subtle)",
+                  }}
+                >
+                  {challengeStep === "signing"
+                    ? "Waiting for wallet signature…"
+                    : "Submitting transaction…"}
+                </span>
+              )}
+
+              {challengeStep === "success" && (
+                <div className="flex flex-col gap-2">
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "var(--fs-12)",
+                      color: "var(--fg)",
+                    }}
+                  >
+                    Challenge filed ✓
+                  </span>
+                  <a
+                    href={explorerUrl(challengeTxSig)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "var(--accent)",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "var(--fs-12)",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {challengeTxSig}
+                  </a>
+                </div>
+              )}
+
+              {challengeStep === "error" && (
+                <div className="flex flex-col gap-2">
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: "var(--fs-12)",
+                      color: "#c0392b",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {challengeError}
+                  </span>
                   <button
                     onClick={() => setChallengeStep("idle")}
                     style={{
@@ -554,88 +709,16 @@ export function AttestationDetailsModal({
                       fontSize: "var(--fs-13)",
                       padding: "6px 14px",
                       cursor: "pointer",
+                      alignSelf: "flex-start",
                     }}
                   >
-                    Cancel
+                    Try again
                   </button>
                 </div>
-              </div>
-            )}
-
-            {(challengeStep === "signing" ||
-              challengeStep === "submitting") && (
-              <span
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "var(--fs-12)",
-                  color: "var(--fg-subtle)",
-                }}
-              >
-                {challengeStep === "signing"
-                  ? "Waiting for wallet signature…"
-                  : "Submitting transaction…"}
-              </span>
-            )}
-
-            {challengeStep === "success" && (
-              <div className="flex flex-col gap-2">
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "var(--fs-12)",
-                    color: "var(--fg)",
-                  }}
-                >
-                  Challenge filed ✓
-                </span>
-                <a
-                  href={explorerUrl(challengeTxSig)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: "var(--accent)",
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "var(--fs-12)",
-                    wordBreak: "break-all",
-                  }}
-                >
-                  {challengeTxSig}
-                </a>
-              </div>
-            )}
-
-            {challengeStep === "error" && (
-              <div className="flex flex-col gap-2">
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: "var(--fs-12)",
-                    color: "#c0392b",
-                    wordBreak: "break-all",
-                  }}
-                >
-                  {challengeError}
-                </span>
-                <button
-                  onClick={() => setChallengeStep("idle")}
-                  style={{
-                    background: "transparent",
-                    color: "var(--fg-muted)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "var(--radius-sm)",
-                    fontFamily: "Inter, sans-serif",
-                    fontSize: "var(--fs-13)",
-                    padding: "6px 14px",
-                    cursor: "pointer",
-                    alignSelf: "flex-start",
-                  }}
-                >
-                  Try again
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </Modal>
   );
