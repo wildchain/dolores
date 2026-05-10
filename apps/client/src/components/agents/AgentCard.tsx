@@ -138,9 +138,9 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
           >
             View
           </Button>
-          <Button size="sm" onClick={() => toast(`Hired ${agent.name}`)}>
+          {/* <Button size="sm" onClick={() => toast(`Hired ${agent.name}`)}>
             Hire
-          </Button>
+          </Button> */}
         </div>
       </div>
 
