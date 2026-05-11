@@ -141,7 +141,7 @@ export default function DocsPage() {
                         • Verify agent actions through on-chain attestations
                     </li>
                     <li>
-                        • slash for agent misbehavior or failed execution.
+                        • Slash for agent misbehavior or failed execution.
                     </li>
 
                     <li>
