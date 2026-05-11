@@ -244,6 +244,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
     try {
       const agentDetails = await this.agentsService.getAgentDetails(
         event.agent.toBase58(),
+        true,
       );
       this.logger.log(`Cached agent: ${agentDetails.name}`);
     } catch (error) {
@@ -265,7 +266,7 @@ export class SyncService implements OnModuleInit, OnModuleDestroy {
       `FundInitialized: agent=${event.agent.toBase58()} operator=${event.operator.toBase58()}`,
     );
     try {
-      await this.agentsService.getAgentDetails(event.agent.toBase58());
+      await this.agentsService.getAgentDetails(event.agent.toBase58(), true);
     } catch (error) {
       this.logger.error('Failed to update agent fund details', error);
     }

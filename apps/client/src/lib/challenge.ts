@@ -5,10 +5,15 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import { Program, AnchorProvider } from "@coral-xyz/anchor";
-import { doloresAdjudicationIdl, PROGRAM_IDS } from "@dolores/contracts";
+import {
+  doloresAdjudicationIdl,
+  doloresRegistryIdl,
+  PROGRAM_IDS,
+} from "@dolores/contracts";
 
 const ADJ_PROGRAM_ID = new PublicKey(PROGRAM_IDS.ADJUDICATION);
 const FUND_PROGRAM_ID = new PublicKey(PROGRAM_IDS.FUND);
+const REGISTRY_PROGRAM_ID = new PublicKey(PROGRAM_IDS.REGISTRY);
 
 export type FailureType = "MissedDeadline" | "OutOfScopeCall";
 
@@ -17,8 +22,6 @@ export interface FileChallengeParams {
   agentId: string;
   /** Task ID as 64-char hex (32 bytes) */
   taskId: string;
-  /** Operator pubkey (base58) — used to derive fund_account PDA */
-  operatorId: string;
   failureType: FailureType;
   /** Proof data bytes — typically UTF-8 encoded receipt CID */
   proofData: Uint8Array;
@@ -33,7 +36,6 @@ export async function buildFileChallengeTransaction(
   const {
     agentId,
     taskId,
-    operatorId,
     failureType,
     proofData,
     challengerPublicKey,
@@ -41,8 +43,25 @@ export async function buildFileChallengeTransaction(
   } = params;
 
   const agentPubkey = new PublicKey(agentId);
-  const operatorPubkey = new PublicKey(operatorId);
   const taskIdBuffer = Buffer.from(taskId, "hex");
+
+  // Build a read-only provider — wallet signing happens in the UI layer
+  const provider = new AnchorProvider(
+    connection,
+    {} as any,
+    AnchorProvider.defaultOptions(),
+  );
+
+  // Fetch registry account to get the agent's operator
+  const registryProgram = new Program(doloresRegistryIdl as any, provider);
+  const [registryPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("registry"), agentPubkey.toBuffer()],
+    REGISTRY_PROGRAM_ID,
+  );
+
+  const registryAccount =
+    await registryProgram.account.registryAccount.fetch(registryPda);
+  const operatorPubkey = (registryAccount as any).operator as PublicKey;
 
   // Derive task_record PDA — seeds: ["task", agent, task_id]
   const [taskRecordPda] = PublicKey.findProgramAddressSync(
@@ -63,17 +82,12 @@ export async function buildFileChallengeTransaction(
   );
 
   // Derive fund_account PDA from fund program — seeds: ["fund", operator, agent]
+  // Using the operator from the registry account (NOT the challenger)
   const [fundAccount] = PublicKey.findProgramAddressSync(
     [Buffer.from("fund"), operatorPubkey.toBuffer(), agentPubkey.toBuffer()],
     FUND_PROGRAM_ID,
   );
 
-  // Build a read-only provider — wallet signing happens in the UI layer
-  const provider = new AnchorProvider(
-    connection,
-    {} as any,
-    AnchorProvider.defaultOptions(),
-  );
   const adjProgram = new Program(doloresAdjudicationIdl as any, provider);
 
   const { blockhash } = await connection.getLatestBlockhash("confirmed");

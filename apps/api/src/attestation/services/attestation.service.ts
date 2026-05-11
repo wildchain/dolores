@@ -20,12 +20,12 @@ export class AttestationService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.logger.log('AttestationService initialized');
-    try {
-      await this.getAllAttestationsFromSolana();
-    } catch (error) {
-      this.logger.error('Failed to fetch attestations on startup', error);
-    }
+    // this.logger.log('AttestationService initialized');
+    // try {
+    //   await this.getAllAttestationsFromSolana();
+    // } catch (error) {
+    //   this.logger.error('Failed to fetch attestations on startup', error);
+    // }
   }
 
   private decodeEvents(program: any, logs: string[]) {

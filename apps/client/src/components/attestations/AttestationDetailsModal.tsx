@@ -158,7 +158,6 @@ export function AttestationDetailsModal({
       const tx = await buildFileChallengeTransaction({
         agentId: a.agentId,
         taskId,
-        operatorId: publicKey.toBase58(),
         failureType,
         proofData,
         challengerPublicKey: publicKey,

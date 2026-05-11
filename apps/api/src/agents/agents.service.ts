@@ -27,11 +27,11 @@ export class AgentsService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('AgentsService initialized');
-    try {
-      this.fetchAllAgentsFromSolana();
-    } catch (error) {
-      this.logger.error('Failed to fetch agents on startup', error);
-    }
+    // try {
+    //   this.fetchAllAgentsFromSolana();
+    // } catch (error) {
+    //   this.logger.error('Failed to fetch agents on startup', error);
+    // }
   }
 
   /**
@@ -109,7 +109,10 @@ export class AgentsService implements OnModuleInit {
   /**
    * Get detailed agent info
    */
-  async getAgentDetails(agentId: string): Promise<AgentDetailsDto> {
+  async getAgentDetails(
+    agentId: string,
+    isNewAgent = false,
+  ): Promise<AgentDetailsDto> {
     try {
       console.log(`Fetching details for agent ${agentId}`);
       const agentPubkey = new PublicKey(agentId);
@@ -122,7 +125,7 @@ export class AgentsService implements OnModuleInit {
       }
 
       // Fetch from Solana
-      let agent = await this.fetchAgentFromSolana(agentPubkey);
+      let agent = await this.fetchAgentFromSolana(agentPubkey, isNewAgent);
       if (!agent) {
         throw new NotFoundException(`Agent ${agentId} not found`);
       }
@@ -208,6 +211,7 @@ export class AgentsService implements OnModuleInit {
    */
   private async fetchAgentFromSolana(
     agentPubkey: PublicKey,
+    isNewAgent = false,
   ): Promise<AgentCacheData | null> {
     try {
       const registryProgram = this.solanaService.getRegistryProgram();
@@ -245,10 +249,14 @@ export class AgentsService implements OnModuleInit {
         const response = await axios.get(manifestUrl, { timeout: 5000 });
         manifest = response.data;
       } else {
-        this.logger.warn(
-          `Agent ${agentPubkey.toBase58()} has no manifest data`,
-        );
-        throw new Error(`Agent ${agentPubkey.toBase58()} has no manifest data`);
+        if (!isNewAgent) {
+          this.logger.warn(
+            `Agent ${agentPubkey.toBase58()} has no manifest data`,
+          );
+          throw new Error(
+            `Agent ${agentPubkey.toBase58()} has no manifest data`,
+          );
+        }
       }
 
       // Extract data
