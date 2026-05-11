@@ -1,4 +1,5 @@
-# Dolores Protocol
+# Dolores Protocol - link [https://dolores.id/]
+
 
 **Decentralized AI Agent Trust & Accountability on Solana**
 
@@ -52,6 +53,7 @@ Dolores is a monorepo protocol for registering, staking, running, and adjudicati
 ```bash
 # From the monorepo root
 pnpm install
+
 
 # Build all shared packages first
 pnpm --filter='./packages/*' build
@@ -166,7 +168,15 @@ pnpm test:sol-transfer
 
 ## 7. Full test sequence
 
-### Step 1 — Register an agent
+### Step 1 - Open Claude with MCP.
+
+```bash
+claude mcp add dolores npx dolores-mcp@0.1.18 --scope user
+```
+Then natural language commands: create wallet, register agent, assign task, check status.
+
+
+### Step 2 — Register an agent
 
 ```bash
 dolores register
@@ -184,7 +194,7 @@ Registration creates two PDAs:
 - `RegistryAccount` on `dolores_registry` — identity and reputation
 - `FundAccount` on `dolores_fund` — staking vault
 
-### Step 2 — Check initial reputation
+### Step 3 — Check initial reputation
 
 ```bash
 dolores history --agent-id <AGENT_PUBKEY>
@@ -192,7 +202,7 @@ dolores history --agent-id <AGENT_PUBKEY>
 
 Expected: `Reputation: 0 / 10000`, `Last attested: never`
 
-### Step 3 — Fund and stake for the agent
+### Step 4 — Fund and stake for the agent
 
 Go to https://faucet.solana.com, request **1 SOL** for both your operator wallet and the agent pubkey.
 
@@ -202,7 +212,7 @@ Then stake SOL to back the agent:
 dolores stake --agent-id <AGENT_PUBKEY> --amount 0.1
 ```
 
-### Step 4 — Run a task
+### Step 5 — Run a task
 
 ```bash
 dolores run --agent-id <AGENT_PUBKEY> \
@@ -227,7 +237,7 @@ Two on-chain transactions are produced:
 - The SOL transfer
 - The `submit_attestation` call on `dolores_registry`
 
-### Step 5 — Assign a task to an agent
+### Step 6 — Assign a task to an agent
 
 ```bash
 dolores assign \
@@ -238,13 +248,14 @@ dolores assign \
 
 This registers the task on-chain via `dolores_adjudication` and notifies the indexer.
 
-### Step 6 — Check task status
+### Step 7 — Check task status
 
 ```bash
 dolores task-status --task-id <TASK_ID_HEX>
 ```
 
-### Step 7 — Verify an agent meets thresholds
+
+### Step 8 — Verify an agent meets thresholds
 
 ```bash
 dolores verify \
@@ -253,7 +264,7 @@ dolores verify \
   --min-stake 0.1
 ```
 
-### Step 8 — Challenge a misbehaving agent
+### Step 9 — Challenge a misbehaving agent
 
 ```bash
 dolores challenge \
@@ -289,7 +300,7 @@ Only the agent holding the private key can submit valid receipts for that agent 
 
 ## 9. Agent capabilities
 
-The agent runtime supports six DeFi capability templates. Each has a Claude skill file that defines allowed operations, verified token addresses, and Dolores accountability rules.
+The agent runtime supports seven DeFi capability templates. Each has a Claude skill file that defines allowed operations, verified token addresses, and Dolores accountability rules.
 
 | Capability template | Skill                      | What the agent can do                                                |
 | ------------------- | -------------------------- | -------------------------------------------------------------------- |
@@ -372,21 +383,30 @@ The agent runtime supports six DeFi capability templates. Each has a Claude skil
 
 ## 12. How reputation works
 
-Each completed task earns an attestation. The reputation delta per task is:
+Reputation is scored out of 10,000 and updated on-chain after every attested task.
+Current implementation:
 
 ```
 delta = score × stake_weight / 10
       = 85    × 5            / 10
       = 42 points
 
-gain formula: reputation_new = min(Reputation_old + ((score × stakeWeight) / 10), 10000).
-slash formula: Reputation_new = Reputation_old × 0.35
+gain:  reputation_new = min(reputation_old + ((score × stake_weight) / 10), 10000)slash: reputation_new = reputation_old × 0.35 Example: score 85 × stake_weight 5 / 10 = +42 points per task.
+```
+An agent reaches maximum reputation after roughly 238 successful tasks at default settings. A slash permanently drops reputation to 35% of its prior value and increments slash_count — three slashes effectively blacklists the agent from any protocol using standard thresholds.
+Designed scoring architecture (next phase):
+The full scoring model introduces three weighted factors:
+
+```
+score = (primary_term × 850 + bonuses) × slash_multiplier primary_term = attestation_rate × task_stake_weight × tenure_factor.
+
 ```
 
 Maximum reputation is **10,000**. It takes roughly 238 successful tasks to reach max reputation at default settings.
 
 A slash drops reputation to **35% of its prior value** and increments `slash_count` permanently. Three slashes effectively blacklists the agent from any protocol using standard thresholds.
 
+This ensures an agent must perform well on meaningful tasks over real time to score highly — trivial tasks at 100% success, or a brief but perfect track record, both produce a lower score than genuine sustained performance on high-value work.
 ---
 
 ## 13. Staking economy
@@ -404,7 +424,8 @@ Minimum stake is **0.01 SOL**. Community stakers cannot be the same wallet as th
 
 ## 14. Challenge & adjudication
 
-The `dolores_adjudication` program automates the full dispute lifecycle with no human arbitrators.
+The dolores_adjudication program handles challenge filing and dispute registration on-chain. Auto-adjudication is in active development  currently challenges are filed on-chain and reviewed manually. 
+ 
 
 | Instruction       | Who calls it     | What it does                                                           |
 | ----------------- | ---------------- | ---------------------------------------------------------------------- |
@@ -414,6 +435,7 @@ The `dolores_adjudication` program automates the full dispute lifecycle with no 
 | `auto_adjudicate` | Anyone           | Resolves on-chain — valid proof slashes agent, invalid proof dismisses |
 
 Failure types: `MissedDeadline` or `OutOfScopeCall`. Minimum challenge bond: **0.01 SOL**.
+Note: auto_adjudicate instruction is deployed on-chain. Full automated resolution is in active development.
 
 ---
 
