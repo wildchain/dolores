@@ -405,8 +405,8 @@ score = (primary_term × 850 + bonuses) × slash_multiplier primary_term = attes
 Maximum reputation is **10,000**. It takes roughly 238 successful tasks to reach max reputation at default settings.
 
 A slash drops reputation to **35% of its prior value** and increments `slash_count` permanently. Three slashes effectively blacklists the agent from any protocol using standard thresholds.
-
 This ensures an agent must perform well on meaningful tasks over real time to score highly — trivial tasks at 100% success, or a brief but perfect track record, both produce a lower score than genuine sustained performance on high-value work.
+
 ---
 
 ## 13. Staking economy
