@@ -19,14 +19,18 @@ import {
 } from "@solana/web3.js";
 import { Program, AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
 import * as crypto from "crypto";
+import {
+  doloresAdjudicationIdl,
+  doloresFundIdl,
+  doloresRegistryIdl,
+} from "@dolores/contracts";
 
-//  Config 
+//  Config
 
 const API_URL =
   process.env.DOLORES_API_URL ||
   "https://lively-dream-production-bf53.up.railway.app";
-const RPC_URL =
-  process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
+const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 
 const DOLORES_WALLET_PATH = process.env.DOLORES_OPERATOR_KEY
   ? path.resolve(process.env.DOLORES_OPERATOR_KEY)
@@ -47,7 +51,7 @@ const VALID_TEMPLATES = [
   "PUMPFUN_TRADER",
 ];
 
-//  Wallet helpers 
+//  Wallet helpers
 
 function getOrCreateWallet(): Keypair {
   if (fs.existsSync(DOLORES_WALLET_PATH)) {
@@ -58,7 +62,7 @@ function getOrCreateWallet(): Keypair {
   fs.mkdirSync(path.dirname(DOLORES_WALLET_PATH), { recursive: true });
   fs.writeFileSync(
     DOLORES_WALLET_PATH,
-    JSON.stringify(Array.from(keypair.secretKey))
+    JSON.stringify(Array.from(keypair.secretKey)),
   );
   return keypair;
 }
@@ -69,7 +73,6 @@ function loadAgentKeypair(agentId: string): Keypair | null {
   const raw = JSON.parse(fs.readFileSync(agentPath, "utf-8"));
   return Keypair.fromSecretKey(Uint8Array.from(raw));
 }
-
 
 function getTemplateSuggestion(template?: string): string {
   const suggestions: Record<string, string> = {
@@ -84,7 +87,7 @@ function getTemplateSuggestion(template?: string): string {
   return suggestions[template || ""] || "General purpose";
 }
 
-//  Anchor helpers 
+//  Anchor helpers
 
 function buildProvider(connection: Connection, payer: Keypair): AnchorProvider {
   return new AnchorProvider(connection, new Wallet(payer), {
@@ -112,12 +115,12 @@ async function signAndSend(
   const sig = await connection.sendRawTransaction(tx.serialize());
   await connection.confirmTransaction(
     { signature: sig, blockhash, lastValidBlockHeight },
-    "confirmed"
+    "confirmed",
   );
   return sig;
 }
 
-//  API helpers 
+//  API helpers
 
 async function apiFetch(endpoint: string, method = "GET", body?: any) {
   const res = await fetch(`${API_URL}${endpoint}`, {
@@ -128,14 +131,14 @@ async function apiFetch(endpoint: string, method = "GET", body?: any) {
   return res.json();
 }
 
-//  MCP Server 
+//  MCP Server
 
 const server = new Server(
   { name: "Dolores Protocol — Solana AI Agent Marketplace", version: "0.1.9" },
-  { capabilities: { tools: {} } }
+  { capabilities: { tools: {} } },
 );
 
-//  Tool Definitions 
+//  Tool Definitions
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
@@ -313,58 +316,72 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: "dolores_check_balance",
-      description: "Check SOL and token balances for any wallet or agent. Use this to verify agent has enough funds before assigning tasks.",
+      description:
+        "Check SOL and token balances for any wallet or agent. Use this to verify agent has enough funds before assigning tasks.",
       inputSchema: {
         type: "object",
         properties: {
           address: {
             type: "string",
-            description: "Wallet or agent public key to check. If not provided, checks your operator wallet.",
+            description:
+              "Wallet or agent public key to check. If not provided, checks your operator wallet.",
           },
           network: {
             type: "string",
-            description: "Network to check: 'devnet' or 'mainnet'. Default: devnet for SOL balance, mainnet for token balances.",
+            description:
+              "Network to check: 'devnet' or 'mainnet'. Default: devnet for SOL balance, mainnet for token balances.",
           },
         },
       },
     },
     {
       name: "dolores_agent_history",
-      description: "Fetch verified on-chain task history for an agent. Only shows tasks that were actually completed and recorded on Solana — not just API cache. Useful for verifying agent reputation.",
+      description:
+        "Fetch verified on-chain task history for an agent. Only shows tasks that were actually completed and recorded on Solana — not just API cache. Useful for verifying agent reputation.",
       inputSchema: {
         type: "object",
         required: ["agentId"],
         properties: {
           agentId: { type: "string", description: "Agent public key" },
-          limit: { type: "number", description: "Max tasks to show (default 10)" },
+          limit: {
+            type: "number",
+            description: "Max tasks to show (default 10)",
+          },
         },
       },
     },
 
     {
       name: "dolores_withdraw_stake",
-      description: "Withdraw staked SOL from a Dolores agent back to your wallet. Only works if there's no active challenge on the agent.",
+      description:
+        "Withdraw staked SOL from a Dolores agent back to your wallet. Only works if there's no active challenge on the agent.",
       inputSchema: {
         type: "object",
         required: ["agentId", "operatorId", "amountSol"],
         properties: {
           agentId: { type: "string", description: "Agent public key" },
-          operatorId: { type: "string", description: "Operator public key (agent owner)" },
-          amountSol: { type: "number", description: "Amount of SOL to withdraw" },
+          operatorId: {
+            type: "string",
+            description: "Operator public key (agent owner)",
+          },
+          amountSol: {
+            type: "number",
+            description: "Amount of SOL to withdraw",
+          },
         },
       },
     },
   ],
 }));
 
-//  Tool Handlers 
+//  Tool Handlers
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async request => {
   const { name, arguments: args } = request.params;
 
   try {
     switch (name) {
-      // dolores_setup 
+      // dolores_setup
       case "dolores_setup": {
         const isNew = !fs.existsSync(DOLORES_WALLET_PATH);
         const keypair = getOrCreateWallet();
@@ -374,7 +391,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         let balance = 0;
         try {
           balance = await connection.getBalance(keypair.publicKey);
-        } catch { }
+        } catch {}
 
         const balanceSOL = (balance / 1e9).toFixed(4);
         const needsFunding = balance < 10_000_000;
@@ -411,11 +428,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      //  dolores_find_agents 
+      //  dolores_find_agents
       case "dolores_find_agents": {
         const limit = (args?.limit as number) ?? 3;
         const response = (await apiFetch(
-          `/agents/marketplace?limit=${limit}`
+          `/agents/marketplace?limit=${limit}`,
         )) as any;
         const agents = Array.isArray(response) ? response : [];
 
@@ -433,7 +450,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         let filtered = agents;
         if (args?.template) {
           const byTemplate = agents.filter(
-            (a: any) => a.capabilityTemplate === args.template
+            (a: any) => a.capabilityTemplate === args.template,
           );
           if (byTemplate.length > 0) filtered = byTemplate;
         }
@@ -482,7 +499,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           {
             payerWallet: operatorKeypair.publicKey.toBase58(),
             operatorId,
-          }
+          },
         )) as any;
 
         if (txData.statusCode === 500 || txData.error) {
@@ -503,7 +520,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      //  dolores_assign_task 
+      //  dolores_assign_task
       case "dolores_assign_task": {
         const { agentId, instruction, deadlineMinutes } = args as {
           agentId: string;
@@ -533,7 +550,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         if (!txData.transaction) {
           throw new Error(
-            `Failed to build register tx: ${txData.message ?? JSON.stringify(txData)}`
+            `Failed to build register tx: ${txData.message ?? JSON.stringify(txData)}`,
           );
         }
 
@@ -560,14 +577,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      //  dolores_task_status 
+      //  dolores_task_status
       case "dolores_task_status": {
         const { taskId } = args as { taskId: string };
         const task = (await apiFetch(`/tasks/${taskId}`)) as any;
 
         if (task.statusCode === 404) {
           return {
-            content: [{ type: "text", text: `Task \`${taskId.slice(0, 16)}...\` not found.` }],
+            content: [
+              {
+                type: "text",
+                text: `Task \`${taskId.slice(0, 16)}...\` not found.`,
+              },
+            ],
           };
         }
 
@@ -587,12 +609,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (task.status === "completed") {
           suggestion = "\n\n✅ Task executed successfully on-chain.";
         } else if (task.status === "pending") {
-          suggestion = "\n\n💡 The agent is still processing. Check again in a few seconds.";
+          suggestion =
+            "\n\n💡 The agent is still processing. Check again in a few seconds.";
         } else if (task.status === "failed") {
           // Give smart suggestions based on what failed
-          if (instruction.toLowerCase().includes("pumpfun") || instruction.toLowerCase().includes("pump")) {
+          if (
+            instruction.toLowerCase().includes("pumpfun") ||
+            instruction.toLowerCase().includes("pump")
+          ) {
             suggestion = `\n\n💡 **PumpFun trade failed.** Common reasons:\n- Token graduated to PumpSwap AMM (use JUPITER_TRADER agent instead)\n- Token address is not a PumpFun bonding curve token\n- Insufficient SOL in agent wallet\n\nTry using a JUPITER_TRADER agent — it can swap any token via Jupiter aggregator which covers PumpSwap too.`;
-          } else if (instruction.toLowerCase().includes("swap") || instruction.toLowerCase().includes("jupiter")) {
+          } else if (
+            instruction.toLowerCase().includes("swap") ||
+            instruction.toLowerCase().includes("jupiter")
+          ) {
             suggestion = `\n\n💡 **Swap failed.** Common reasons:\n- Insufficient SOL in agent wallet\n- Token not supported by Jupiter\n- RPC rate limit hit\n\nCheck agent balance with \`dolores_agent_info\` and fund if needed.`;
           } else {
             suggestion = `\n\n💡 Task failed. Use \`dolores_agent_info\` to check agent balance and status.`;
@@ -600,14 +629,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         return {
-          content: [{
-            type: "text",
-            text: `${emoji} Task Status: **${task.status.toUpperCase()}**\n\nTask ID: \`${taskId.slice(0, 16)}...\`\nAgent: \`${task.agentId?.slice(0, 8)}...\`\nInstruction: "${instruction}"\nCreated: ${new Date(task.createdAt * 1000).toISOString()}${suggestion}`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `${emoji} Task Status: **${task.status.toUpperCase()}**\n\nTask ID: \`${taskId.slice(0, 16)}...\`\nAgent: \`${task.agentId?.slice(0, 8)}...\`\nInstruction: "${instruction}"\nCreated: ${new Date(task.createdAt * 1000).toISOString()}${suggestion}`,
+            },
+          ],
         };
       }
 
-      //  dolores_agent_info 
+      //  dolores_agent_info
       case "dolores_agent_info": {
         const { agentId } = args as { agentId: string };
         const agent = (await apiFetch(`/agents/${agentId}`)) as any;
@@ -636,17 +667,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      //  dolores_my_agents 
+      //  dolores_my_agents
       case "dolores_my_agents": {
         const operatorKeypair = getOrCreateWallet();
         const operatorId =
-          (args?.operatorId as string) ??
-          operatorKeypair.publicKey.toBase58();
+          (args?.operatorId as string) ?? operatorKeypair.publicKey.toBase58();
 
         const response = (await apiFetch(`/agents?limit=100`)) as any;
         const allAgents: any[] = Array.isArray(response) ? response : [];
 
-        const myAgents = allAgents.filter((a: any) => a.operator === operatorId);
+        const myAgents = allAgents.filter(
+          (a: any) => a.operator === operatorId,
+        );
 
         if (myAgents.length === 0) {
           return {
@@ -681,7 +713,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      //  dolores_new_memecoins 
+      //  dolores_new_memecoins
       case "dolores_new_memecoins": {
         const limit = (args?.limit as number) ?? 10;
 
@@ -707,7 +739,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           .map((t: any) => t.tokenAddress)
           .join(",");
         const pairsRes = await fetch(
-          `https://api.dexscreener.com/latest/dex/tokens/${addresses}`
+          `https://api.dexscreener.com/latest/dex/tokens/${addresses}`,
         );
         const pairsData = (await pairsRes.json()) as any;
         const pairs: any[] = pairsData.pairs ?? [];
@@ -765,7 +797,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      //  dolores_register_agent 
+      //  dolores_register_agent
       case "dolores_register_agent": {
         const { template, name } = args as {
           template: string;
@@ -774,7 +806,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         if (!VALID_TEMPLATES.includes(template)) {
           throw new Error(
-            `Invalid template. Choose from: ${VALID_TEMPLATES.join(", ")}`
+            `Invalid template. Choose from: ${VALID_TEMPLATES.join(", ")}`,
           );
         }
 
@@ -802,7 +834,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         fs.mkdirSync(AGENT_DIR, { recursive: true });
         fs.writeFileSync(
           path.join(AGENT_DIR, `${agentId}.json`),
-          JSON.stringify(Array.from(agentKeypair.secretKey))
+          JSON.stringify(Array.from(agentKeypair.secretKey)),
         );
         fs.writeFileSync(
           path.join(AGENT_DIR, `${agentId}.meta.json`),
@@ -814,37 +846,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               operator: operatorKeypair.publicKey.toBase58(),
             },
             null,
-            2
-          )
+            2,
+          ),
         );
 
         // Build capability hash
         const capabilityHash = Array.from(
           crypto
             .createHash("sha256")
-            .update(
-              JSON.stringify([{ name: template, version: "1.0" }])
-            )
-            .digest()
+            .update(JSON.stringify([{ name: template, version: "1.0" }]))
+            .digest(),
         );
 
         // Load IDLs and set up Anchor programs
-        const idlRegistry = require(
-          path.join(__dirname, "idl/dolores_registry.json")
-        );
-        const idlFund = require(path.join(__dirname, "idl/dolores_fund.json"));
+        const idlRegistry = doloresAdjudicationIdl;
+        const idlFund = doloresFundIdl;
 
         const provider = buildProvider(connection, operatorKeypair);
         const registryProgram = new Program(
           idlRegistry as any,
-          provider
+          provider,
         ) as any;
         const fundProgram = new Program(idlFund as any, provider) as any;
 
         // Derive PDAs
         const [registryPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("registry"), agentKeypair.publicKey.toBuffer()],
-          new PublicKey(REGISTRY_PROGRAM_ID)
+          new PublicKey(REGISTRY_PROGRAM_ID),
         );
         const [fundPda] = PublicKey.findProgramAddressSync(
           [
@@ -852,7 +880,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             operatorKeypair.publicKey.toBuffer(),
             agentKeypair.publicKey.toBuffer(),
           ],
-          new PublicKey(FUND_PROGRAM_ID)
+          new PublicKey(FUND_PROGRAM_ID),
         );
         const [vaultPda] = PublicKey.findProgramAddressSync(
           [
@@ -860,7 +888,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             operatorKeypair.publicKey.toBuffer(),
             agentKeypair.publicKey.toBuffer(),
           ],
-          new PublicKey(FUND_PROGRAM_ID)
+          new PublicKey(FUND_PROGRAM_ID),
         );
 
         // FIX: Use .transaction() + signAndSend instead of .signers([agentKeypair]).rpc()
@@ -883,7 +911,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           connection,
           regTx,
           operatorKeypair,
-          agentKeypair
+          agentKeypair,
         );
         console.error(`register_agent confirmed: ${tx1}`);
 
@@ -903,7 +931,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           connection,
           initFundTx,
           operatorKeypair,
-          agentKeypair
+          agentKeypair,
         );
         console.error(`initialize_fund confirmed: ${tx2}`);
 
@@ -915,7 +943,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             fromPubkey: operatorKeypair.publicKey,
             toPubkey: agentKeypair.publicKey,
             lamports: 10_000_000, // 0.01 SOL
-          })
+          }),
         );
         const fundSig = await signAndSend(connection, fundTx, operatorKeypair);
         console.error(`Agent funded (0.01 SOL): ${fundSig}`);
@@ -927,14 +955,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           template,
           description: `Dolores agent with ${template} capability`,
         });
-        await apiFetch(`/agents/${agentId}`, "GET").catch(() => { });
+        await apiFetch(`/agents/${agentId}`, "GET").catch(() => {});
 
         // Send raw secret key to API — the API encrypts it server-side before storing.
         // Users never need to manage an encryption key.
         await apiFetch(`/agents/${agentId}/keypair`, "POST", {
           secretKey: Array.from(agentKeypair.secretKey),
         }).catch((err: any) => {
-          console.error(`⚠️  Failed to store keypair in API: ${err?.message} (local copy still saved)`);
+          console.error(
+            `⚠️  Failed to store keypair in API: ${err?.message} (local copy still saved)`,
+          );
         });
 
         return {
@@ -947,7 +977,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      //  dolores_stake_agent 
+      //  dolores_stake_agent
       case "dolores_stake_agent": {
         const { agentId, amountSol } = args as {
           agentId: string;
@@ -957,15 +987,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const operatorKeypair = getOrCreateWallet();
         const connection = new Connection(RPC_URL, "confirmed");
 
-        const idlRegistry = require(
-          path.join(__dirname, "idl/dolores_registry.json")
-        );
-        const idlFund = require(path.join(__dirname, "idl/dolores_fund.json"));
+        const idlRegistry = doloresRegistryIdl;
+        const idlFund = doloresFundIdl;
 
         const provider = buildProvider(connection, operatorKeypair);
         const registryProgram = new Program(
           idlRegistry as any,
-          provider
+          provider,
         ) as any;
         const fundProgram = new Program(idlFund as any, provider) as any;
 
@@ -974,7 +1002,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const [registryPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("registry"), agentPubkey.toBuffer()],
-          new PublicKey(REGISTRY_PROGRAM_ID)
+          new PublicKey(REGISTRY_PROGRAM_ID),
         );
         const [fundPda] = PublicKey.findProgramAddressSync(
           [
@@ -982,7 +1010,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             operatorKeypair.publicKey.toBuffer(),
             agentPubkey.toBuffer(),
           ],
-          new PublicKey(FUND_PROGRAM_ID)
+          new PublicKey(FUND_PROGRAM_ID),
         );
         const [vaultPda] = PublicKey.findProgramAddressSync(
           [
@@ -990,7 +1018,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             operatorKeypair.publicKey.toBuffer(),
             agentPubkey.toBuffer(),
           ],
-          new PublicKey(FUND_PROGRAM_ID)
+          new PublicKey(FUND_PROGRAM_ID),
         );
         const [stakerPositionPda] = PublicKey.findProgramAddressSync(
           [
@@ -998,7 +1026,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             fundPda.toBuffer(),
             operatorKeypair.publicKey.toBuffer(),
           ],
-          new PublicKey(FUND_PROGRAM_ID)
+          new PublicKey(FUND_PROGRAM_ID),
         );
 
         // FIX: Use .transaction() + signAndSend for consistency — if the stake
@@ -1025,7 +1053,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           })
           .transaction();
 
-        const tx2 = await signAndSend(connection, updateStakeTx, operatorKeypair);
+        const tx2 = await signAndSend(
+          connection,
+          updateStakeTx,
+          operatorKeypair,
+        );
 
         return {
           content: [
@@ -1037,14 +1069,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      //  dolores_list_agent_for_hire 
+      //  dolores_list_agent_for_hire
       case "dolores_list_agent_for_hire": {
         const { agentId, hireFeeSOL } = args as {
           agentId: string;
           hireFeeSOL?: number;
         };
 
-        await apiFetch(`/agents/${agentId}`, "GET").catch(() => { });
+        await apiFetch(`/agents/${agentId}`, "GET").catch(() => {});
 
         const result = (await apiFetch(
           `/agents/${agentId}/list-for-hire`,
@@ -1052,7 +1084,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           {
             available: true,
             hireFeeSOL: hireFeeSOL ?? 0.01,
-          }
+          },
         )) as any;
 
         if (!result.ok) throw new Error("Failed to list agent for hire");
@@ -1068,23 +1100,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "dolores_check_balance": {
-        const { address, network } = args as { address?: string; network?: string };
+        const { address, network } = args as {
+          address?: string;
+          network?: string;
+        };
 
         const keypair = getOrCreateWallet();
         const pubkey = address ? new PublicKey(address) : keypair.publicKey;
 
         // Check both devnet (for Dolores coordination) and mainnet (for DeFi)
-        const devnetConnection = new Connection("https://api.devnet.solana.com", "confirmed");
+        const devnetConnection = new Connection(
+          "https://api.devnet.solana.com",
+          "confirmed",
+        );
         const mainnetConnection = new Connection(
           process.env.MAINNET_RPC_URL || "https://api.mainnet-beta.solana.com",
-          "confirmed"
+          "confirmed",
         );
 
         let devnetBalance = 0;
         let mainnetBalance = 0;
 
-        try { devnetBalance = await devnetConnection.getBalance(pubkey); } catch { }
-        try { mainnetBalance = await mainnetConnection.getBalance(pubkey); } catch { }
+        try {
+          devnetBalance = await devnetConnection.getBalance(pubkey);
+        } catch {}
+        try {
+          mainnetBalance = await mainnetConnection.getBalance(pubkey);
+        } catch {}
 
         // Check mainnet token balances (USDC, USDT)
         const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -1092,10 +1134,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         let tokenBalances = "";
         try {
-          const tokenAccounts = await mainnetConnection.getParsedTokenAccountsByOwner(
-            pubkey,
-            { programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") }
-          );
+          const tokenAccounts =
+            await mainnetConnection.getParsedTokenAccountsByOwner(pubkey, {
+              programId: new PublicKey(
+                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              ),
+            });
 
           const relevantTokens = tokenAccounts.value
             .map((a: any) => {
@@ -1103,17 +1147,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               const mint = info.mint;
               const amount = info.tokenAmount.uiAmount;
               if (amount === 0) return null;
-              const symbol = mint === USDC_MINT ? "USDC" :
-                mint === USDT_MINT ? "USDT" : null;
+              const symbol =
+                mint === USDC_MINT
+                  ? "USDC"
+                  : mint === USDT_MINT
+                    ? "USDT"
+                    : null;
               if (!symbol) return null;
               return `- ${symbol}: ${amount.toFixed(6)}`;
             })
             .filter(Boolean);
 
           if (relevantTokens.length > 0) {
-            tokenBalances = "\n\n**Mainnet Token Balances:**\n" + relevantTokens.join("\n");
+            tokenBalances =
+              "\n\n**Mainnet Token Balances:**\n" + relevantTokens.join("\n");
           }
-        } catch { }
+        } catch {}
 
         // Check if this is an agent
         let agentInfo = "";
@@ -1129,13 +1178,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const mainnetSOL = (mainnetBalance / 1e9).toFixed(4);
 
         const devnetStatus = devnetBalance < 10_000_000 ? "⚠️ Low" : "✅";
-        const mainnetStatus = mainnetBalance < 10_000_000 ? "⚠️ Low — fund for DeFi tasks" : "✅";
+        const mainnetStatus =
+          mainnetBalance < 10_000_000 ? "⚠️ Low — fund for DeFi tasks" : "✅";
 
         return {
-          content: [{
-            type: "text",
-            text: `💰 **Balance Check**\n\nAddress: \`${pubkey.toBase58()}\`${agentInfo}\n\n**Devnet SOL** (Dolores coordination): ${devnetStatus} ${devnetSOL} SOL\n**Mainnet SOL** (DeFi execution): ${mainnetStatus} ${mainnetSOL} SOL${tokenBalances}\n\n💡 Agents need devnet SOL for task registration and mainnet SOL for actual DeFi execution.`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `💰 **Balance Check**\n\nAddress: \`${pubkey.toBase58()}\`${agentInfo}\n\n**Devnet SOL** (Dolores coordination): ${devnetStatus} ${devnetSOL} SOL\n**Mainnet SOL** (DeFi execution): ${mainnetStatus} ${mainnetSOL} SOL${tokenBalances}\n\n💡 Agents need devnet SOL for task registration and mainnet SOL for actual DeFi execution.`,
+            },
+          ],
         };
       }
 
@@ -1147,7 +1199,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const ADJ_PROGRAM_ID = "4BPrSgzHJK1GzE5dYDsscKvgNRRiDzzq2WvPHHzLyAbz";
 
         // Load IDL and fetch all task records for this agent
-        const idlAdj = require(path.join(__dirname, "idl/dolores_adjudication.json"));
+        const idlAdj = doloresAdjudicationIdl;
         const dummyKeypair = Keypair.generate();
         const provider = buildProvider(connection, dummyKeypair);
         const adjProgram = new Program(idlAdj as any, provider) as any;
@@ -1167,21 +1219,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ]);
           taskRecords = accounts;
         } catch (err: any) {
-          throw new Error(`Failed to fetch on-chain task records: ${err?.message}`);
+          throw new Error(
+            `Failed to fetch on-chain task records: ${err?.message}`,
+          );
         }
 
         if (taskRecords.length === 0) {
           return {
-            content: [{
-              type: "text",
-              text: `No on-chain task records found for agent \`${agentId.slice(0, 8)}...\`\n\nThis agent hasn't completed any verified tasks yet.`,
-            }],
+            content: [
+              {
+                type: "text",
+                text: `No on-chain task records found for agent \`${agentId.slice(0, 8)}...\`\n\nThis agent hasn't completed any verified tasks yet.`,
+              },
+            ],
           };
         }
 
         // Sort by created_at descending
-        taskRecords.sort((a, b) =>
-          (b.account.createdAt?.toNumber() ?? 0) - (a.account.createdAt?.toNumber() ?? 0)
+        taskRecords.sort(
+          (a, b) =>
+            (b.account.createdAt?.toNumber() ?? 0) -
+            (a.account.createdAt?.toNumber() ?? 0),
         );
 
         const statusMap: Record<string, string> = {
@@ -1191,37 +1249,45 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           slashed: "❌ Slashed",
         };
 
-        const completed = taskRecords.filter(t =>
-          Object.keys(t.account.status)[0] === "completed"
+        const completed = taskRecords.filter(
+          t => Object.keys(t.account.status)[0] === "completed",
         ).length;
-        const slashed = taskRecords.filter(t =>
-          Object.keys(t.account.status)[0] === "slashed"
+        const slashed = taskRecords.filter(
+          t => Object.keys(t.account.status)[0] === "slashed",
         ).length;
 
-        const summary = taskRecords.slice(0, maxTasks).map((t, i) => {
-          const acc = t.account;
-          const taskId = Buffer.from(acc.taskId).toString("hex").slice(0, 16);
-          const status = statusMap[Object.keys(acc.status)[0]] ?? "❓ Unknown";
-          const outputHash = Buffer.from(acc.outputHash).toString("hex").slice(0, 16);
-          const createdAt = acc.createdAt?.toNumber()
-            ? new Date(acc.createdAt.toNumber() * 1000).toISOString()
-            : "N/A";
-          const completedAt = acc.completedAt
-            ? new Date(acc.completedAt.toNumber() * 1000).toISOString()
-            : "Not completed";
+        const summary = taskRecords
+          .slice(0, maxTasks)
+          .map((t, i) => {
+            const acc = t.account;
+            const taskId = Buffer.from(acc.taskId).toString("hex").slice(0, 16);
+            const status =
+              statusMap[Object.keys(acc.status)[0]] ?? "❓ Unknown";
+            const outputHash = Buffer.from(acc.outputHash)
+              .toString("hex")
+              .slice(0, 16);
+            const createdAt = acc.createdAt?.toNumber()
+              ? new Date(acc.createdAt.toNumber() * 1000).toISOString()
+              : "N/A";
+            const completedAt = acc.completedAt
+              ? new Date(acc.completedAt.toNumber() * 1000).toISOString()
+              : "Not completed";
 
-          return `**Task ${i + 1}:** \`${taskId}...\`
+            return `**Task ${i + 1}:** \`${taskId}...\`
 - Status: ${status}
 - Output hash: \`${outputHash}...\`
 - Created: ${createdAt}
 - Completed: ${completedAt}`;
-        }).join("\n\n");
+          })
+          .join("\n\n");
 
         return {
-          content: [{
-            type: "text",
-            text: `📋 **On-chain Task History for Agent \`${agentId.slice(0, 8)}...\`**\n\nTotal: ${taskRecords.length} tasks | ✅ ${completed} completed | ❌ ${slashed} slashed\n\n${summary}\n\n*Data sourced directly from Solana devnet — cryptographically verified.*`,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `📋 **On-chain Task History for Agent \`${agentId.slice(0, 8)}...\`**\n\nTotal: ${taskRecords.length} tasks | ✅ ${completed} completed | ❌ ${slashed} slashed\n\n${summary}\n\n*Data sourced directly from Solana devnet — cryptographically verified.*`,
+            },
+          ],
         };
       }
 
@@ -1235,7 +1301,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const stakerKeypair = getOrCreateWallet();
         const connection = new Connection(RPC_URL, "confirmed");
 
-        const idlFund = require(path.join(__dirname, "idl/dolores_fund.json"));
+        const idlFund = doloresFundIdl;
         const provider = buildProvider(connection, stakerKeypair);
         const fundProgram = new Program(idlFund as any, provider) as any;
 
@@ -1244,16 +1310,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const amountLamports = Math.floor(amountSol * 1e9);
 
         const [fundPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from("fund"), operatorPubkey.toBuffer(), agentPubkey.toBuffer()],
-          new PublicKey(FUND_PROGRAM_ID)
+          [
+            Buffer.from("fund"),
+            operatorPubkey.toBuffer(),
+            agentPubkey.toBuffer(),
+          ],
+          new PublicKey(FUND_PROGRAM_ID),
         );
         const [vaultPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from("vault"), operatorPubkey.toBuffer(), agentPubkey.toBuffer()],
-          new PublicKey(FUND_PROGRAM_ID)
+          [
+            Buffer.from("vault"),
+            operatorPubkey.toBuffer(),
+            agentPubkey.toBuffer(),
+          ],
+          new PublicKey(FUND_PROGRAM_ID),
         );
         const [stakerPositionPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from("staker"), fundPda.toBuffer(), stakerKeypair.publicKey.toBuffer()],
-          new PublicKey(FUND_PROGRAM_ID)
+          [
+            Buffer.from("staker"),
+            fundPda.toBuffer(),
+            stakerKeypair.publicKey.toBuffer(),
+          ],
+          new PublicKey(FUND_PROGRAM_ID),
         );
 
         const withdrawTx = await fundProgram.methods
@@ -1270,11 +1348,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const sig = await signAndSend(connection, withdrawTx, stakerKeypair);
 
         // Update registry declared stake
-        const idlRegistry = require(path.join(__dirname, "idl/dolores_registry.json"));
-        const registryProgram = new Program(idlRegistry as any, provider) as any;
+        const idlRegistry = doloresRegistryIdl;
+        const registryProgram = new Program(
+          idlRegistry as any,
+          provider,
+        ) as any;
         const [registryPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("registry"), agentPubkey.toBuffer()],
-          new PublicKey(REGISTRY_PROGRAM_ID)
+          new PublicKey(REGISTRY_PROGRAM_ID),
         );
 
         try {
@@ -1286,13 +1367,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             })
             .transaction();
           await signAndSend(connection, updateTx, stakerKeypair);
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
 
         return {
-          content: [{
-            type: "text",
-            text: `✅ **Stake withdrawn!**\n\nAgent: \`${agentId.slice(0, 8)}...\`\nWithdrawn: ${amountSol} SOL → \`${stakerKeypair.publicKey.toBase58().slice(0, 8)}...\`\nTX: \`${sig}\``,
-          }],
+          content: [
+            {
+              type: "text",
+              text: `✅ **Stake withdrawn!**\n\nAgent: \`${agentId.slice(0, 8)}...\`\nWithdrawn: ${amountSol} SOL → \`${stakerKeypair.publicKey.toBase58().slice(0, 8)}...\`\nTX: \`${sig}\``,
+            },
+          ],
         };
       }
 
@@ -1301,13 +1386,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } catch (err: any) {
     return {
-      content: [{ type: "text", text: `❌ Error: ${err?.message ?? String(err)}` }],
+      content: [
+        { type: "text", text: `❌ Error: ${err?.message ?? String(err)}` },
+      ],
       isError: true,
     };
   }
 });
 
-//  Start 
+//  Start
 
 async function main() {
   const transport = new StdioServerTransport();
