@@ -4,6 +4,6 @@ import { Navbar } from "@/components/layout/Navbar";
 
 export function ConditionalNavbar() {
   const pathname = usePathname();
-  if (pathname === "/") return null;
+  if (["/", "/docs/", "/docs"].includes(pathname)) return null;
   return <Navbar />;
 }
