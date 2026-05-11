@@ -59,8 +59,9 @@ export async function buildFileChallengeTransaction(
     REGISTRY_PROGRAM_ID,
   );
 
-  const registryAccount =
-    await registryProgram.account.registryAccount.fetch(registryPda);
+  const registryAccount = await (registryProgram.account as any)[
+    "registryAccount"
+  ].fetch(registryPda);
   const operatorPubkey = (registryAccount as any).operator as PublicKey;
 
   // Derive task_record PDA — seeds: ["task", agent, task_id]
