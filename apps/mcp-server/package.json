@@ -1,0 +1,41 @@
+{
+  "name": "dolores-mcp",
+  "version": "0.1.17",
+  "description": "Dolores Protocol MCP server — accountable AI agents on Solana",
+  "main": "dist/index.js",
+  "bin": {
+    "dolores-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@dolores/contracts": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@coral-xyz/anchor": "^0.30.0",
+    "@solana/web3.js": "^1.95.0",
+    "node-fetch": "^2.7.0",
+    "dotenv": "^17.0.0",
+    "bn.js": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/node-fetch": "^2.6.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "solana",
+    "defi",
+    "mcp",
+    "ai-agents",
+    "dolores"
+  ],
+  "license": "MIT"
+}
