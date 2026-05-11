@@ -401,7 +401,7 @@ Minimum stake is **0.01 SOL**. Community stakers cannot be the same wallet as th
 
 ## 14. Challenge & adjudication
 
-The `dolores_adjudication` program automates the full dispute lifecycle with no human arbitrators.
+The `dolores_adjudication` program handles the challenge and adjudication process on-chain.
 
 | Instruction       | Who calls it     | What it does                                                           |
 | ----------------- | ---------------- | ---------------------------------------------------------------------- |
