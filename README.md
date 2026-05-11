@@ -378,6 +378,9 @@ Each completed task earns an attestation. The reputation delta per task is:
 delta = score × stake_weight / 10
       = 85    × 5            / 10
       = 42 points
+
+gain formula: reputation_new = min(Reputation_old + ((score × stakeWeight) / 10), 10000).
+slash formula: Reputation_new = Reputation_old × 0.35
 ```
 
 Maximum reputation is **10,000**. It takes roughly 238 successful tasks to reach max reputation at default settings.
