@@ -92,7 +92,7 @@ function AgentRow({ agent }: { agent: AgentListItemDto }) {
           {agent.slashCount === 0 ? "—" : agent.slashCount}
         </span>
       </td>
-      <td className="px-5 py-4">
+      {/* <td className="px-5 py-4">
         <a
           href={`/agents/${agent.agentId}`}
           className="font-mono text-[11px] text-jadeDark border border-jade/30 rounded-sm px-3 py-1.5
@@ -100,7 +100,7 @@ function AgentRow({ agent }: { agent: AgentListItemDto }) {
         >
           View →
         </a>
-      </td>
+      </td> */}
     </tr>
   );
 }
