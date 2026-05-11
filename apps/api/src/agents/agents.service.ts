@@ -27,11 +27,11 @@ export class AgentsService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('AgentsService initialized');
-    // try {
-    //   this.fetchAllAgentsFromSolana();
-    // } catch (error) {
-    //   this.logger.error('Failed to fetch agents on startup', error);
-    // }
+    try {
+      this.fetchAllAgentsFromSolana();
+    } catch (error) {
+      this.logger.error('Failed to fetch agents on startup', error);
+    }
   }
 
   /**
