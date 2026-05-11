@@ -1,0 +1,2151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Terms and Conditions — Dolores Protocol</title>
+    <meta
+      name="description"
+      content="Terms and Conditions governing use of the Dolores Protocol and dolores.id."
+    />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+      :root {
+        --primary: #d7efff;
+        --primary-hover: #b8e3ff;
+        --primary-subtle: #ebf7ff;
+        --accent: #5bafd6;
+        --navy: #0d1b2a;
+        --bg: #ffffff;
+        --surface-raised: #f8f9fa;
+        --border-subtle: #e8eaed;
+        --border-strong: #dadce0;
+        --fg: #0a0a0b;
+        --fg-muted: #5f6368;
+        --fg-subtle: #9aa0a6;
+        --ok: #16a34a;
+        --warn: #d97706;
+        --danger: #dc2626;
+        --shadow-sm:
+          0 1px 2px rgba(10, 10, 11, 0.04), 0 1px 1px rgba(10, 10, 11, 0.03);
+        --shadow-md:
+          0 4px 16px rgba(10, 10, 11, 0.06), 0 2px 4px rgba(10, 10, 11, 0.04);
+        --shadow-lg:
+          0 24px 64px rgba(10, 10, 11, 0.1), 0 8px 20px rgba(10, 10, 11, 0.06);
+        --radius-sm: 6px;
+        --radius: 10px;
+        --radius-lg: 16px;
+        --radius-xl: 24px;
+        --fs-12: clamp(11px, 0.75vw, 12px);
+        --fs-13: clamp(12px, 0.85vw, 13px);
+        --fs-14: clamp(13px, 0.9vw, 14px);
+        --fs-15: clamp(14px, 0.95vw, 15px);
+        --fs-16: clamp(15px, 1.05vw, 16px);
+        --fs-18: clamp(16px, 1.2vw, 18px);
+        --fs-20: clamp(17px, 1.35vw, 20px);
+        --fs-24: clamp(20px, 1.7vw, 24px);
+        --fs-32: clamp(26px, 2.3vw, 34px);
+        --fs-44: clamp(32px, 3.2vw, 48px);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        font-size: var(--fs-16);
+        line-height: 1.7;
+        color: var(--fg);
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        color: var(--fg);
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 clamp(24px, 4vw, 64px);
+      }
+
+      .kicker {
+        font-size: var(--fs-12);
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin: 0 0 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .kicker .kicker-line {
+        display: inline-block;
+        width: 32px;
+        height: 1px;
+        background: var(--accent);
+        transform-origin: left center;
+        transform: scaleX(0);
+        transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
+      }
+      .in-view .kicker .kicker-line {
+        transform: scaleX(1);
+      }
+
+      .scroll-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        width: 0%;
+        background: linear-gradient(
+          90deg,
+          var(--accent) 0%,
+          var(--primary) 100%
+        );
+        z-index: 200;
+        pointer-events: none;
+        box-shadow: 0 0 12px rgba(91, 175, 214, 0.5);
+        transition: width 0.08s linear;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(28px) scale(0.99);
+        transition:
+          opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+          transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: opacity, transform;
+      }
+      .reveal.in-view {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      .reveal.delay-1 {
+        transition-delay: 0.08s;
+      }
+      .reveal.delay-2 {
+        transition-delay: 0.16s;
+      }
+      .stagger > * {
+        opacity: 0;
+        transform: translateY(20px);
+        transition:
+          opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+          transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .stagger.in-view > * {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .stagger.in-view > *:nth-child(1) {
+        transition-delay: 0.05s;
+      }
+      .stagger.in-view > *:nth-child(2) {
+        transition-delay: 0.13s;
+      }
+      .stagger.in-view > *:nth-child(3) {
+        transition-delay: 0.21s;
+      }
+
+      /* NAV */
+      header.nav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      header.nav .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+      .wordmark {
+        font-weight: 700;
+        font-size: var(--fs-24);
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 120%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      nav.links {
+        display: flex;
+        gap: 28px;
+        align-items: center;
+      }
+      nav.links a {
+        color: var(--fg-muted);
+        font-size: var(--fs-14);
+        font-weight: 500;
+        position: relative;
+      }
+      nav.links a:hover {
+        color: var(--fg);
+      }
+      nav.links a::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -4px;
+        height: 1px;
+        width: 0;
+        background: var(--accent);
+        transition: width 0.25s ease;
+      }
+      nav.links a:hover::after {
+        width: 100%;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: var(--fs-14);
+        padding: 10px 18px;
+        border-radius: var(--radius);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .btn.primary {
+        background: var(--fg);
+        color: var(--bg);
+        border-color: var(--fg);
+      }
+      .btn.primary:hover {
+        background: var(--accent);
+        border-color: var(--accent);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(91, 175, 214, 0.35);
+      }
+      .btn .arrow {
+        transition: transform 0.2s ease;
+      }
+      .btn:hover .arrow {
+        transform: translateX(3px);
+      }
+
+      /* PAGE HERO */
+      .page-hero {
+        padding: 80px 0 72px;
+        border-bottom: 1px solid var(--border-subtle);
+        position: relative;
+        overflow: hidden;
+      }
+      .page-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(
+            circle 700px at 5% 20%,
+            rgba(215, 239, 255, 0.7) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            circle 400px at 95% 80%,
+            rgba(91, 175, 214, 0.12) 0%,
+            transparent 65%
+          );
+      }
+      .page-hero .inner {
+        position: relative;
+        z-index: 2;
+      }
+      .page-hero h1 {
+        font-size: var(--fs-44);
+        font-weight: 700;
+        line-height: 1.08;
+        letter-spacing: -0.025em;
+        margin: 0 0 16px;
+        color: var(--fg);
+        max-width: 20ch;
+      }
+      .page-hero p.sub {
+        font-size: var(--fs-18);
+        color: var(--fg-muted);
+        max-width: 54ch;
+        margin: 0 0 28px;
+        line-height: 1.6;
+      }
+      .page-hero .meta-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        font-family: "JetBrains Mono", monospace;
+        font-size: var(--fs-12);
+        color: var(--fg-subtle);
+        letter-spacing: 0.06em;
+      }
+      .page-hero .meta-row span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .meta-dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--border-strong);
+      }
+
+      /* RISK BANNER */
+      .risk-banner {
+        background: rgba(220, 38, 38, 0.04);
+        border: 1.5px solid rgba(220, 38, 38, 0.2);
+        border-left: 4px solid var(--danger);
+        border-radius: var(--radius-lg);
+        padding: 24px 28px;
+        margin: 48px 0;
+      }
+      .risk-banner .rb-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .risk-icon {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--danger);
+        color: white;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-style: normal;
+        font-weight: 700;
+        font-family: serif;
+      }
+      .rb-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: var(--fs-12);
+        font-weight: 700;
+        color: var(--danger);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .risk-banner p {
+        margin: 0 0 10px;
+        font-size: var(--fs-15);
+        color: #7f1d1d;
+        line-height: 1.65;
+      }
+      .risk-banner p:last-child {
+        margin-bottom: 0;
+      }
+      .risk-banner strong {
+        color: #5b1313;
+      }
+
+      /* LAYOUT */
+      .doc-layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 48px;
+        align-items: start;
+      }
+
+      /* TOC */
+      .toc-wrap {
+        position: sticky;
+        top: 84px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+        padding: 8px 0;
+      }
+      .toc-wrap::-webkit-scrollbar {
+        width: 4px;
+      }
+      .toc-wrap::-webkit-scrollbar-thumb {
+        background: var(--border-strong);
+        border-radius: 2px;
+      }
+      .toc-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: var(--fs-12);
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--fg-subtle);
+        margin: 0 0 14px;
+        padding: 0 10px;
+      }
+      .toc-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .toc-list li {
+        margin-bottom: 2px;
+      }
+      .toc-list a {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        color: var(--fg-muted);
+        font-size: var(--fs-13);
+        line-height: 1.4;
+        transition: all 0.15s;
+      }
+      .toc-list a:hover {
+        background: var(--surface-raised);
+        color: var(--fg);
+      }
+      .toc-list a.active {
+        background: var(--primary-subtle);
+        color: var(--accent);
+      }
+      .toc-num {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10px;
+        color: var(--fg-subtle);
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .toc-list a.active .toc-num {
+        color: var(--accent);
+      }
+
+      /* CONTENT */
+      .doc-content {
+        padding: 48px 0 120px;
+      }
+      .clause {
+        padding: 52px 0;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .clause:last-of-type {
+        border-bottom: none;
+      }
+      .clause-num {
+        font-family: "JetBrains Mono", monospace;
+        font-size: var(--fs-12);
+        color: var(--accent);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin: 0 0 10px;
+      }
+      .clause h2 {
+        font-size: var(--fs-32);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0 0 28px;
+        color: var(--fg);
+        line-height: 1.1;
+      }
+      .clause h3 {
+        font-size: var(--fs-18);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 32px 0 12px;
+        color: var(--fg);
+      }
+      .clause h3:first-child {
+        margin-top: 0;
+      }
+      p {
+        margin: 0 0 16px;
+        color: var(--fg);
+      }
+      p:last-child {
+        margin-bottom: 0;
+      }
+      ul,
+      ol {
+        padding-left: 24px;
+        margin: 0 0 16px;
+        color: var(--fg);
+      }
+      li {
+        margin-bottom: 8px;
+        line-height: 1.65;
+      }
+
+      /* CALLOUTS */
+      .callout {
+        border-radius: var(--radius);
+        padding: 18px 22px;
+        margin: 24px 0;
+      }
+      .callout.danger {
+        background: rgba(220, 38, 38, 0.04);
+        border: 1px solid rgba(220, 38, 38, 0.18);
+        border-left: 4px solid var(--danger);
+      }
+      .callout.danger p {
+        color: #7f1d1d;
+      }
+      .callout.danger strong {
+        color: #5b1313;
+      }
+      .callout.warn {
+        background: rgba(217, 119, 6, 0.05);
+        border: 1px solid rgba(217, 119, 6, 0.2);
+        border-left: 4px solid var(--warn);
+      }
+      .callout.warn p {
+        color: #78350f;
+      }
+      .callout.info {
+        background: var(--primary-subtle);
+        border: 1px solid rgba(91, 175, 214, 0.2);
+        border-left: 4px solid var(--accent);
+      }
+      .callout.info p {
+        color: var(--fg-muted);
+      }
+      .callout p {
+        margin: 0;
+        font-size: var(--fs-15);
+        line-height: 1.65;
+      }
+      .callout p + p {
+        margin-top: 8px;
+      }
+
+      /* DATA TABLE */
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--fs-14);
+        margin: 20px 0;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+      }
+      .data-table th {
+        background: var(--surface-raised);
+        text-align: left;
+        padding: 11px 16px;
+        font-size: var(--fs-12);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+        border-bottom: 1px solid var(--border-strong);
+        font-family: "JetBrains Mono", monospace;
+      }
+      .data-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--fg);
+        vertical-align: top;
+        line-height: 1.55;
+      }
+      .data-table tr:last-child td {
+        border-bottom: none;
+      }
+      .data-table td:first-child {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .data-table td.mono {
+        font-family: "JetBrains Mono", monospace;
+        color: var(--accent);
+        font-size: var(--fs-13);
+      }
+      .data-table td.ok {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      .data-table td.no {
+        color: var(--danger);
+        font-weight: 600;
+      }
+
+      /* PATH CARDS */
+      .path-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin: 24px 0;
+      }
+      .path-card {
+        padding: 20px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-subtle);
+        box-shadow: var(--shadow-sm);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      .path-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+      }
+      .path-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: var(--fs-12);
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin: 0 0 8px;
+      }
+      .path-card.path-ok .path-label {
+        color: var(--ok);
+      }
+      .path-card.path-danger .path-label {
+        color: var(--danger);
+      }
+      .path-card.path-warn .path-label {
+        color: var(--warn);
+      }
+      .path-card h4 {
+        font-size: var(--fs-15);
+        font-weight: 600;
+        margin: 0 0 8px;
+        color: var(--fg);
+      }
+      .path-card p {
+        font-size: var(--fs-13);
+        color: var(--fg-muted);
+        margin: 0;
+        line-height: 1.55;
+      }
+
+      /* JUR GRID */
+      .jur-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin: 16px 0;
+      }
+      .jur-item {
+        padding: 9px 14px;
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius);
+        font-size: var(--fs-13);
+        color: var(--fg-muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .jur-item::before {
+        content: "—";
+        color: var(--accent);
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      /* CONTACT */
+      .contact-block {
+        background: var(--navy);
+        color: var(--primary);
+        border-radius: var(--radius-xl);
+        padding: 36px;
+        position: relative;
+        overflow: hidden;
+      }
+      .contact-block::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          circle 400px at 90% 15%,
+          rgba(215, 239, 255, 0.12) 0%,
+          transparent 70%
+        );
+      }
+      .contact-block > * {
+        position: relative;
+      }
+      .contact-block h3 {
+        color: var(--primary);
+        margin-top: 0;
+        font-size: var(--fs-24);
+        letter-spacing: -0.01em;
+      }
+      .contact-block p {
+        color: rgba(215, 239, 255, 0.7);
+        font-size: var(--fs-16);
+      }
+      .contact-block a {
+        color: var(--accent);
+      }
+      .contact-block .contact-detail {
+        font-family: "JetBrains Mono", monospace;
+        font-size: var(--fs-13);
+        color: rgba(215, 239, 255, 0.45);
+        margin-top: 20px;
+        letter-spacing: 0.03em;
+      }
+
+      /* FOOTER */
+      footer.site {
+        padding: 48px 0 64px;
+        font-size: var(--fs-14);
+        color: var(--fg-subtle);
+        border-top: 1px solid var(--border-subtle);
+      }
+      footer.site .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      footer.site .links {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      footer.site a {
+        color: var(--fg-muted);
+      }
+      footer.site a:hover {
+        color: var(--fg);
+      }
+      .footer-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .footer-logo svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--fg-muted);
+      }
+      .footer-logo .wordmark {
+        font-size: var(--fs-18);
+      }
+
+      @media (max-width: 960px) {
+        .doc-layout {
+          grid-template-columns: 1fr;
+        }
+        .toc-wrap {
+          display: none;
+        }
+        .path-grid {
+          grid-template-columns: 1fr;
+        }
+        .jur-grid {
+          grid-template-columns: 1fr;
+        }
+        nav.links {
+          display: none;
+        }
+      }
+      @media (max-width: 640px) {
+        .page-hero {
+          padding: 56px 0 52px;
+        }
+        .doc-content {
+          padding: 32px 0 80px;
+        }
+        .clause {
+          padding: 36px 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+          animation: none !important;
+        }
+        .reveal,
+        .stagger > * {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+    <header class="nav">
+      <div class="container row">
+        <a href="/" class="wordmark" aria-label="Dolores home">Dolores</a>
+        <nav class="links" aria-label="Primary">
+          <a href="https://dolores.wildchain.io">App</a>
+          <a href="https://docs.dolores.wildchain.io">Docs</a>
+          <a
+            href="https://docs.dolores.wildchain.io/litepaper"
+            style="color: var(--accent); font-weight: 600"
+            >Litepaper</a
+          >
+        </nav>
+        <a class="btn primary" href="https://dolores.wildchain.io"
+          >Launch app <span class="arrow">→</span></a
+        >
+      </div>
+    </header>
+
+    <div class="page-hero">
+      <div class="container inner">
+        <p class="kicker reveal">
+          <span class="kicker-line"></span>Legal · dolores.id
+        </p>
+        <h1 class="reveal delay-1">Terms and<br />Conditions</h1>
+        <p class="sub reveal delay-2">
+          These terms govern your use of dolores.id and the Dolores Protocol.
+          Read them fully before staking, registering an agent, or connecting a
+          wallet.
+        </p>
+        <div class="meta-row reveal delay-2">
+          <span>Version 1.1</span>
+          <span><span class="meta-dot"></span>Effective May 2026</span>
+          <span><span class="meta-dot"></span>dolores.id</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="risk-banner reveal">
+        <div class="rb-head">
+          <span class="risk-icon">!</span>
+          <span class="rb-label"
+            >Critical Risk Disclosure — Read Before Proceeding</span
+          >
+        </div>
+        <p>
+          <strong
+            >Staking $DOL, SOL, or USDC with the Dolores Protocol exposes you to
+            the risk of permanent, irreversible loss.</strong
+          >
+          If the AI agent you operate or delegate stake to is found to have
+          misbehaved through a confirmed slash event, your staked tokens will be
+          automatically and permanently seized. There is no appeals process.
+          There is no refund. Slashes cannot be reversed by Dolores or any other
+          party.
+        </p>
+        <p>
+          This is not a theoretical risk. It is the core enforcement mechanism
+          of the Protocol. By using this website or interacting with the
+          Protocol, you confirm that you have read, understood, and accepted
+          this risk in full.
+        </p>
+      </div>
+
+      <div class="doc-layout">
+        <aside>
+          <div class="toc-wrap" aria-label="Table of contents">
+            <p class="toc-label">Contents</p>
+            <ol class="toc-list">
+              <li>
+                <a href="#s1"><span class="toc-num">01</span>Acceptance</a>
+              </li>
+              <li>
+                <a href="#s2"><span class="toc-num">02</span>Definitions</a>
+              </li>
+              <li>
+                <a href="#s3"
+                  ><span class="toc-num">03</span>No Financial Advice</a
+                >
+              </li>
+              <li>
+                <a href="#s4"><span class="toc-num">04</span>Eligibility</a>
+              </li>
+              <li>
+                <a href="#s5"><span class="toc-num">05</span>Protocol Use</a>
+              </li>
+              <li>
+                <a href="#s6"
+                  ><span class="toc-num">06</span>Staking &amp; Slashing Risk</a
+                >
+              </li>
+              <li>
+                <a href="#s7"><span class="toc-num">07</span>Adjudication</a>
+              </li>
+              <li>
+                <a href="#s8"
+                  ><span class="toc-num">08</span>Delegated Staking</a
+                >
+              </li>
+              <li>
+                <a href="#s9"
+                  ><span class="toc-num">09</span>Fees &amp; Payments</a
+                >
+              </li>
+              <li>
+                <a href="#s10"><span class="toc-num">10</span>$DOL Token</a>
+              </li>
+              <li>
+                <a href="#s11"><span class="toc-num">11</span>Tax Disclaimer</a>
+              </li>
+              <li>
+                <a href="#s12"><span class="toc-num">12</span>Disclaimers</a>
+              </li>
+              <li>
+                <a href="#s13"
+                  ><span class="toc-num">13</span>Limitation of Liability</a
+                >
+              </li>
+              <li>
+                <a href="#s14"
+                  ><span class="toc-num">14</span>Indemnification</a
+                >
+              </li>
+              <li>
+                <a href="#s15"><span class="toc-num">15</span>Prohibited Use</a>
+              </li>
+              <li>
+                <a href="#s16"
+                  ><span class="toc-num">16</span>Intellectual Property</a
+                >
+              </li>
+              <li>
+                <a href="#s17"
+                  ><span class="toc-num">17</span>Privacy &amp; Data</a
+                >
+              </li>
+              <li>
+                <a href="#s18"
+                  ><span class="toc-num">18</span>What Dolores Does Not Do</a
+                >
+              </li>
+              <li>
+                <a href="#s19"><span class="toc-num">19</span>Governing Law</a>
+              </li>
+              <li>
+                <a href="#s20"
+                  ><span class="toc-num">20</span>Changes to Terms</a
+                >
+              </li>
+              <li>
+                <a href="#s21"><span class="toc-num">21</span>Contact</a>
+              </li>
+            </ol>
+          </div>
+        </aside>
+
+        <main class="doc-content">
+          <section class="clause reveal" id="s1">
+            <p class="clause-num">Section 01</p>
+            <h2>Acceptance of Terms</h2>
+            <p>
+              These Terms and Conditions ("Terms") govern your access to and use
+              of the website at <strong>dolores.id</strong> (the "Site"), the
+              Dolores Protocol (the "Protocol"), and any associated services,
+              interfaces, or documentation (collectively, the "Services")
+              provided by the Dolores Protocol team ("Dolores", "we", "us", or
+              "our").
+            </p>
+            <p>
+              By accessing the Site, connecting a wallet, staking tokens,
+              registering an agent, or otherwise interacting with the Protocol,
+              you ("User", "you", "your") agree to be bound by these Terms in
+              full. If you do not agree, cease all use of the Site and Protocol
+              immediately.
+            </p>
+            <div class="callout info">
+              <p>
+                <strong>On-chain actions are irreversible.</strong> When you
+                sign a transaction interacting with the Dolores Protocol, that
+                transaction executes on the Solana blockchain and cannot be
+                undone by Dolores or any other party. Ensure you have read and
+                understood these Terms before signing any transaction.
+              </p>
+            </div>
+          </section>
+
+          <section class="clause reveal" id="s2">
+            <p class="clause-num">Section 02</p>
+            <h2>Definitions</h2>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Term</th>
+                  <th>Definition</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Protocol</td>
+                  <td>
+                    The Dolores on-chain accountability system deployed on
+                    Solana, including all smart contracts, the Agent Registry,
+                    staking mechanisms, adjudication system, and attestation
+                    engine.
+                  </td>
+                </tr>
+                <tr>
+                  <td>$DOL</td>
+                  <td>
+                    The native utility token of the Dolores Protocol. Fixed
+                    supply of 1,000,000,000 tokens. Not a security or investment
+                    instrument.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Agent</td>
+                  <td>
+                    An autonomous AI system registered with the Protocol by an
+                    Operator.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Operator</td>
+                  <td>
+                    A person or entity that registers an Agent and stakes $DOL,
+                    SOL, or USDC as a deposit.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Delegator</td>
+                  <td>
+                    A $DOL holder who stakes tokens behind a registered Agent as
+                    a trust signal, sharing rewards and slash exposure.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Challenger</td>
+                  <td>
+                    A person or entity that files a slash claim against a
+                    registered Agent by posting a bond.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Slash</td>
+                  <td>
+                    The automatic, permanent seizure of staked tokens following
+                    a confirmed failure finding. Irreversible for any currency
+                    staked.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Stake</td>
+                  <td>
+                    Any tokens ($DOL, SOL, or USDC) locked with the Protocol by
+                    an Operator or Delegator and subject to slashing.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Attestation</td>
+                  <td>
+                    An on-chain record of a successfully completed Agent task,
+                    contributing to its trust score.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Trust Score</td>
+                  <td>
+                    A 0–1000 score reflecting Agent performance, stake depth,
+                    tenure, and slash history.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Wallet</td>
+                  <td>
+                    A non-custodial cryptographic wallet controlled by the User
+                    to sign transactions.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="clause reveal" id="s3">
+            <p class="clause-num">Section 03</p>
+            <h2>No Financial, Legal, or Investment Advice</h2>
+            <p>
+              Nothing on the Site, in the Protocol documentation, in the
+              Litepaper, or in any communication from Dolores constitutes
+              financial advice, investment advice, legal advice, tax advice, or
+              any other professional advice of any kind.
+            </p>
+            <div class="callout warn">
+              <p>
+                <strong>Trust Score data is not a recommendation.</strong> Agent
+                trust scores, tier classifications, and attestation records are
+                informational Protocol outputs. They are not endorsements,
+                investment recommendations, or guarantees of future performance.
+                Dolores does not recommend any Agent to any protocol or user.
+              </p>
+            </div>
+            <p>
+              Reward projections and calculator outputs are illustrative only
+              and not guarantees of any return. No specific APY, yield, or
+              profit is promised by Dolores at any time. You should
+              independently evaluate whether participating in the Protocol is
+              appropriate for your financial situation and consult qualified
+              professional advisors as needed.
+            </p>
+            <p>
+              Dolores is not registered as an investment adviser, broker-dealer,
+              or financial institution in any jurisdiction.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s4">
+            <p class="clause-num">Section 04</p>
+            <h2>Eligibility</h2>
+            <p>
+              By using the Site or Protocol, you represent and warrant that:
+            </p>
+            <ul>
+              <li>
+                You are at least 18 years of age, or the age of legal majority
+                in your jurisdiction, whichever is greater.
+              </li>
+              <li>
+                You have the legal capacity and authority to enter into binding
+                agreements.
+              </li>
+              <li>
+                Your use of the Protocol is not prohibited by any applicable law
+                or regulation in your jurisdiction.
+              </li>
+              <li>
+                You are not located in, incorporated in, or a resident or
+                national of any jurisdiction subject to comprehensive sanctions
+                by OFAC, the EU, the UN, or other applicable sanctions
+                authorities — including Cuba, Iran, North Korea, Russia, Syria,
+                and the Crimea, Donetsk, and Luhansk regions.
+              </li>
+              <li>
+                You are not accessing the Protocol on behalf of any person or
+                entity that is itself prohibited from using it.
+              </li>
+              <li>
+                You understand that regulatory requirements for digital assets,
+                staking, and on-chain enforcement mechanisms vary by
+                jurisdiction and may restrict or prohibit your use.
+              </li>
+            </ul>
+            <div class="callout warn">
+              <p>
+                <strong>Jurisdictional responsibility:</strong> You are solely
+                responsible for determining whether your use of the Protocol
+                complies with laws applicable in your jurisdiction. If uncertain
+                about your eligibility, consult qualified legal counsel before
+                using the Protocol.
+              </p>
+            </div>
+          </section>
+
+          <section class="clause reveal" id="s5">
+            <p class="clause-num">Section 05</p>
+            <h2>Protocol Use</h2>
+            <h3>5.1 Nature of the Protocol</h3>
+            <p>
+              The Dolores Protocol is a decentralised, on-chain accountability
+              system operating on Solana. It operates through autonomous smart
+              contracts. Once deployed, the core enforcement logic — including
+              slashing, attestation, and adjudication — operates without
+              discretionary intervention by Dolores. Dolores has no ability to
+              reverse, pause, or override on-chain executions.
+            </p>
+
+            <h3>5.2 Wallet Connection and Security</h3>
+            <p>
+              Interacting with the Protocol requires a non-custodial Solana
+              wallet. You are solely responsible for:
+            </p>
+            <ul>
+              <li>
+                The security of your private keys and seed phrase. Dolores has
+                no access to and cannot recover your private keys under any
+                circumstances.
+              </li>
+              <li>
+                Any transaction you sign. Review all transaction parameters
+                carefully before confirming.
+              </li>
+              <li>
+                Ensuring sufficient SOL for network fees (gas) in addition to
+                any staking amounts.
+              </li>
+              <li>
+                Losses arising from loss of wallet access, forgotten seed
+                phrases, or compromise by unauthorised third parties. Dolores
+                has no liability for any such losses.
+              </li>
+            </ul>
+
+            <h3>5.3 Agent Registration</h3>
+            <p>
+              When you register an Agent, its identity and capability hash are
+              permanently written to the Solana blockchain. This record cannot
+              be deleted. You represent that you have authority to register the
+              Agent, accept full responsibility for its behaviour, and that all
+              information submitted is accurate. The Agent's operations must
+              comply with all applicable laws in all jurisdictions where it
+              operates.
+            </p>
+
+            <h3>5.4 Protocol Upgrades and Fork Risk</h3>
+            <p>
+              Dolores may release updated smart contract versions to address
+              security vulnerabilities, add functionality, or comply with
+              regulatory requirements. Migration of staked tokens or agent
+              records between contract versions is not guaranteed to be
+              automatic. You are responsible for monitoring official Dolores
+              communications and taking action to migrate your stake following
+              any upgrade. Dolores has no liability for losses arising from your
+              failure to migrate following a contract upgrade or in the event of
+              protocol deprecation.
+            </p>
+
+            <h3>5.5 No Guaranteed Uptime</h3>
+            <p>
+              The Site is provided on an "as available" basis. The Protocol's
+              operation depends on the Solana blockchain, which is subject to
+              network congestion, outages, and disruptions outside Dolores's
+              control.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s6">
+            <p class="clause-num">Section 06</p>
+            <h2>Staking and Slashing Risk</h2>
+            <div class="callout danger">
+              <p>
+                <strong
+                  >THIS SECTION CONTAINS THE MOST IMPORTANT RISK DISCLOSURES IN
+                  THESE TERMS. READ IT IN FULL BEFORE STAKING ANY
+                  TOKENS.</strong
+                >
+              </p>
+            </div>
+
+            <h3>6.1 What You Can Lose — All Currencies</h3>
+            <p>
+              The Dolores Protocol accepts staking in three currencies:
+              <strong>$DOL tokens, SOL, and USDC</strong>. All three are subject
+              to the same slashing mechanism.
+              <strong
+                >SOL and USDC staked as registration deposits are equally
+                subject to permanent seizure in a slash event — the slashing
+                risk is not limited to $DOL holders.</strong
+              >
+            </p>
+            <p>
+              When a slash fires, the Protocol seizes the Operator's staked
+              deposit regardless of which currency was used. 60% goes to the
+              Challenger, 40% to the Protocol treasury. Dolores has no ability
+              to recover, return, or compensate you for any of these tokens in
+              any currency.
+            </p>
+
+            <h3>6.2 Slashing — Permanent and Irreversible</h3>
+            <div class="callout danger">
+              <p>
+                <strong
+                  >When a slash fires, your staked tokens are gone.
+                  Permanently.</strong
+                >
+                Dolores cannot return slashed tokens. There is no insurance
+                fund, no appeal to Dolores, and no legal or arbitral mechanism
+                that can compel Dolores to compensate you for a correctly
+                executed slash — in any currency.
+              </p>
+            </div>
+
+            <h3>6.3 Slash Records — Permanence and Arweave Storage</h3>
+            <p>
+              Confirmed slash records and attestations are stored on the Solana
+              blockchain and may also be anchored to
+              <strong>Arweave</strong> for permanent, immutable archival.
+              Arweave is a decentralised storage network outside Dolores's
+              control that is, by design, uncensorable and permanent. Records
+              anchored to Arweave cannot be deleted by Dolores, the Operator, or
+              any other party, and are permanently accessible to any party with
+              the relevant transaction ID.
+            </p>
+            <p>
+              Each confirmed slash also applies a compounding score multiplier
+              of ×0.35 per event. Two slashes reduce a previously high trust
+              score to approximately 12% of its prior value. This penalty cannot
+              be erased or bought off.
+            </p>
+
+            <h3>6.4 Provisional Flag and Stake Hold</h3>
+            <p>
+              Upon a reported failure, a provisional score penalty of 25% of the
+              full slash amount is applied immediately and is visible to all
+              protocols querying your Agent. Your stake enters a dispute hold —
+              withdrawals are blocked. You cannot unstake to avoid a slash while
+              a dispute is active. This provisional penalty may affect your
+              Agent's access to integrating protocols during the window even if
+              the challenge ultimately fails.
+            </p>
+
+            <h3>6.5 Challenges by Third Parties</h3>
+            <p>
+              Any person who has posted a Challenger bond may file a slash claim
+              against your Agent. The Protocol processes challenges without
+              requiring your pre-approval. Challengers who file incorrect claims
+              lose their bond, which deters frivolous challenges — but Dolores
+              cannot guarantee frivolous challenges will never be filed.
+            </p>
+
+            <h3>6.6 Acknowledgement of Risk</h3>
+            <p>
+              By staking tokens with the Protocol, you expressly acknowledge and
+              accept that:
+            </p>
+            <ul>
+              <li>
+                You may lose all staked tokens ($DOL, SOL, or USDC) in a slash
+                event.
+              </li>
+              <li>
+                Loss from slashing is not recoverable from Dolores, the Protocol
+                treasury, or any other party.
+              </li>
+              <li>
+                The risk of slashing is a fundamental feature of the Protocol,
+                not a bug or unintended consequence.
+              </li>
+              <li>
+                You have independently evaluated whether staking is appropriate
+                for your financial situation.
+              </li>
+              <li>
+                Dolores has not provided financial, investment, or legal advice
+                in connection with your decision to stake.
+              </li>
+            </ul>
+          </section>
+
+          <section class="clause reveal" id="s7">
+            <p class="clause-num">Section 07</p>
+            <h2>The Adjudication System</h2>
+            <p>
+              The Protocol uses a two-stage adjudication system that separates
+              the immediate protocol response from fault attribution. It is
+              designed to deter bad actors while protecting Operators from being
+              penalised for genuine infrastructure failures outside their
+              control.
+            </p>
+
+            <h3>7.1 Stage 1 — Provisional Flag (Automatic)</h3>
+            <p>
+              Stage 1 fires automatically when a failure is reported. No human
+              is involved. A provisional score penalty of
+              <strong>25% of the full slash amount</strong> is applied
+              immediately. The Operator's stake enters a
+              <strong>dispute hold</strong> — withdrawals are blocked. A
+              <strong>72-hour dispute window</strong> opens for the Operator to
+              submit evidence. If no evidence is submitted, a full slash fires
+              automatically at the window's close.
+            </p>
+
+            <h3>7.2 Stage 2 — Resolution (Three Paths)</h3>
+            <div class="path-grid stagger">
+              <div class="path-card path-ok">
+                <p class="path-label">Path A — Exoneration</p>
+                <h4>Infrastructure Exoneration</h4>
+                <p>
+                  Operator submits valid infrastructure proof. Oracle confirms a
+                  Solana network degradation event overlapped the failure
+                  window. Slash voided automatically. Provisional hit reversed.
+                  Stake released. Recorded as infrastructure event.
+                </p>
+              </div>
+              <div class="path-card path-danger">
+                <p class="path-label">Path B — Auto-Slash</p>
+                <h4>Timeout Auto-Slash</h4>
+                <p>
+                  No evidence submitted within 72 hours. Full slash fires
+                  automatically. Stake seized 60% to Challenger, 40% to
+                  treasury. Permanent slash record written on-chain. No further
+                  appeal available.
+                </p>
+              </div>
+              <div class="path-card path-warn">
+                <p class="path-label">Path C — Escalation</p>
+                <h4>Contested Failure</h4>
+                <p>
+                  Evidence submitted but oracle inconclusive. Case escalates to
+                  expert panel. Operator posts additional bond (larger than the
+                  challenger bond) to proceed. DAO is the last-resort appeal
+                  body.
+                </p>
+              </div>
+            </div>
+
+            <h3>7.3 The Force Majeure Oracle</h3>
+            <p>
+              The oracle queries on-chain data produced by Solana's own
+              infrastructure. It checks whether any of the following conditions
+              were confirmed at the failure timestamp:
+            </p>
+            <ul>
+              <li>
+                Solana network-wide outage or degraded slot confirmation rates
+                (&gt;50% of slots missing for &gt;5 minutes)
+              </li>
+              <li>
+                Confirmed RPC provider degradation affecting &gt;30% of endpoint
+                availability
+              </li>
+              <li>
+                Network congestion causing &gt;10× normal transaction
+                confirmation latency at the relevant block height
+              </li>
+            </ul>
+            <p>
+              Oracle data is sourced from a decentralised network status feed
+              anchored on-chain — not any Dolores-controlled source. Neither the
+              Operator nor Dolores can influence oracle results. Dolores does
+              not warrant that the oracle will be available at all times or that
+              its determinations will be free from error.
+            </p>
+
+            <h3>7.4 Expert Panel and DAO</h3>
+            <p>
+              Path C disputes escalate to a specialised expert panel. If the
+              panel's verdict is disputed, the DAO serves as last-resort appeal
+              body. DAO governance parameters are subject to change following
+              activation at 50,000 registered agents. Expert panel and DAO
+              decisions are binding. Dolores has no power to override them.
+            </p>
+
+            <h3>7.5 Protocol Parameters</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Value</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Provisional score hit</td>
+                  <td class="mono">25% of full slash</td>
+                  <td>Reversible if exonerated. Immediate and public.</td>
+                </tr>
+                <tr>
+                  <td>Dispute window</td>
+                  <td class="mono">72 hours</td>
+                  <td>
+                    Cross-timezone response time without a meaningful escape
+                    window.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Slash distribution</td>
+                  <td class="mono">60% / 40%</td>
+                  <td>60% to Challenger; 40% to treasury.</td>
+                </tr>
+                <tr>
+                  <td>Score slash multiplier</td>
+                  <td class="mono">×0.35 per slash</td>
+                  <td>
+                    Non-linear and compounding. Two slashes ≈ 12% of prior
+                    score.
+                  </td>
+                </tr>
+                <tr>
+                  <td>L3 operator bond</td>
+                  <td>Larger than challenger bond</td>
+                  <td>Escalating cost filters bad-faith contests.</td>
+                </tr>
+                <tr>
+                  <td>DAO governance transfer</td>
+                  <td class="mono">50,000 agents</td>
+                  <td>
+                    All parameters above are governance-adjustable
+                    post-transfer.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="clause reveal" id="s8">
+            <p class="clause-num">Section 08</p>
+            <h2>Delegated Trust Staking</h2>
+
+            <h3>8.1 Overview</h3>
+            <p>
+              $DOL holders may delegate stake behind registered Agents at
+              Developing tier (Trust Score ≥ 400) or above as a public signal of
+              trust. Delegated staking is
+              <strong>not a passive investment product</strong>. It is an active
+              economic participation mechanism in the Protocol's accountability
+              system. SOL and USDC operators cannot participate as delegators —
+              delegation is a $DOL-native benefit only.
+            </p>
+
+            <h3>8.2 Delegation Rewards</h3>
+            <p>
+              Delegators receive protocol rewards from the 400M registry rewards
+              pool, scaled by the trust tier of the Agent they back. Rewards are
+              expressed in $DOL tokens. Their USD value depends on $DOL market
+              price, which is not guaranteed and may be zero.
+              <strong
+                >No specific return, APY, or yield is promised by
+                Dolores.</strong
+              >
+              Rewards are protocol participation incentives, not investment
+              returns.
+            </p>
+
+            <h3>8.3 Delegator Slash Exposure</h3>
+            <div class="callout danger">
+              <p>
+                <strong
+                  >If the Agent you delegate to is slashed, you will
+                  automatically lose 15% of your delegated stake.</strong
+                >
+                This loss is proportional to your delegation size and is
+                automatic and on-chain. You cannot opt out of slash exposure
+                while delegated. Slash exposure persists during the 10-day
+                unbonding period — you cannot unstake to avoid a pending slash.
+              </p>
+            </div>
+
+            <h3>8.4 Unbonding Period</h3>
+            <p>
+              Delegated stake is subject to a 10-day unbonding period on
+              withdrawal. During unbonding, your stake earns no rewards but
+              remains exposed to slash events arising from disputes active at
+              the time of your unbonding request.
+            </p>
+
+            <h3>8.5 Your Responsibility</h3>
+            <p>
+              You are solely responsible for evaluating the Agents you delegate
+              to. Dolores does not endorse any Agent, does not guarantee any
+              Agent's trust score will be maintained, and has no liability for
+              losses arising from your delegation choices.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s9">
+            <p class="clause-num">Section 09</p>
+            <h2>Fees and Payments</h2>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Function</th>
+                  <th>SOL / USDC</th>
+                  <th>$DOL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Agent registration</td>
+                  <td>Standard fee applies</td>
+                  <td class="ok">Zero fee</td>
+                </tr>
+                <tr>
+                  <td>API registry queries</td>
+                  <td>Per-request pricing</td>
+                  <td class="mono">50% discount</td>
+                </tr>
+                <tr>
+                  <td>Registry rewards pool (400M)</td>
+                  <td class="no">Not eligible</td>
+                  <td class="ok">Exclusive access</td>
+                </tr>
+                <tr>
+                  <td>Challenger slash share</td>
+                  <td class="mono">60% of slashed stake</td>
+                  <td class="mono">65% of slashed stake</td>
+                </tr>
+              </tbody>
+            </table>
+            <p>
+              All fees paid to the Protocol are <strong>non-refundable</strong>.
+              You are responsible for all Solana network transaction fees (gas)
+              incurred. Fee structures may be modified by Dolores or, following
+              DAO activation at 50,000 registered agents, by DAO governance
+              vote.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s10">
+            <p class="clause-num">Section 10</p>
+            <h2>$DOL Token</h2>
+            <p>
+              $DOL is a utility token with a fixed supply of 1,000,000,000
+              tokens. Its purpose is to enable participation in the Dolores
+              Protocol — including staking, challenging, adjudication,
+              governance, and exclusive Protocol benefits.
+            </p>
+            <div class="callout warn">
+              <p>
+                <strong
+                  >$DOL is not a security, investment contract, or financial
+                  instrument.</strong
+                >
+                Purchasing, holding, or staking $DOL does not constitute an
+                investment in Dolores, does not entitle you to any equity,
+                profit sharing, or financial return, and is not guaranteed to
+                have any particular value. The value of $DOL may decrease to
+                zero.
+              </p>
+            </div>
+            <p>
+              Dolores makes no representations regarding the current or future
+              market price of $DOL, its liquidity on any exchange, any projected
+              appreciation or depreciation, or the continued operation of any
+              secondary market. The $DOL emission schedule is set by the
+              Protocol and enforced on-chain. DAO governance may adjust certain
+              parameters following activation.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s11">
+            <p class="clause-num">Section 11</p>
+            <h2>Tax Disclaimer</h2>
+            <p>
+              Dolores makes no representation about the tax treatment of any
+              activity involving the Protocol or $DOL in any jurisdiction. This
+              includes:
+            </p>
+            <ul>
+              <li>Receiving staking or delegation rewards in $DOL</li>
+              <li>
+                Receiving slash proceeds as a Challenger (which may constitute
+                taxable income in some jurisdictions)
+              </li>
+              <li>Purchasing, selling, or transferring $DOL tokens</li>
+              <li>
+                Registering an Agent or paying registration fees in any currency
+              </li>
+              <li>
+                Any loss of tokens from a slash event and whether that loss is
+                tax-deductible
+              </li>
+            </ul>
+            <div class="callout warn">
+              <p>
+                <strong
+                  >You are solely responsible for determining and meeting your
+                  tax obligations</strong
+                >
+                arising from your use of the Protocol in your jurisdiction. Tax
+                laws relating to digital assets are complex, rapidly evolving,
+                and vary significantly by jurisdiction. Dolores strongly
+                recommends consulting a qualified tax advisor before
+                participating in the Protocol.
+              </p>
+            </div>
+            <p>
+              Dolores does not report Protocol activity to tax authorities on
+              your behalf and makes no representations about whether or when it
+              may be required to do so.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s12">
+            <p class="clause-num">Section 12</p>
+            <h2>Disclaimers</h2>
+            <p>
+              THE SITE AND PROTOCOL ARE PROVIDED "AS IS" AND "AS AVAILABLE"
+              WITHOUT WARRANTY OF ANY KIND. TO THE FULLEST EXTENT PERMITTED BY
+              LAW, DOLORES DISCLAIMS ALL WARRANTIES INCLUDING MERCHANTABILITY,
+              FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+            </p>
+
+            <h3>Smart Contract Risk</h3>
+            <p>
+              Smart contracts may contain bugs or vulnerabilities. While Dolores
+              intends to conduct security audits prior to mainnet deployment, no
+              audit guarantees the absence of all vulnerabilities. You accept
+              the risk of smart contract failure, which may result in loss of
+              staked tokens or other assets.
+            </p>
+
+            <h3>Oracle Risk</h3>
+            <p>
+              The force majeure oracle relies on on-chain network data. If that
+              data is unavailable, corrupted, or manipulated, oracle
+              determinations may be incorrect. Dolores does not warrant the
+              accuracy or availability of oracle outputs.
+            </p>
+
+            <h3>Protocol Upgrade Risk</h3>
+            <p>
+              Smart contract upgrades may introduce unintended behaviour, and
+              migration of existing stakes is not guaranteed. Dolores does not
+              warrant that any upgraded contract will be compatible with stakes
+              or records created under prior contract versions.
+            </p>
+
+            <h3>Arweave Storage</h3>
+            <p>
+              Records anchored to Arweave are stored on a decentralised,
+              uncensorable network outside Dolores's control. Arweave is
+              designed for permanence, and records anchored there cannot be
+              altered or deleted by any party — including Dolores. Dolores does
+              not warrant the permanent availability of Arweave network
+              services.
+            </p>
+
+            <h3>Third-Party Integrations</h3>
+            <p>
+              The Site may link to third-party services. Dolores is not
+              responsible for the content, availability, or practices of any
+              third-party service. Use of third-party services is at your own
+              risk.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s13">
+            <p class="clause-num">Section 13</p>
+            <h2>Limitation of Liability</h2>
+            <p>
+              TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT
+              SHALL DOLORES, ITS FOUNDERS, TEAM MEMBERS, CONTRIBUTORS, ADVISORS,
+              OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+              CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF TOKENS IN
+              ANY CURRENCY ($DOL, SOL, OR USDC); LOSS OF DATA, PROFITS, REVENUE,
+              OR BUSINESS OPPORTUNITY; OR DAMAGES RESULTING FROM SLASHING
+              EVENTS, ORACLE ERRORS, SMART CONTRACT FAILURES, PROTOCOL UPGRADES,
+              OR NETWORK OUTAGES.
+            </p>
+            <p>
+              WHERE LIABILITY CANNOT BE EXCLUDED, DOLORES'S TOTAL AGGREGATE
+              LIABILITY TO YOU SHALL NOT EXCEED THE GREATER OF (A) FEES PAID BY
+              YOU TO THE PROTOCOL IN THE 12 MONTHS PRECEDING THE CLAIM, OR (B)
+              USD $100.
+            </p>
+            <div class="callout danger">
+              <p>
+                <strong
+                  >Slashing losses are not recoverable in any currency.</strong
+                >
+                Dolores has no liability — in contract, tort, or any other
+                theory — for tokens lost to Protocol slashing ($DOL, SOL, or
+                USDC), even if you believe the slash was erroneous. The
+                Protocol's adjudication system is the exclusive mechanism for
+                contesting slash claims.
+              </p>
+            </div>
+            <div class="callout warn">
+              <p>
+                <strong>Class action waiver:</strong> You waive any right to
+                participate in a class action lawsuit or class-wide arbitration
+                against Dolores to the fullest extent permitted by applicable
+                law.
+              </p>
+            </div>
+          </section>
+
+          <section class="clause reveal" id="s14">
+            <p class="clause-num">Section 14</p>
+            <h2>Indemnification</h2>
+            <p>
+              You agree to indemnify, defend, and hold harmless Dolores and its
+              founders, team members, contributors, advisors, and affiliates
+              from and against any claims, damages, losses, liabilities, costs,
+              and expenses (including reasonable legal fees) arising from or
+              relating to:
+            </p>
+            <ul>
+              <li>
+                Your use of the Site or Protocol, including any transactions you
+                sign.
+              </li>
+              <li>
+                Your Agent's behaviour, including losses caused to third-party
+                protocols or users by your Agent's failures or misbehaviour.
+              </li>
+              <li>
+                Your violation of these Terms or any applicable law or
+                regulation.
+              </li>
+              <li>
+                Any misrepresentation made by you in connection with your use of
+                the Protocol.
+              </li>
+              <li>
+                Third-party claims arising from your Agent's operations or your
+                delegation choices.
+              </li>
+            </ul>
+            <p>
+              Dolores reserves the right to assume exclusive control of the
+              defence of any matter subject to indemnification, and you agree to
+              cooperate with that defence.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s15">
+            <p class="clause-num">Section 15</p>
+            <h2>Prohibited Use</h2>
+            <p>You agree not to use the Site or Protocol to:</p>
+            <ul>
+              <li>
+                Register Agents whose operations are illegal under applicable
+                law.
+              </li>
+              <li>
+                Attempt to manipulate, exploit, or attack Protocol smart
+                contracts.
+              </li>
+              <li>File frivolous or bad-faith slash claims against Agents.</li>
+              <li>
+                Engage in collusive behaviour to manipulate trust scores or
+                adjudication outcomes.
+              </li>
+              <li>
+                Use the Protocol in violation of applicable sanctions laws.
+              </li>
+              <li>
+                Impersonate any person or entity or misrepresent your
+                affiliation.
+              </li>
+              <li>
+                Scrape or systematically extract Site data without
+                authorisation.
+              </li>
+              <li>
+                Introduce malware, denial-of-service attacks, or disruptive code
+                to the Site or Protocol infrastructure.
+              </li>
+            </ul>
+            <p>
+              Dolores may restrict Site access for users who violate these
+              prohibitions. On-chain interactions with the Protocol cannot be
+              blocked by Dolores.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s16">
+            <p class="clause-num">Section 16</p>
+            <h2>Intellectual Property</h2>
+            <p>
+              The Site, its design, content, code, and branding — including the
+              Dolores name, logo, and "The record does not forget" tagline — are
+              the intellectual property of Dolores and protected by applicable
+              laws. You may not reproduce, distribute, modify, or create
+              derivative works from Site content without Dolores's express
+              written permission.
+            </p>
+            <p>
+              Open-source Protocol components are licensed under their
+              respective open-source licences. Deployed smart contract code is
+              publicly readable on the Solana blockchain.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s17">
+            <p class="clause-num">Section 17</p>
+            <h2>Privacy and Data</h2>
+            <p>
+              The Site may collect limited non-custodial analytics data. Dolores
+              does not collect personally identifiable information unless you
+              voluntarily provide it.
+            </p>
+            <p>
+              <strong
+                >On-chain and Arweave data is public and permanent.</strong
+              >
+              Any wallet address that interacts with the Protocol, any Agent
+              registered, any attestation earned, any challenge filed, and any
+              slash recorded are written to the Solana blockchain — and may also
+              be anchored to Arweave — and are permanently and publicly visible.
+              This data cannot be deleted by any party, including Dolores.
+            </p>
+            <p>
+              For EU users, Dolores's data practices are intended to comply with
+              the GDPR to the extent applicable. Contact us at the address in
+              Section 21 for data-related enquiries.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s18">
+            <p class="clause-num">Section 18</p>
+            <h2>Nature of the Protocol and What Dolores Does Not Do</h2>
+
+            <p>
+              Dolores is the developer and deployer of autonomous smart contract
+              software. It is not a financial intermediary. To avoid any
+              ambiguity about the nature of the Services, this section sets out
+              clearly what Dolores does not do.
+            </p>
+
+            <h3>18.1 No Custody of User Assets</h3>
+            <p>
+              Dolores does not hold, safekeep, administer, or control any user
+              tokens at any point. When you stake tokens with the Protocol,
+              those tokens are locked by autonomous smart contracts deployed on
+              the Solana blockchain — not by Dolores. Dolores has no technical
+              ability to access, move, freeze, or recover your tokens. You
+              retain full control over your wallet and sign all transactions
+              yourself.
+            </p>
+
+            <h3>18.2 No Exchange of Virtual Assets</h3>
+            <p>
+              Dolores does not exchange virtual assets for fiat currencies or
+              for other virtual assets. The Protocol does not operate a trading
+              platform, order book, matching engine, or brokerage service of any
+              kind. No buying or selling of tokens takes place through Dolores.
+            </p>
+
+            <h3>18.3 No Transfer of Tokens on Your Behalf</h3>
+            <p>
+              Dolores does not transfer tokens on behalf of any user. Slash
+              redistributions, reward distributions, and bond forfeitures are
+              executed automatically by smart contract logic when predetermined
+              on-chain conditions are met. These are deterministic contract
+              executions triggered by user-signed inputs — Dolores does not
+              instruct, initiate, or conduct any of these transfers. The
+              contract acts; Dolores does not.
+            </p>
+
+            <h3>18.4 Software Infrastructure, Not Financial Services</h3>
+            <p>
+              Dolores's role is that of a software developer and protocol
+              operator. It builds and maintains the smart contract system
+              through which users choose to interact. Users interact with the
+              Protocol directly — Dolores does not intermediate between users
+              and their assets, and does not perform any service on behalf of
+              users in relation to their tokens.
+            </p>
+
+            <h3>18.5 Regulatory Compliance Commitment</h3>
+            <p>
+              Dolores monitors applicable regulatory requirements across
+              relevant jurisdictions and is committed to operating in compliance
+              with the law. Where any regulatory authority determines that
+              Dolores's activities require registration, licensing, or other
+              authorisation, Dolores will take appropriate steps to comply
+              before continuing those activities. Dolores will obtain qualified
+              legal opinions on its regulatory position in relevant
+              jurisdictions prior to mainnet launch.
+            </p>
+            <div class="callout warn">
+              <p>
+                Digital asset regulation is evolving rapidly across all
+                jurisdictions. A future law, regulatory determination, or change
+                in enforcement approach could affect how Dolores's activities
+                are classified. Dolores cannot guarantee that its regulatory
+                position will remain unchanged throughout the life of the
+                Protocol. Any change in Dolores's regulatory obligations does
+                not give rise to any claim by you against Dolores.
+              </p>
+            </div>
+          </section>
+
+          <section class="clause reveal" id="s19">
+            <p class="clause-num">Section 19</p>
+            <h2>Governing Law and Dispute Resolution</h2>
+            <p>
+              These Terms shall be governed by and construed in accordance with
+              applicable law as determined by the jurisdiction in which Dolores
+              is incorporated. Dolores will update this clause with specific
+              governing law prior to mainnet launch.
+            </p>
+            <p>
+              Any dispute shall first be subject to good-faith negotiation. If
+              unresolved within 30 days, it shall be submitted to binding
+              arbitration under internationally recognised arbitration rules.
+              Nothing in these Terms prevents Dolores from seeking injunctive or
+              equitable relief in any court to protect its intellectual property
+              or prevent irreparable harm.
+            </p>
+
+            <h3>Jurisdictions Requiring Additional Caution</h3>
+            <div class="jur-grid">
+              <div class="jur-item">United States (certain states)</div>
+              <div class="jur-item">People's Republic of China</div>
+              <div class="jur-item">Russia</div>
+              <div class="jur-item">Iran</div>
+              <div class="jur-item">North Korea</div>
+              <div class="jur-item">Cuba</div>
+              <div class="jur-item">Syria</div>
+              <div class="jur-item">Myanmar</div>
+            </div>
+            <p>
+              This list is not exhaustive. Regulatory conditions change
+              frequently. Users from these regions should seek independent legal
+              advice before using the Protocol.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s20">
+            <p class="clause-num">Section 20</p>
+            <h2>Changes to These Terms</h2>
+            <p>
+              Dolores reserves the right to update these Terms at any time.
+              Material changes will be communicated via the Site. Your continued
+              use of the Site or Protocol after updated Terms are posted
+              constitutes acceptance of the revised Terms. On-chain Protocol
+              parameters may also be modified through DAO governance following
+              activation at 50,000 registered agents.
+            </p>
+          </section>
+
+          <section class="clause reveal" id="s21">
+            <p class="clause-num">Section 21</p>
+            <h2>Contact</h2>
+            <div class="contact-block">
+              <h3>Get in Touch</h3>
+              <p>
+                For legal enquiries, data protection requests, or questions
+                about these Terms, please contact the Dolores Protocol team.
+              </p>
+              <p>
+                <strong style="color: var(--primary)">dolores.id</strong><br />
+                Email: <a href="mailto:hello@dolores.id">hello@dolores.id</a>
+              </p>
+              <p class="contact-detail">
+                These Terms do not constitute legal advice. Dolores is not a law
+                firm. For advice specific to your situation, consult qualified
+                legal counsel in your jurisdiction.
+              </p>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <footer class="site">
+      <div class="container">
+        <div class="row" style="margin-bottom: 16px">
+          <a href="/" class="footer-logo" aria-label="Dolores home">
+            <svg viewBox="0 0 700 700" aria-hidden="true">
+              <path
+                d="M357.63,499.92h-112.43V203.51h112.43c81.72,0,148.2,66.49,148.2,148.21s-66.48,148.2-148.2,148.2ZM288.55,456.57h69.08c57.82,0,104.85-47.03,104.85-104.85s-47.03-104.86-104.85-104.86h-69.08v209.71Z"
+              />
+              <circle cx="365" cy="351.71" r="37.16" />
+            </svg>
+            <span class="wordmark">Dolores</span>
+          </a>
+          <div class="links">
+            <a href="https://dolores.wildchain.io">App</a>
+            <a href="https://docs.dolores.wildchain.io">Docs</a>
+            <a href="https://github.com/wildchain/dolores">GitHub</a>
+            <a href="https://x.com/dolores_xyz">X</a>
+          </div>
+        </div>
+        <div
+          class="row"
+          style="padding-top: 16px; border-top: 1px solid var(--border-subtle)"
+        >
+          <a
+            href="mailto:hello@dolores.id"
+            style="
+              font-family: &quot;JetBrains Mono&quot;, monospace;
+              font-size: var(--fs-12);
+              color: var(--fg-subtle);
+              letter-spacing: 0.04em;
+            "
+            >hello@dolores.id</a
+          >
+          <div class="links">
+            <a
+              href="/terms"
+              style="
+                font-size: var(--fs-13);
+                color: var(--accent);
+                font-weight: 600;
+              "
+              >Terms &amp; Conditions</a
+            >
+            <a
+              href="/privacy"
+              style="font-size: var(--fs-13); color: var(--fg-subtle)"
+              >Privacy Policy</a
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var bar = document.getElementById("scrollProgress");
+        function updateBar() {
+          var h = document.documentElement;
+          var s = h.scrollTop || document.body.scrollTop;
+          var m = h.scrollHeight - h.clientHeight || 1;
+          bar.style.width = Math.min(100, Math.max(0, (s / m) * 100)) + "%";
+        }
+        window.addEventListener("scroll", updateBar, { passive: true });
+        window.addEventListener("resize", updateBar);
+        updateBar();
+
+        var els = document.querySelectorAll(".reveal,.stagger");
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                  e.target.classList.add("in-view");
+                  io.unobserve(e.target);
+                }
+              });
+            },
+            { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+          );
+          els.forEach(function (el) {
+            io.observe(el);
+          });
+        } else {
+          els.forEach(function (el) {
+            el.classList.add("in-view");
+          });
+        }
+
+        var sections = document.querySelectorAll("section.clause[id]");
+        var tocLinks = document.querySelectorAll(".toc-list a");
+        var tocObs = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (e.isIntersecting) {
+                tocLinks.forEach(function (l) {
+                  l.classList.remove("active");
+                });
+                var a = document.querySelector(
+                  '.toc-list a[href="#' + e.target.id + '"]',
+                );
+                if (a) a.classList.add("active");
+              }
+            });
+          },
+          { threshold: 0.25 },
+        );
+        sections.forEach(function (s) {
+          tocObs.observe(s);
+        });
+      })();
+    </script>
+  </body>
+</html>
