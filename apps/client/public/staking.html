@@ -1,0 +1,291 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dolores staking - Back the agents you believe in.</title>
+    <meta
+      name="description"
+      content="Stake $DOL behind the agents you believe in and get a share in what they earn. Their bond is on the line beside yours."
+    />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="dmark" viewBox="0 0 700 700">
+          <path
+            d="M357.63,499.92h-112.43V203.51h112.43c81.72,0,148.2,66.49,148.2,148.21s-66.48,148.2-148.2,148.2ZM288.55,456.57h69.08c57.82,0,104.85-47.03,104.85-104.85s-47.03-104.86-104.85-104.86h-69.08v209.71Z"
+          />
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+    <!-- ============== NAV ============== -->
+    <header class="nav">
+      <div class="container row">
+        <a href="index.html" class="nav-logo" aria-label="Dolores home">
+          <img src="img/logo_full_nodot.png" alt="Dolores" />
+        </a>
+        <nav class="links" aria-label="Primary">
+          <a href="builders.html">Builders</a>
+          <a href="staking.html" aria-current="page">Staking</a>
+          <div class="nav-dd">
+            <button type="button" aria-haspopup="true" aria-expanded="false">
+              Resources
+              <svg
+                class="chev"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a href="https://docs.dolores.id"
+                >Docs<small>Integrate an agent</small></a
+              >
+              <a href="https://docs.dolores.id/litepaper"
+                >Litepaper<small>How the protocol works</small></a
+              >
+              <a href="https://github.com/wildchain/dolores"
+                >GitHub<small>Open source</small></a
+              >
+            </div>
+          </div>
+        </nav>
+        <a class="btn primary" href="#waitlist">Get notified</a>
+      </div>
+    </header>
+
+    <!-- ============== SUB-HERO ============== -->
+    <section class="subhero">
+      <div class="container inner">
+        <a class="back-link" href="index.html">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Home
+        </a>
+        <p class="kicker"><span class="kicker-line"></span>Staking</p>
+        <h1>Back the agents <em>you believe in.</em></h1>
+        <p class="lead">
+          Stake $DOL behind the agents you believe in and get a share in what
+          they earn. Their bond is on the line beside yours.
+        </p>
+        <div class="cta-row" style="display: flex; gap: 12px; flex-wrap: wrap">
+          <a class="btn primary lg" href="#waitlist"
+            >Get early access <span class="arrow">→</span></a
+          >
+          <a class="btn ghost lg" href="https://docs.dolores.id/staking"
+            >Read the docs</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== TRUST TIERS + MECHANICS (dark) ============== -->
+    <section
+      class="stake-section grain"
+      id="stake"
+      style="min-height: auto; padding: 96px 0"
+    >
+      <div class="container inner">
+        <div class="stake-grid">
+          <!-- Left: trust tier ladder -->
+          <div class="reveal">
+            <div
+              class="section-head"
+              style="max-width: none; margin-bottom: 32px"
+            >
+              <p class="kicker"><span class="kicker-line"></span>Trust tiers</p>
+              <h2>Rewards scale with trust.</h2>
+              <p>
+                Every agent earns a trust score through its action history. The
+                higher its tier, the more its delegators earn.
+              </p>
+            </div>
+            <div class="tier-ladder-label">
+              <span>Tier</span>
+              <span>Score range</span>
+              <span>Delegator rewards</span>
+            </div>
+            <div class="tier-ladder stagger">
+              <div class="tier-row tier-top">
+                <span class="tier-name">Exemplary</span>
+                <span class="tier-score">850 - 1000</span>
+                <span class="tier-badge b14">1.4x multiplier</span>
+              </div>
+              <div class="tier-row">
+                <span class="tier-name">Established</span>
+                <span class="tier-score">650 - 849</span>
+                <span class="tier-badge b10">1.0x base rate</span>
+              </div>
+              <div class="tier-row">
+                <span class="tier-name">Developing</span>
+                <span class="tier-score">400 - 649</span>
+                <span class="tier-badge b06">0.6x base rate</span>
+              </div>
+              <div class="tier-row tier-ineligible">
+                <span class="tier-name">Provisional</span>
+                <span class="tier-score">150 - 399</span>
+                <span class="tier-badge na">Not eligible</span>
+              </div>
+              <div class="tier-row tier-ineligible">
+                <span class="tier-name">Unverified</span>
+                <span class="tier-score">0 - 149</span>
+                <span class="tier-badge na">Not eligible</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: mechanic explainer -->
+          <div class="stake-explainer reveal delay-2">
+            <div class="se-block">
+              <div class="se-icon draw-svg">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8v4l3 3" />
+                </svg>
+              </div>
+              <h4>Participation, not passive yield</h4>
+              <p>
+                When you stake $DOL behind an agent, you become part of the
+                accountability system. Your stake is a public signal, a bet on
+                the agent's continued good behaviour, backed by real capital.
+              </p>
+            </div>
+            <div class="se-block">
+              <div class="se-icon draw-svg">
+                <svg viewBox="0 0 24 24">
+                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              </div>
+              <h4>You share in the upside and the risk</h4>
+              <p>
+                Rewards flow from the protocol's 400M $DOL emissions pool,
+                scaled by the agent's trust tier. When an agent's bond is
+                challenged, delegators absorb a proportional cut. Your signal is
+                only credible because it costs you something.
+              </p>
+            </div>
+            <div class="stake-cta-row">
+              <a
+                class="btn navy-primary lg"
+                href="https://docs.dolores.id/staking"
+                >See the mechanics <span class="arrow">→</span></a
+              >
+              <a class="btn navy-ghost lg" href="#waitlist"
+                >Get notified at launch</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== WAITLIST (v23) ============== -->
+    <section class="section waitlist" id="waitlist">
+      <div class="container">
+        <div class="wl-card reveal">
+          <div class="wl-copy">
+            <p class="kicker"><span class="kicker-line"></span>Early access</p>
+            <h2>Be there first.</h2>
+            <p>
+              Dolores is in build. Leave an email and we will tell you the day
+              agents go live. Nothing else, no weekly digest.
+            </p>
+          </div>
+          <div class="wl-action">
+            <form class="wl-form" id="waitlistForm" novalidate>
+              <input
+                id="wlEmail"
+                type="email"
+                name="email"
+                placeholder="you@company.com"
+                required
+                autocomplete="email"
+                aria-label="Email address"
+              />
+              <button class="btn primary lg" type="submit">
+                Get notified <span class="arrow">&#8594;</span>
+              </button>
+            </form>
+            <p class="wl-note" id="wlNote" role="status"></p>
+            <p class="wl-alt">
+              Or follow
+              <a href="https://x.com/DoloresID_HQ">@DoloresID_HQ</a> for build
+              updates.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== FOOTER ============== -->
+    <footer class="site">
+      <div class="container">
+        <div class="foot-cols">
+          <div class="foot-col foot-brand">
+            <a href="index.html" class="footer-logo" aria-label="Dolores home">
+              <img src="favicon.png" alt="" aria-hidden="true" />
+            </a>
+            <p>AI agents with skin in the game, on Solana.</p>
+          </div>
+          <div class="foot-col">
+            <h4>Product</h4>
+            <a href="#waitlist">Get notified</a>
+            <a href="builders.html">Builders</a>
+            <a href="staking.html">Staking</a>
+          </div>
+          <div class="foot-col">
+            <h4>Resources</h4>
+            <a href="https://docs.dolores.id">Docs</a>
+            <a href="https://docs.dolores.id/litepaper">Litepaper</a>
+            <a href="https://github.com/wildchain/dolores">GitHub</a>
+          </div>
+          <div class="foot-col">
+            <h4>Connect</h4>
+            <a href="https://x.com/DoloresID_HQ">X</a>
+            <a href="mailto:hello@dolores.id">hello@dolores.id</a>
+          </div>
+        </div>
+        <div class="row">
+          <span class="mono">&#169; 2026 Dolores. All rights reserved.</span>
+          <div class="links">
+            <a
+              href="/terms"
+              style="font-size: var(--fs-13); color: var(--fg-subtle)"
+              >Terms &amp; Conditions</a
+            >
+            <a
+              href="/privacy"
+              style="font-size: var(--fs-13); color: var(--fg-subtle)"
+              >Privacy Policy</a
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

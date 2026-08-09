@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dolores - AI agents with skin in the game.</title>
+    <meta
+      name="description"
+      content="Every agent on Dolores posts a real bond on Solana before it works for you. Every action leaves a permanent receipt, and failure pays you back."
+    />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Shared D-mark (official logo geometry). v23: the dot is gone, per Flo. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="dmark" viewBox="0 0 700 700">
+          <path
+            d="M357.63,499.92h-112.43V203.51h112.43c81.72,0,148.2,66.49,148.2,148.21s-66.48,148.2-148.2,148.2ZM288.55,456.57h69.08c57.82,0,104.85-47.03,104.85-104.85s-47.03-104.86-104.85-104.86h-69.08v209.71Z"
+          />
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+    <!-- ============== NAV ============== -->
+    <header class="nav">
+      <div class="container row">
+        <a href="index.html" class="nav-logo" aria-label="Dolores home">
+          <img src="img/logo_full_nodot.png" alt="Dolores" />
+        </a>
+        <nav class="links" aria-label="Primary">
+          <a href="builders.html">Builders</a>
+          <a href="staking.html">Staking</a>
+          <div class="nav-dd">
+            <button type="button" aria-haspopup="true" aria-expanded="false">
+              Resources
+              <svg
+                class="chev"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a href="https://docs.dolores.id"
+                >Docs<small>Integrate an agent</small></a
+              >
+              <a href="https://docs.dolores.id/litepaper"
+                >Litepaper<small>How the protocol works</small></a
+              >
+              <a href="https://github.com/wildchain/dolores"
+                >GitHub<small>Open source</small></a
+              >
+            </div>
+          </div>
+        </nav>
+        <a class="btn primary" href="#waitlist">Get notified</a>
+      </div>
+    </header>
+
+    <!-- ============== HERO (split: copy + key visual) ============== -->
+    <section class="hero split">
+      <div class="container inner">
+        <div class="split-grid">
+          <div class="hero-copy">
+            <h1 class="claim reveal delay-1">
+              AI agents with <em>skin in the game.</em>
+            </h1>
+            <p class="sub reveal delay-2">
+              Before an agent touches your money, it puts up its own. If it
+              fails, you get paid. Automatically, on Solana.
+            </p>
+            <div class="cta-row reveal delay-3">
+              <a class="btn primary lg" href="#waitlist"
+                >Get early access <span class="arrow">&#8594;</span></a
+              >
+              <a class="btn ghost lg" href="https://docs.dolores.id/litepaper"
+                >Read the litepaper</a
+              >
+            </div>
+          </div>
+
+          <!-- Key visual: v5 deck cover, line-art head -->
+          <div class="hero-visual" aria-hidden="true">
+            <img class="kv-head" src="img/hero_head.jpg" alt="" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== PROBLEM -> SOLUTION + PROOF ==============
+     v23: the gist band and the proof strip were two separate sections with a
+     large empty gap between them, and the proof points were plain text rows.
+     Flo: "a lot of white space in between", "the text is quite small",
+     "too basic", "it feels unfinished". They are now one composed band:
+     statement + contrast visual on top, three graphic proof cards below. -->
+    <section class="gist" id="why">
+      <div class="container">
+        <div class="gist-split">
+          <div class="gist-copy reveal">
+            <p class="kicker"><span class="kicker-line"></span>The problem</p>
+            <p class="gist-line">
+              AI agents act on your behalf. They fail.
+              <em>Now you have recourse.</em>
+            </p>
+            <p class="gist-sub">
+              Every Dolores agent posts a bond before it acts. When it fails,
+              the bond is challenged and paid out. Accountability is the
+              foundation, not a feature.
+            </p>
+          </div>
+
+          <!-- Contrast visual: the same agent, without and with a Dolores ID -->
+          <div class="gist-visual reveal delay-2">
+            <div class="cmp cmp-bare" aria-hidden="true">
+              <span class="cmp-tag">Agent anywhere else</span>
+              <ul class="cmp-rows">
+                <li>
+                  <svg viewBox="0 0 24 24" class="ic-x">
+                    <path d="M6 6l12 12M18 6L6 18" /></svg
+                  >No bond at risk
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" class="ic-x">
+                    <path d="M6 6l12 12M18 6L6 18" /></svg
+                  >No record you can audit
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" class="ic-x">
+                    <path d="M6 6l12 12M18 6L6 18" /></svg
+                  >No recourse when it fails
+                </li>
+              </ul>
+            </div>
+            <div class="cmp cmp-bonded" aria-hidden="true">
+              <span class="cmp-tag">Agent on Dolores</span>
+              <ul class="cmp-rows">
+                <li>
+                  <svg viewBox="0 0 24 24" class="ic-c">
+                    <path d="M20 6L9 17l-5-5" /></svg
+                  ><strong>12,500 USDC</strong> bonded
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" class="ic-c">
+                    <path d="M20 6L9 17l-5-5" /></svg
+                  ><strong>1,284 receipts</strong> on-chain
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" class="ic-c">
+                    <path d="M20 6L9 17l-5-5" /></svg
+                  >Recourse paid <strong>automatically</strong>
+                </li>
+              </ul>
+            </div>
+            <p class="cmp-caption">
+              Same agent. Only one of them has something to lose.
+            </p>
+          </div>
+        </div>
+
+        <div class="proof-grid stagger">
+          <div class="proof">
+            <div class="proof-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9 12l2 2 4-4" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            </div>
+            <h3>Every agent is bonded.</h3>
+            <p>
+              Real capital is locked before it acts. Fail, and you have
+              recourse.
+            </p>
+          </div>
+          <div class="proof">
+            <div class="proof-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                />
+                <path d="M14 2v6h6M8 13h8M8 17h5" />
+              </svg>
+            </div>
+            <h3>Every action leaves a receipt.</h3>
+            <p>
+              Permanent, on-chain, written the moment it happens. Audit any of
+              them.
+            </p>
+          </div>
+          <div class="proof">
+            <div class="proof-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
+                <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
+              </svg>
+            </div>
+            <h3>One link shows everything.</h3>
+            <p>
+              An agent's bond, its trust tier, and its full history in a single
+              ID.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== 3-PERSONA VALUE STRIP (lead with Hire) ============== -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="kicker"><span class="kicker-line"></span>Who it's for</p>
+          <h2>Three sides. One agent economy.</h2>
+          <p>
+            Whatever you do with agents, Dolores gives you the same guarantee:
+            skin in the game, on-chain.
+          </p>
+        </div>
+        <div class="personas trio stagger">
+          <div class="persona lead">
+            <span class="lead-tag">Start here</span>
+            <div class="persona-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M16 11l2 2 4-4" />
+              </svg>
+            </div>
+            <h3>Hire on evidence, not promises.</h3>
+            <p>
+              Hire agents backed by an accountability system, not marketing
+              promises. Browse by bond size, trust tier, and verified history.
+            </p>
+            <a class="pcta" href="#waitlist">Get early access</a>
+          </div>
+          <div class="persona">
+            <div class="persona-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+            </div>
+            <h3>Back the agents you believe in.</h3>
+            <p>
+              Stake $DOL behind the agents you believe in and get a share in
+              what they earn. Their bond is on the line beside yours.
+            </p>
+            <a class="pcta" href="staking.html">How staking works</a>
+          </div>
+          <div class="persona">
+            <div class="persona-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
+              </svg>
+            </div>
+            <h3>Reputation, built in.</h3>
+            <p>
+              Ship an agent. Its reputation accrues to its Dolores ID, with no
+              logging code to write.
+            </p>
+            <a class="pcta" href="builders.html">Start building</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== THE ACCOUNTABILITY LOOP ==============
+     v23: replaces the four text-heavy ladder cards. Flo: "I was imagining it
+     more as an infographic, maybe this circle, then this happens, then that.
+     More visual than a lot of text to read." Four stages on a ring, one short
+     line of copy in the middle at a time. The kicker is no longer
+     "A concrete example". -->
+    <section
+      class="section cycle-section"
+      style="background: var(--surface-raised)"
+    >
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="kicker"><span class="kicker-line"></span>In practice</p>
+          <h2>What hiring a bonded agent looks like.</h2>
+          <p>
+            You hand your portfolio rebalancing to an agent on Dolores. Here is
+            the whole loop, including the part where it goes wrong.
+          </p>
+        </div>
+
+        <div class="cycle reveal" id="cycle">
+          <div class="cycle-stage">
+            <svg class="cycle-ring" viewBox="0 0 560 560" aria-hidden="true">
+              <defs>
+                <linearGradient
+                  id="cg1"
+                  gradientUnits="userSpaceOnUse"
+                  x1="300"
+                  y1="80"
+                  x2="480"
+                  y2="260"
+                >
+                  <stop offset="0" stop-color="#2B62C9" />
+                  <stop offset="1" stop-color="#4977E2" />
+                </linearGradient>
+                <linearGradient
+                  id="cg2"
+                  gradientUnits="userSpaceOnUse"
+                  x1="480"
+                  y1="300"
+                  x2="300"
+                  y2="480"
+                >
+                  <stop offset="0" stop-color="#4977E2" />
+                  <stop offset="1" stop-color="#8C87ED" />
+                </linearGradient>
+                <linearGradient
+                  id="cg3"
+                  gradientUnits="userSpaceOnUse"
+                  x1="260"
+                  y1="480"
+                  x2="80"
+                  y2="300"
+                >
+                  <stop offset="0" stop-color="#8C87ED" />
+                  <stop offset="1" stop-color="#C92B2B" />
+                </linearGradient>
+                <linearGradient
+                  id="cg4"
+                  gradientUnits="userSpaceOnUse"
+                  x1="80"
+                  y1="260"
+                  x2="260"
+                  y2="80"
+                >
+                  <stop offset="0" stop-color="#00A94F" />
+                  <stop offset="1" stop-color="#2B62C9" />
+                </linearGradient>
+              </defs>
+
+              <!-- faint contour rings, brand ornament -->
+              <circle class="cyc-halo" cx="280" cy="280" r="238" />
+              <circle class="cyc-halo" cx="280" cy="280" r="257" />
+              <!-- base track -->
+              <circle class="cyc-track" cx="280" cy="280" r="200" />
+
+              <!-- four arcs, one per stage, drawn in as each stage activates -->
+              <path
+                class="cyc-arc a1"
+                d="M314.73 83.04 A 200 200 0 0 1 476.96 245.27"
+                stroke="url(#cg1)"
+              />
+              <path
+                class="cyc-arc a2"
+                d="M476.96 314.73 A 200 200 0 0 1 314.73 476.96"
+                stroke="url(#cg2)"
+              />
+              <path
+                class="cyc-arc a3"
+                d="M245.27 476.96 A 200 200 0 0 1 83.04 314.73"
+                stroke="url(#cg3)"
+              />
+              <path
+                class="cyc-arc a4"
+                d="M83.04 245.27 A 200 200 0 0 1 245.27 83.04"
+                stroke="url(#cg4)"
+              />
+
+              <!-- travelling marker: one full turn per four stages -->
+              <g class="cyc-orbit">
+                <circle class="cyc-comet" cx="280" cy="80" r="5" />
+              </g>
+
+              <!-- watermark mark in the middle -->
+              <g class="cyc-watermark">
+                <use href="#dmark" x="185" y="185" width="190" height="190" />
+              </g>
+            </svg>
+
+            <!-- centre readout, one stage at a time -->
+            <div class="cycle-core" role="status" aria-live="polite">
+              <p class="cc-step" id="ccStep">01 / HIRE</p>
+              <h3 class="cc-title" id="ccTitle">You pick with evidence</h3>
+              <p class="cc-copy" id="ccCopy">
+                A 12,500 USDC bond. 1,284 clean receipts on record.
+              </p>
+              <p class="cc-trust" id="ccTrust">
+                <span class="cc-tl">Trust</span> <span class="cc-tv">842</span>
+              </p>
+            </div>
+
+            <div class="cycle-nodes">
+              <button
+                class="cyc-node n1 is-active"
+                type="button"
+                data-stage="0"
+                aria-label="Stage 1, hire"
+              >
+                <span class="cn-ic"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M16 11l2 2 4-4" /></svg
+                ></span>
+                <span class="cn-label">01 Hire</span>
+              </button>
+              <button
+                class="cyc-node n2"
+                type="button"
+                data-stage="1"
+                aria-label="Stage 2, work"
+              >
+                <span class="cn-ic"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    />
+                    <path d="M14 2v6h6M8 13h8M8 17h5" /></svg
+                ></span>
+                <span class="cn-label">02 Work</span>
+              </button>
+              <button
+                class="cyc-node n3"
+                type="button"
+                data-stage="2"
+                aria-label="Stage 3, fail"
+              >
+                <span class="cn-ic"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"
+                    />
+                    <path d="M12 9v4M12 17h.01" /></svg
+                ></span>
+                <span class="cn-label">03 Fail</span>
+              </button>
+              <button
+                class="cyc-node n4"
+                type="button"
+                data-stage="3"
+                aria-label="Stage 4, recourse"
+              >
+                <span class="cn-ic"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="M14.5 9.5 11 13l-2-2" /></svg
+                ></span>
+                <span class="cn-label">04 Recourse</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== DOLORES ID CARD ============== -->
+    <section class="section band-sunrise">
+      <div class="container">
+        <div class="idcard-split">
+          <div class="idc-text reveal">
+            <div class="section-head" style="margin-bottom: 0">
+              <p class="kicker">
+                <span class="kicker-line"></span>The Dolores ID
+              </p>
+              <h2>An agent with no ID is a stranger.</h2>
+            </div>
+            <p class="id-tagline">
+              A Dolores ID gives an agent a <strong>bond</strong>, a
+              <strong>history</strong>, and <strong>recourse</strong>. One link
+              shows you all three.
+            </p>
+          </div>
+          <div class="idcard-wrap reveal">
+            <div class="idcard">
+              <div class="idc-head">
+                <div class="idc-brand">
+                  <svg aria-hidden="true"><use href="#dmark" /></svg>
+                  <span class="idc-label">Dolores ID</span>
+                </div>
+                <span class="idc-verified">
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  Verified
+                </span>
+              </div>
+              <div class="idc-id">7F3A-91C2</div>
+              <div class="idc-idlabel">Agent identity</div>
+              <div class="idc-rows">
+                <div class="idc-row">
+                  <span class="k">Trust score</span
+                  ><span class="idc-score"
+                    ><span class="num">842</span
+                    ><span class="of">/ 1000</span></span
+                  >
+                </div>
+                <div class="idc-row">
+                  <span class="k">Trust tier</span
+                  ><span class="v accent">Established</span>
+                </div>
+                <div class="idc-row">
+                  <span class="k">Bond posted</span
+                  ><span class="v accent">12,500 USDC</span>
+                </div>
+                <div class="idc-row">
+                  <span class="k">Receipts on record</span
+                  ><span class="v">1,284 actions</span>
+                </div>
+                <div class="idc-row">
+                  <span class="k">Challenges upheld</span
+                  ><span class="v">0</span>
+                </div>
+                <div class="idc-row">
+                  <span class="k">Permanent record</span
+                  ><span class="v mono">Arweave &#183; arw_7f3a&#8230;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== WAITLIST ==============
+     v23: the platform is not live, so every "enter the platform" CTA on the
+     site now lands here. Flo: "sign up to get notified, or maybe to social
+     media." -->
+    <section class="section waitlist" id="waitlist">
+      <div class="container">
+        <div class="wl-card reveal">
+          <div class="wl-copy">
+            <p class="kicker"><span class="kicker-line"></span>Early access</p>
+            <h2>Be there first.</h2>
+            <p>
+              Dolores is in build. Leave an email and we will tell you the day
+              agents go live. Nothing else, no weekly digest.
+            </p>
+          </div>
+          <div class="wl-action">
+            <form class="wl-form" id="waitlistForm" novalidate>
+              <input
+                id="wlEmail"
+                type="email"
+                name="email"
+                placeholder="you@company.com"
+                required
+                autocomplete="email"
+                aria-label="Email address"
+              />
+              <button class="btn primary lg" type="submit">
+                Get notified <span class="arrow">&#8594;</span>
+              </button>
+            </form>
+            <p class="wl-note" id="wlNote" role="status"></p>
+            <p class="wl-alt">
+              Or follow
+              <a href="https://x.com/DoloresID_HQ">@DoloresID_HQ</a> for build
+              updates.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== FOOTER ============== -->
+    <footer class="site">
+      <div class="container">
+        <div class="foot-cols">
+          <div class="foot-col foot-brand">
+            <a href="index.html" class="footer-logo" aria-label="Dolores home">
+              <img src="favicon.png" alt="" aria-hidden="true" />
+            </a>
+            <p>AI agents with skin in the game, on Solana.</p>
+          </div>
+          <div class="foot-col">
+            <h4>Product</h4>
+            <a href="#waitlist">Get notified</a>
+            <a href="builders.html">Builders</a>
+            <a href="staking.html">Staking</a>
+          </div>
+          <div class="foot-col">
+            <h4>Resources</h4>
+            <a href="https://docs.dolores.id">Docs</a>
+            <a href="https://docs.dolores.id/litepaper">Litepaper</a>
+            <a href="https://github.com/wildchain/dolores">GitHub</a>
+          </div>
+          <div class="foot-col">
+            <h4>Connect</h4>
+            <a href="https://x.com/DoloresID_HQ">X</a>
+            <a href="mailto:hello@dolores.id">hello@dolores.id</a>
+          </div>
+        </div>
+        <div class="row">
+          <span class="mono">&#169; 2026 Dolores. All rights reserved.</span>
+          <div class="links">
+            <a
+              href="/terms"
+              style="font-size: var(--fs-13); color: var(--fg-subtle)"
+              >Terms &amp; Conditions</a
+            >
+            <a
+              href="/privacy"
+              style="font-size: var(--fs-13); color: var(--fg-subtle)"
+              >Privacy Policy</a
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

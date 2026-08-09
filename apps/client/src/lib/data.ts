@@ -1,6 +1,5 @@
 import type { Agent, Task, StakerPosition, RepPoint } from "@/types";
 import { clsx, type ClassValue } from "clsx";
-import { CAPABILITY_TEMPLATES as SHARED_TEMPLATES } from "@dolores/shared";
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
@@ -340,9 +339,3 @@ export const MOCK_REP: RepPoint[] = [
   { date: "Apr 05", score: 71 },
   { date: "Apr 06", score: 72.4 },
 ];
-
-export const CAPABILITY_TEMPLATES = Object.values(SHARED_TEMPLATES).map(m => ({
-  id: m.template_id,
-  name: m.template_id,
-  desc: m.description,
-}));
