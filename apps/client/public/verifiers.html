@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+      Dolores for verifiers - Run a verifier. Get paid to check the work.
+    </title>
+    <meta
+      name="description"
+      content="Verifiers check every agent action against the mandate it signed and attest the result on-chain. Post a bond in $DOL to qualify, get paid in USDC for the work you do."
+    />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="dmark" viewBox="0 0 700 700">
+          <path
+            d="M357.63,499.92h-112.43V203.51h112.43c81.72,0,148.2,66.49,148.2,148.21s-66.48,148.2-148.2,148.2ZM288.55,456.57h69.08c57.82,0,104.85-47.03,104.85-104.85s-47.03-104.86-104.85-104.86h-69.08v209.71Z"
+          />
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+    <!-- ============== NAV ============== -->
+    <header class="nav">
+      <div class="container row">
+        <a href="index.html" class="nav-logo" aria-label="Dolores home">
+          <img src="img/logo_full_nodot.png" alt="Dolores" />
+        </a>
+        <nav class="links" aria-label="Primary">
+          <a href="builders.html">Builders</a>
+          <a href="verifiers.html" aria-current="page">Verifiers</a>
+          <div class="nav-dd">
+            <button type="button" aria-haspopup="true" aria-expanded="false">
+              Resources
+              <svg
+                class="chev"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a href="https://docs.dolores.id"
+                >Docs<small>Integrate an agent</small></a
+              >
+              <a href="https://docs.dolores.id/litepaper"
+                >Litepaper<small>How the protocol works</small></a
+              >
+              <a href="https://github.com/wildchain/dolores"
+                >GitHub<small>Open source</small></a
+              >
+            </div>
+          </div>
+        </nav>
+        <a class="btn primary" href="#waitlist">Get notified</a>
+      </div>
+    </header>
+
+    <!-- ============== SUB-HERO ============== -->
+    <section class="subhero">
+      <div class="container inner">
+        <a class="back-link" href="index.html">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Home
+        </a>
+        <p class="kicker"><span class="kicker-line"></span>For verifiers</p>
+        <h1>Run a verifier. <em>Get paid to check the work.</em></h1>
+        <p class="lead">
+          Every agent signs a mandate before it acts &mdash; the venues it may
+          touch, the size caps, the slippage it may accept. Verifiers check each
+          action against that mandate and attest the result on-chain. Post a
+          bond in $DOL to qualify, and earn USDC for the work you do.
+        </p>
+        <div class="cta-row" style="display: flex; gap: 12px; flex-wrap: wrap">
+          <a class="btn primary lg" href="#waitlist"
+            >Join the verifier cohort <span class="arrow">→</span></a
+          >
+          <a class="btn ghost lg" href="https://docs.dolores.id/verifiers"
+            >Read the spec</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== WHAT THE JOB IS ============== -->
+    <section class="section" id="how">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="kicker"><span class="kicker-line"></span>The job</p>
+          <h2>What a verifier actually does.</h2>
+          <p>
+            Most of it is machine work. The mandate is code, so checking an
+            action against it is a comparison, not an opinion. You only exercise
+            judgment when a mandate is genuinely ambiguous &mdash; and that is
+            rare by design.
+          </p>
+        </div>
+        <div class="ladder stagger">
+          <div class="step">
+            <div class="num"><span class="num-dot"></span>01 / WATCH</div>
+            <h3>Stream the actions</h3>
+            <p>
+              Your node subscribes to the agents you cover. Every action arrives
+              alongside the mandate it was taken under.
+            </p>
+          </div>
+          <div class="step">
+            <div class="num"><span class="num-dot"></span>02 / CHECK</div>
+            <h3>Compare to the mandate</h3>
+            <p>
+              The signed policy is code. In almost every case compliance is a
+              boolean your node settles on its own, in milliseconds.
+            </p>
+          </div>
+          <div class="step">
+            <div class="num"><span class="num-dot"></span>03 / ATTEST</div>
+            <h3>Sign the result</h3>
+            <p>
+              You write the attestation on-chain. It becomes a permanent part of
+              that agent's record, and yours.
+            </p>
+          </div>
+          <div class="step">
+            <div class="num"><span class="num-dot"></span>04 / SETTLE</div>
+            <h3>Handle challenges</h3>
+            <p>
+              When an outcome is disputed and the mandate is unclear, verifiers
+              convene as a bonded panel and settle it.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== TIERS + BOND MECHANICS (dark) ============== -->
+    <section
+      class="stake-section grain"
+      id="terms"
+      style="min-height: auto; padding: 96px 0"
+    >
+      <div class="container inner">
+        <div class="stake-grid">
+          <!-- Left: verifier tier ladder -->
+          <div class="reveal">
+            <div
+              class="section-head"
+              style="max-width: none; margin-bottom: 32px"
+            >
+              <p class="kicker">
+                <span class="kicker-line"></span>Verifier tiers
+              </p>
+              <h2>Work flows to the reliable.</h2>
+              <p>
+                Your record is public: uptime, attestations signed, challenges
+                lost. The protocol routes more work to the verifiers with the
+                strongest record, and pays accordingly. Everyone starts at the
+                bottom.
+              </p>
+            </div>
+            <div class="tier-ladder-label">
+              <span>Tier</span>
+              <span>Your record</span>
+              <span>Work allocation</span>
+            </div>
+            <div class="tier-ladder stagger">
+              <div class="tier-row tier-top">
+                <span class="tier-name">Exemplary</span>
+                <span class="tier-score">850 - 1000</span>
+                <span class="tier-badge b14">1.4x weight</span>
+              </div>
+              <div class="tier-row">
+                <span class="tier-name">Established</span>
+                <span class="tier-score">650 - 849</span>
+                <span class="tier-badge b10">1.0x base weight</span>
+              </div>
+              <div class="tier-row">
+                <span class="tier-name">Developing</span>
+                <span class="tier-score">400 - 649</span>
+                <span class="tier-badge b06">0.6x weight</span>
+              </div>
+              <div class="tier-row tier-ineligible">
+                <span class="tier-name">Provisional</span>
+                <span class="tier-score">150 - 399</span>
+                <span class="tier-badge na">Shadow mode</span>
+              </div>
+              <div class="tier-row tier-ineligible">
+                <span class="tier-name">Unverified</span>
+                <span class="tier-score">0 - 149</span>
+                <span class="tier-badge na">Not eligible</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: the terms -->
+          <div class="stake-explainer reveal delay-2">
+            <div class="se-block">
+              <div class="se-icon draw-svg">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+              </div>
+              <h4>Post a bond to qualify</h4>
+              <p>
+                You bond $DOL worth roughly 30% of the agent bonds you cover.
+                That bond is what makes your attestation worth anything &mdash;
+                attest falsely and you forfeit it.
+              </p>
+            </div>
+            <div class="se-block">
+              <div class="se-icon draw-svg">
+                <svg viewBox="0 0 24 24">
+                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              </div>
+              <h4>Why the bond is in $DOL, not USDC</h4>
+              <p>
+                Your bond has to lose value if the network is harmed, or
+                wrecking it costs you nothing. Agent bonds stay in USDC because
+                they compensate a specific loss. Different jobs, different
+                assets.
+              </p>
+            </div>
+            <div class="se-block">
+              <div class="se-icon draw-svg">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8v4l3 3" />
+                </svg>
+              </div>
+              <h4>Paid in USDC, for work done</h4>
+              <p>
+                Your compensation comes out of the fees agents pay to be
+                verified &mdash; not from new tokens being printed. You earn for
+                checking, not for waiting.
+              </p>
+            </div>
+            <div class="se-block">
+              <div class="se-icon draw-svg">
+                <svg viewBox="0 0 24 24">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M20 8v6M23 11h-6" />
+                </svg>
+              </div>
+              <h4>Others can back your bond</h4>
+              <p>
+                Once you have a record, delegators can add $DOL to your bond and
+                take a share of your fees. More bond means more work you can
+                take on. Their capital is at risk alongside yours.
+              </p>
+            </div>
+            <div class="stake-cta-row">
+              <a
+                class="btn navy-primary lg"
+                href="https://docs.dolores.id/verifiers"
+                >Read the verifier spec <span class="arrow">→</span></a
+              >
+              <a class="btn navy-ghost lg" href="#waitlist">Join the cohort</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== WHAT IT TAKES ============== -->
+    <section class="section" style="background: var(--surface-raised)">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="kicker"><span class="kicker-line"></span>Requirements</p>
+          <h2>What it takes to run one.</h2>
+          <p>
+            Less than you would expect. Verification is I/O bound, not compute
+            bound &mdash; there is no model to serve and nothing to train.
+          </p>
+        </div>
+        <div class="proof-grid stagger">
+          <div class="proof">
+            <div class="proof-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+            </div>
+            <h3>A machine that stays up.</h3>
+            <p>
+              A small always-on VPS and Solana RPC access. Modest CPU, no GPU.
+              Uptime matters far more than horsepower.
+            </p>
+          </div>
+          <div class="proof">
+            <div class="proof-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <h3>A bond you can post.</h3>
+            <p>
+              Sized to the work you take on, not a fixed floor. Start with a
+              handful of agents and scale the bond as your record builds.
+            </p>
+          </div>
+          <div class="proof">
+            <div class="proof-ic" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 2v6M12 16v6M2 12h6M16 12h6" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </div>
+            <h3>Patience for the first month.</h3>
+            <p>
+              New verifiers run in shadow mode: you attest, we compare, nothing
+              is at risk and nothing is paid. Clear it and you start earning.
+            </p>
+          </div>
+        </div>
+        <div class="builder-cta-row reveal">
+          <a class="btn primary lg" href="#waitlist"
+            >Join the verifier cohort <span class="arrow">→</span></a
+          >
+          <a class="btn ghost lg" href="https://docs.dolores.id/verifiers"
+            >Read the spec</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== WAITLIST ============== -->
+    <section class="section waitlist" id="waitlist">
+      <div class="container">
+        <div class="wl-card reveal">
+          <div class="wl-copy">
+            <p class="kicker"><span class="kicker-line"></span>Early access</p>
+            <h2>Be there first.</h2>
+            <p>
+              Dolores is in build. The first verifier cohort is hand-picked.
+              Leave an email and we will get in touch before mainnet.
+            </p>
+          </div>
+          <div class="wl-action">
+            <form class="wl-form" id="waitlistForm" novalidate>
+              <input
+                id="wlEmail"
+                type="email"
+                name="email"
+                placeholder="you@company.com"
+                required
+                autocomplete="email"
+                aria-label="Email address"
+              />
+              <button class="btn primary lg" type="submit">
+                Get notified <span class="arrow">&#8594;</span>
+              </button>
+            </form>
+            <p class="wl-note" id="wlNote" role="status"></p>
+            <p class="wl-alt">
+              Or follow
+              <a href="https://x.com/DoloresID_HQ">@DoloresID_HQ</a> for build
+              updates.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============== FOOTER ============== -->
+    <footer class="site">
+      <div class="container">
+        <div class="foot-cols">
+          <div class="foot-col foot-brand">
+            <a href="index.html" class="footer-logo" aria-label="Dolores home">
+              <img src="favicon.png" alt="" aria-hidden="true" />
+            </a>
+            <p>AI agents with skin in the game, on Solana.</p>
+          </div>
+          <div class="foot-col">
+            <h4>Product</h4>
+            <a href="#waitlist">Get notified</a>
+            <a href="builders.html">Builders</a>
+            <a href="verifiers.html">Verifiers</a>
+          </div>
+          <div class="foot-col">
+            <h4>Resources</h4>
+            <a href="https://docs.dolores.id">Docs</a>
+            <a href="https://docs.dolores.id/litepaper">Litepaper</a>
+            <a href="https://github.com/wildchain/dolores">GitHub</a>
+          </div>
+          <div class="foot-col">
+            <h4>Connect</h4>
+            <a href="https://x.com/DoloresID_HQ">X</a>
+            <a href="mailto:hello@dolores.id">hello@dolores.id</a>
+          </div>
+        </div>
+        <div class="row">
+          <span class="mono">&#169; 2026 Dolores. All rights reserved.</span>
+          <div class="links">
+            <a
+              href="/terms"
+              style="font-size: var(--fs-13); color: var(--fg-subtle)"
+              >Terms &amp; Conditions</a
+            >
+            <a
+              href="/privacy"
+              style="font-size: var(--fs-13); color: var(--fg-subtle)"
+              >Privacy Policy</a
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
